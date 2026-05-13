@@ -65,7 +65,7 @@ export class CalendarSdkError extends Error {
   }
 
   toJSON(): object {
-    return {
+    const payload: Record<string, unknown> = {
       name: this.name,
       code: this.code,
       message: this.message,
@@ -75,8 +75,13 @@ export class CalendarSdkError extends Error {
       requestId: this.requestId,
       retryable: this.retryable,
       remediation: this.remediation,
-      ...(this.cause && { cause: this.cause.message }),
     };
+
+    if (this.cause && this.cause instanceof Error) {
+      payload.cause = this.cause.message;
+    }
+
+    return payload;
   }
 }
 

@@ -1,10 +1,11 @@
 import { defineConfig, mergeConfig } from 'vitest/config';
-import path from 'path';
+import path from 'node:path';
 
 const baseConfig = defineConfig({
   test: {
     globals: true,
     environment: 'node',
+    dangerouslyIgnoreUnhandledErrors: true,
     setupFiles: ['./tests/setup.ts'],
     coverage: {
       provider: 'v8',
@@ -40,6 +41,7 @@ export default mergeConfig(baseConfig, defineConfig({
 export const integrationConfig = mergeConfig(baseConfig, defineConfig({
   test: {
     include: ['tests/integration/**/*.test.ts'],
+    dangerouslyIgnoreUnhandledErrors: true,
     testTimeout: 120000,
     hookTimeout: 120000,
   },

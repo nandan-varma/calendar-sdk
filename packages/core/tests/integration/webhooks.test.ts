@@ -9,7 +9,7 @@ const TEST_PREFIX = '__TEST_WEBHOOK__';
 describe.skipIf(!hasGoogleCredentials() || !hasWebhookUrl())('Webhook Integration', () => {
   let provider: ProviderAdapter;
   let token: TokenSet;
-  let testCalendar: any = null;
+  let testCalendar: { providerId: string; name?: string } | null = null;
   let subscriptions: Subscription[] = [];
 
   beforeAll(async () => {
@@ -26,8 +26,9 @@ describe.skipIf(!hasGoogleCredentials() || !hasWebhookUrl())('Webhook Integratio
       try {
         await provider.subscriptions.delete(token, sub.id);
         console.log(`   ✅ Deleted subscription: ${sub.id}`);
-      } catch (e: any) {
-        console.warn(`   ⚠️  Failed to delete subscription: ${e.message}`);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.warn(`   ⚠️  Failed to delete subscription: ${message}`);
       }
     }
     

@@ -4,7 +4,8 @@
     "outDir": "./dist",
     "rootDir": "./src",
     "skipLibCheck": true,
-    "declaration": false
+    "declaration": false,
+    "declarationMap": false
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "tests"]

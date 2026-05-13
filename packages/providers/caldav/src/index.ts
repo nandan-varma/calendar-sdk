@@ -297,6 +297,8 @@ export function createCalDavProvider(config: CalDavProviderConfig): ProviderAdap
     fullSync: async (_token: TokenSet, calendarId: string, options?: { timeMin?: Date; timeMax?: Date }) => {
       const result = await events.list(_token, calendarId, { timeMin: options?.timeMin, timeMax: options?.timeMax });
       return {
+        accountId: '',
+        scope: 'events' as const,
         events: result.items.map(e => ({ type: 'created' as const, event: e })),
         deletions: [],
         expiredToken: false,

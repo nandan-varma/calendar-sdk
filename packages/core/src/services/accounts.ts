@@ -1,6 +1,6 @@
 import type { Account, AuthInput, ConnectOptions } from '../types/account.js';
 import type { ProviderKey } from '../types/common.js';
-import type { ProviderAdapter } from '../adapters/provider.js';
+import type { ProviderAdapter, TokenSet } from '../adapters/provider.js';
 import type { StorageAdapter } from '../storage/index.js';
 import type { Logger } from '../logger/index.js';
 import { CalendarSdkError, errors } from '../errors/index.js';
@@ -30,7 +30,7 @@ export class AccountsService {
     this.logger.info('Connecting account', { provider: providerKey });
 
     try {
-      let tokenSet;
+      let tokenSet: TokenSet;
 
       if (options.authInput.authorizationCode) {
         tokenSet = await provider.auth.exchangeCode(

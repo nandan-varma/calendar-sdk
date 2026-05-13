@@ -23,7 +23,7 @@ export function toDate(dt: DateTimeValue): Date {
     return new Date(dt.dateTime);
   }
   const dateStr = 'date' in dt ? (dt.date || '') : '';
-  return new Date(dateStr + 'T00:00:00');
+  return new Date(`${dateStr}T00:00:00`);
 }
 
 export function toDateTimeString(dt: DateTimeValue, timezone?: string): string {
@@ -60,9 +60,7 @@ export interface RequestOptions {
   signal?: AbortSignal;
 }
 
-export interface RawProviderData {
-  [key: string]: unknown;
-}
+export type RawProviderData = unknown;
 
 export interface Extensions {
   [key: string]: unknown;

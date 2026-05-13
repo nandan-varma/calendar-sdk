@@ -102,7 +102,7 @@ export function createHooks(): Hooks {
       if (!handlers.has(key)) {
         handlers.set(key, new Set());
       }
-      handlers.get(key)!.add(callback);
+      handlers.get(key)?.add(callback);
     },
 
     off(event: '*' | HookEvent['type'], callback: HookCallback) {
@@ -114,11 +114,21 @@ export function createHooks(): Hooks {
       const callbacks: HookCallback[] = [];
       
       if (handlers.has('*')) {
-        handlers.get('*')!.forEach(cb => callbacks.push(cb));
+        const wildcardHandlers = handlers.get('*');
+        if (wildcardHandlers) {
+          for (const cb of wildcardHandlers) {
+            callbacks.push(cb);
+          }
+        }
       }
       
       if (handlers.has(event.type)) {
-        handlers.get(event.type)!.forEach(cb => callbacks.push(cb));
+        const specificHandlers = handlers.get(event.type);
+        if (specificHandlers) {
+          for (const cb of specificHandlers) {
+            callbacks.push(cb);
+          }
+        }
       }
 
       for (const callback of callbacks) {
@@ -161,7 +171,7 @@ export class EventEmitter implements Hooks {
     if (!this.handlers.has(key)) {
       this.handlers.set(key, new Set());
     }
-    this.handlers.get(key)!.add(callback);
+    this.handlers.get(key)?.add(callback);
   }
 
   off(event: '*' | HookEvent['type'], callback: HookCallback): void {

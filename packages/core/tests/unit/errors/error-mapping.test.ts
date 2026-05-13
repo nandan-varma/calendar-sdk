@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { CalendarSdkError, errors, mapHttpError, isCalendarSdkError, ErrorCode } from '../../../src/errors/index.js';
+import { CalendarSdkError, errors, mapHttpError, isCalendarSdkError, type ErrorCode } from '../../../src/errors/index.js';
 
 describe('Error Model', () => {
   describe('CalendarSdkError', () => {

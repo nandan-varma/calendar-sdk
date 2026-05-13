@@ -1,5 +1,6 @@
 import type { Subscription, SubscriptionConfig, SubscriptionInput, SubscriptionNotification } from '../types/subscription.js';
-import type { ProviderAdapter } from '../adapters/provider.js';
+import type { ProviderAdapter, TokenSet } from '../adapters/provider.js';
+import type { ProviderKey } from '../types/common.js';
 import type { StorageAdapter } from '../storage/index.js';
 import type { Logger } from '../logger/index.js';
 import { CalendarSdkError, errors } from '../errors/index.js';
@@ -7,14 +8,14 @@ import { v4 as uuidv4 } from 'uuid';
 
 export class SubscriptionsService {
   private storage: StorageAdapter;
-  private getToken: (accountId: string) => Promise<string | null>;
-  private getProvider: (accountId: string) => ProviderAdapter;
+  private getToken: (accountId: string) => Promise<TokenSet | null>;
+  private getProvider: (providerKey: ProviderKey) => ProviderAdapter;
   private logger: Logger;
 
   constructor(
     storage: StorageAdapter,
-    getToken: (accountId: string) => Promise<string | null>,
-    getProvider: (accountId: string) => ProviderAdapter,
+    getToken: (accountId: string) => Promise<TokenSet | null>,
+    getProvider: (providerKey: ProviderKey) => ProviderAdapter,
     logger: Logger
   ) {
     this.storage = storage;
@@ -49,7 +50,7 @@ export class SubscriptionsService {
       id: created.id || uuidv4(),
       accountId,
       provider: account.provider,
-      renewalPolicy: config.renewalPolicy || 'auto',
+       renewalPolicy: 'auto',
       status: 'active',
       createdAt: new Date(),
       updatedAt: new Date(),

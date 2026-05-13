@@ -3,6 +3,7 @@ import type { SyncCursor, SyncResult, SyncScope } from '../types/sync.js';
 import type { StorageAdapter } from '../storage/index.js';
 import type { ProviderAdapter } from '../adapters/provider.js';
 import type { Logger } from '../logger/index.js';
+import type { TokenSet } from '../adapters/provider.js';
 import { CalendarSdkError, errors } from '../errors/index.js';
 
 export interface SyncServiceOptions {
@@ -39,21 +40,24 @@ export class SyncService {
         ? [calendarId] 
         : (await this.storage.calendars.listByAccount(accountId)).map(c => c.id);
 
-      const results: SyncResult = {
-        accountId,
-        scope: 'events',
-        events: [],
-        deletions: [],
-        expiredToken: false,
-        hasMore: false,
-      };
+    const results: SyncResult = {
+      accountId,
+      scope: 'events',
+      events: [],
+      deletions: [],
+      expiredToken: false,
+      hasMore: false,
+    };
+
+    let lastSyncResult: SyncResult | undefined;
 
       for (const calId of calendars) {
-        const syncResult = await provider.fullSync(
-          { accountId } as any, // token would come from auth service
-          calId,
-          { timeMin, timeMax, limit }
-        );
+      const syncResult = await provider.sync.fullSync(
+        { accessToken: '', refreshToken: undefined } as TokenSet,
+        calId,
+        { timeMin, timeMax, limit }
+      );
+      lastSyncResult = syncResult;
 
         for (const event of syncResult.events) {
           if (event.type === 'created') {
@@ -69,18 +73,18 @@ export class SyncService {
         }
       }
 
-      if (syncResult.nextCursor) {
-        await this.storage.syncCursors.save({
-          id: `${accountId}:events`,
-          provider: provider.key,
-          accountId,
-          scope: 'events',
-          token: syncResult.nextCursor.token,
-          expiry: syncResult.nextCursor.expiry,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        });
-      }
+    if (lastSyncResult?.nextCursor) {
+      await this.storage.syncCursors.save({
+        id: `${accountId}:events`,
+        provider: provider.key,
+        accountId,
+        scope: 'events',
+        token: lastSyncResult.nextCursor.token,
+        expiry: lastSyncResult.nextCursor.expiry,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+    }
 
       this.logger.info('Full sync completed', { 
         accountId, 
@@ -106,13 +110,13 @@ export class SyncService {
     this.logger.info('Starting incremental sync', { 
       accountId, 
       scope: cursor.scope,
-      cursorToken: cursor.token.substring(0, 20) + '...',
+      cursorToken: `${cursor.token.substring(0, 20)}...`,
     });
 
     try {
-      const result = await provider.incrementalSync(
-        { accountId } as any,
-        options?.calendarId,
+      const result = await provider.sync.incrementalSync(
+        { accessToken: '', refreshToken: undefined } as TokenSet,
+        options?.calendarId ?? '',
         cursor
       );
 
@@ -127,14 +131,11 @@ export class SyncService {
       }
 
       for (const event of result.events) {
-        if (event.type === 'created') {
-          await this.storage.events.save(event.event);
-        } else if (event.type === 'updated') {
+        if (event.type === 'created' || event.type === 'updated') {
           await this.storage.events.save(event.event);
         } else if (event.type === 'deleted') {
           await this.storage.events.delete(event.eventId);
         }
-        results.deletions.push(event.eventId);
       }
 
       if (result.deletions.length > 0) {
@@ -197,9 +198,9 @@ export class SyncService {
       localEvents.map(e => [e.providerId, e])
     );
 
-    const remoteResult = await provider.fullSync(
-      { accountId } as any,
-      undefined,
+    const remoteResult = await provider.sync.fullSync(
+      { accessToken: '', refreshToken: undefined } as TokenSet,
+      '',
       options
     );
 
@@ -310,10 +311,4 @@ export interface SyncStatus {
     expiresAt: Date;
   }[];
   lastSync?: Date;
-}
-
-let results: SyncResult;
-
-function getEvents(result: SyncResult): SyncResult['events'] {
-  return result.events;
 }

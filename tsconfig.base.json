@@ -3,7 +3,16 @@
     "target": "ES2022",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM"],
+    "baseUrl": ".",
+    "paths": {
+      "@calendar-sdk/core": ["packages/core/src/index.ts"],
+      "@calendar-sdk/auth": ["packages/auth/src/index.ts"],
+      "@calendar-sdk/google": ["packages/providers/google/src/index.ts"],
+      "@calendar-sdk/microsoft": ["packages/providers/microsoft/src/index.ts"],
+      "@calendar-sdk/caldav": ["packages/providers/caldav/src/index.ts"],
+      "@calendar-sdk/tests": ["packages/tests/src/index.ts"]
+    },
     "declaration": true,
     "declarationMap": true,
     "strict": true,

@@ -1,6 +1,6 @@
 import type { Calendar } from '@calendar-sdk/core';
 import type { GoogleCalendarListEntry, GoogleCalendarListResponse } from '../types/index.js';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 
 export function mapCalendarListResponse(
   response: GoogleCalendarListResponse,
@@ -13,7 +13,7 @@ export function mapCalendar(entry: GoogleCalendarListEntry, accountId: string): 
   const accessRole = mapAccessRole(entry.accessRole);
   
   return {
-    id: uuidv4(),
+    id: randomUUID(),
     accountId,
     providerId: entry.id,
     name: entry.summary,

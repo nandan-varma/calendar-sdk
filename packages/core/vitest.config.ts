@@ -5,7 +5,6 @@ const baseConfig = defineConfig({
   test: {
     globals: true,
     environment: 'node',
-    dangerouslyIgnoreUnhandledErrors: true,
     setupFiles: ['./tests/setup.ts'],
     coverage: {
       provider: 'v8',
@@ -26,22 +25,21 @@ const baseConfig = defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@calendar-sdk/google': path.resolve(__dirname, '../providers/google/dist/index.js'),
-      '@calendar-sdk/microsoft': path.resolve(__dirname, '../providers/microsoft/dist/index.js'),
+      '@calendar-sdk/google': path.resolve(__dirname, '../providers/google/src/index.ts'),
+      '@calendar-sdk/microsoft': path.resolve(__dirname, '../providers/microsoft/src/index.ts'),
     },
   },
 });
 
 export default mergeConfig(baseConfig, defineConfig({
   test: {
-    include: ['tests/unit/**/*.test.ts', 'tests/integration/sdk.test.ts'],
+    include: ['tests/basic.test.ts', 'tests/unit/**/*.test.ts', 'tests/integration/sdk.test.ts'],
   },
 }));
 
 export const integrationConfig = mergeConfig(baseConfig, defineConfig({
   test: {
     include: ['tests/integration/**/*.test.ts'],
-    dangerouslyIgnoreUnhandledErrors: true,
     testTimeout: 120000,
     hookTimeout: 120000,
   },

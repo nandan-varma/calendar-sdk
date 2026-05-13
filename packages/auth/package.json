@@ -18,6 +18,7 @@
     "test:unit": "vitest run --passWithNoTests",
     "test:integration": "vitest run --passWithNoTests",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage --passWithNoTests",
     "lint": "biome lint --config-path ../../biome.json ../../packages/auth",
     "lint:fix": "biome lint --config-path ../../biome.json --write ../../packages/auth",
     "typecheck": "tsc --noEmit",

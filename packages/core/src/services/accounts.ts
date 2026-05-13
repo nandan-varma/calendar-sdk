@@ -4,7 +4,7 @@ import type { ProviderAdapter, TokenSet } from '../adapters/provider.js';
 import type { StorageAdapter } from '../storage/index.js';
 import type { Logger } from '../logger/index.js';
 import { CalendarSdkError, errors } from '../errors/index.js';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 
 export class AccountsService {
   private storage: StorageAdapter;
@@ -53,7 +53,7 @@ export class AccountsService {
       const accountInfo = await provider.accounts.getAccount(tokenSet);
 
       const account: Account = {
-        id: uuidv4(),
+        id: randomUUID(),
         provider: providerKey,
         displayName: accountInfo.displayName,
         email: accountInfo.email,

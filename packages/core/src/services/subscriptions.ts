@@ -4,7 +4,7 @@ import type { ProviderKey } from '../types/common.js';
 import type { StorageAdapter } from '../storage/index.js';
 import type { Logger } from '../logger/index.js';
 import { CalendarSdkError, errors } from '../errors/index.js';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 
 export class SubscriptionsService {
   private storage: StorageAdapter;
@@ -47,7 +47,7 @@ export class SubscriptionsService {
 
     const subscription: Subscription = {
       ...created,
-      id: created.id || uuidv4(),
+      id: created.id || randomUUID(),
       accountId,
       provider: account.provider,
        renewalPolicy: 'auto',

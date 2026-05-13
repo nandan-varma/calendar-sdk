@@ -13,7 +13,7 @@ import type {
   EventVisibility,
 } from '@calendar-sdk/core';
 import type { GoogleEvent, GoogleEventsResponse } from '../types/index.js';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 
 export function mapEventsResponse(
   response: GoogleEventsResponse,
@@ -160,8 +160,8 @@ function mapConferenceData(data?: GoogleEvent['conferenceData']): ConferenceData
     provider: mapConferenceProvider(data.conferenceSolution?.key?.type),
     conferenceId: data.conferenceId,
     conferenceSolutionId: data.conferenceSolution?.key?.type,
-    entryPoints: data.entryPoints?.map(ep => ({
-      entryPointType: ep.entryPointType as ConferenceData['entryPoints'][number]['entryPointType'],
+    entryPoints: data.entryPoints?.map((ep) => ({
+      entryPointType: ep.entryPointType as NonNullable<ConferenceData['entryPoints']>[number]['entryPointType'],
       uri: ep.uri,
       label: ep.label,
       password: ep.password,
@@ -182,7 +182,7 @@ function mapConferenceProvider(type?: string): ConferenceData['provider'] {
 function mapAttachments(attachments?: GoogleEvent['attachments']): Attachment[] {
   if (!attachments) return [];
   return attachments.map((a, i) => ({
-    id: a.fileId || uuidv4(),
+    id: a.fileId || randomUUID(),
     title: a.title || 'Attachment',
     mimeType: a.mimeType || 'application/octet-stream',
     size: undefined,

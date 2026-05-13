@@ -17,9 +17,6 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^1.2.0
         version: 1.6.1(vitest@1.6.1(@types/node@20.19.40))
-      prettier:
-        specifier: ^3.2.0
-        version: 3.8.3
       typescript:
         specifier: ^5.3.3
         version: 5.9.3
@@ -48,9 +45,6 @@ importers:
 
   packages/core:
     dependencies:
-      uuid:
-        specifier: ^9.0.1
-        version: 9.0.1
       zod:
         specifier: ^3.22.4
         version: 3.25.76
@@ -58,9 +52,6 @@ importers:
       '@types/node':
         specifier: ^20.11.0
         version: 20.19.40
-      '@types/uuid':
-        specifier: ^9.0.8
-        version: 9.0.8
       dotenv:
         specifier: ^17.4.2
         version: 17.4.2
@@ -98,9 +89,6 @@ importers:
       '@calendar-sdk/core':
         specifier: workspace:*
         version: link:../../core
-      uuid:
-        specifier: ^9.0.1
-        version: 9.0.1
     devDependencies:
       '@types/node':
         specifier: ^20.11.0
@@ -697,9 +685,6 @@ packages:
   '@types/node@20.19.40':
     resolution: {integrity: sha512-xxx6M2IpSTnnKcR0cMvIiohkiCx20/oRPtWGbenFygKCGl3zqUzdNjQ/1V4solq1LU+dgv0nQzeGOuqkqZGg0Q==}
 
-  '@types/uuid@9.0.8':
-    resolution: {integrity: sha512-jg+97EGIcY9AGHJJRaaPVgetKDsrTgbRjQ5Msgjh/DQKEFl0DtyRr/VCOyD1T2R1MNeWPK/u7JoGhlDZnKBAfA==}
-
   '@vitest/coverage-v8@1.6.1':
     resolution: {integrity: sha512-6YeRZwuO4oTGKxD3bijok756oktHSIm3eczVVzNe3scqzuhLwltIF3S9ZL/vwOVIpURmU6SnZhziXXAfw8/Qlw==}
     peerDependencies:
@@ -1029,11 +1014,6 @@ packages:
     resolution: {integrity: sha512-SoSL4+OSEtR99LHFZQiJLkT59C5B1amGO1NzTwj7TT1qCUgUO6hxOvzkOYxD+vMrXBM3XJIKzokoERdqQq/Zmg==}
     engines: {node: ^10 || ^12 || >=14}
 
-  prettier@3.8.3:
-    resolution: {integrity: sha512-7igPTM53cGHMW8xWuVTydi2KO233VFiTNyF5hLJqpilHfmn8C8gPf+PS7dUT64YcXFbiMGZxS9pCSxL/Dxm/Jw==}
-    engines: {node: '>=14'}
-    hasBin: true
-
   pretty-format@29.7.0:
     resolution: {integrity: sha512-Pdlw/oPxN+aXdmM9R00JVC9WVFoCLTKJvDVLgmJ+qAffBMxsV85l/Lu7sNx4zSzPyoL2euImuEwHhOXdEgNFZQ==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
@@ -1173,11 +1153,6 @@ packages:
 
   undici-types@6.21.0:
     resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
-
-  uuid@9.0.1:
-    resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
-    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
-    hasBin: true
 
   vite-node@1.6.1:
     resolution: {integrity: sha512-YAXkfvGtuTzwWbDSACdJSg4A4DZiAqckWe90Zapc/sEX3XvHcw1NdurM/6od8J207tSDqNbSsgdCacBgvJKFuA==}
@@ -1569,8 +1544,6 @@ snapshots:
     dependencies:
       undici-types: 6.21.0
 
-  '@types/uuid@9.0.8': {}
-
   '@vitest/coverage-v8@1.6.1(vitest@1.6.1(@types/node@20.19.40))':
     dependencies:
       '@ampproject/remapping': 2.3.0
@@ -1938,8 +1911,6 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.1
 
-  prettier@3.8.3: {}
-
   pretty-format@29.7.0:
     dependencies:
       '@jest/schemas': 29.6.3
@@ -2089,8 +2060,6 @@ snapshots:
   ufo@1.6.4: {}
 
   undici-types@6.21.0: {}
-
-  uuid@9.0.1: {}
 
   vite-node@1.6.1(@types/node@20.19.40):
     dependencies:

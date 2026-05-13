@@ -11,7 +11,7 @@ import type { ProviderKey } from '../types/common.js';
 import type { StorageAdapter } from '../storage/index.js';
 import type { Logger } from '../logger/index.js';
 import { CalendarSdkError, errors } from '../errors/index.js';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 
 export class EventsService {
   private storage: StorageAdapter;
@@ -54,7 +54,7 @@ export class EventsService {
 
     const events: CalendarEvent[] = result.items.map(evt => ({
       ...evt,
-      id: evt.id || uuidv4(),
+      id: evt.id || randomUUID(),
       accountId: calendar.accountId,
       calendarId,
     }));
@@ -97,7 +97,7 @@ export class EventsService {
 
     const event: CalendarEvent = {
       ...created,
-      id: created.id || uuidv4(),
+      id: created.id || randomUUID(),
       accountId: calendar.accountId,
       calendarId,
       recurrenceMaster: !input.recurrence,
@@ -284,7 +284,7 @@ export class EventsService {
 
     const result: CalendarEvent = {
       ...duplicated,
-      id: uuidv4(),
+      id: randomUUID(),
       accountId: sourceCalendar.accountId,
       calendarId: targetCalendarId,
       recurrenceMaster: true,

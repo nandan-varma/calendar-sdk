@@ -44,6 +44,7 @@ export interface CalendarSdk {
 }
 
 export function createCalendarSdk(config: SdkConfig): CalendarSdk {
+  const usingDefaultStorage = config.storage === undefined;
   const {
     providers,
     storage = createMemoryStorage(),
@@ -140,8 +141,8 @@ export function createCalendarSdk(config: SdkConfig): CalendarSdk {
   }
 
   effectiveLogger.info('Calendar SDK initialized', {
-    providers: providers.map(p => p.key),
-    storageType: storage === createMemoryStorage() ? 'memory' : 'custom',
+    providers: providers.map((p) => p.key),
+    storageType: usingDefaultStorage ? 'memory' : 'custom',
   });
 
   return {

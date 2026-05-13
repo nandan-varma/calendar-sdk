@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { createTransport, defaultRetryOptions, type RetryOptions } from '../../../src/transport/index.js';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createTransport, defaultRetryOptions } from '../../../src/transport/index.js';
 
 describe('Transport', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
@@ -10,16 +10,16 @@ describe('Transport', () => {
 
   describe('createTransport', () => {
     it('should create transport with default config', () => {
-      const transport = createTransport({}, 'google');
+      const transport = createTransport('google', {});
       expect(transport).toBeDefined();
       expect(typeof transport.request).toBe('function');
     });
 
     it('should create transport with custom config', () => {
-      const transport = createTransport({
+      const transport = createTransport('google', {
         baseUrl: 'https://api.example.com',
         timeout: 5000,
-      }, 'google');
+      });
       
       expect(transport).toBeDefined();
     });
@@ -36,7 +36,7 @@ describe('Transport', () => {
       
       fetchMock.mockResolvedValueOnce(mockResponse);
       
-      const transport = createTransport({ fetch: fetchMock as any }, 'google');
+      const transport = createTransport('google', { fetch: fetchMock as any });
       
       const result = await transport.request({
         path: '/test',
@@ -57,7 +57,7 @@ describe('Transport', () => {
       
       fetchMock.mockResolvedValueOnce(mockResponse);
       
-      const transport = createTransport({ fetch: fetchMock as any, baseUrl: 'https://api.example.com' }, 'google');
+      const transport = createTransport('google', { fetch: fetchMock as any, baseUrl: 'https://api.example.com' });
       
       await transport.request({
         path: '/items',
@@ -80,7 +80,7 @@ describe('Transport', () => {
       
       fetchMock.mockResolvedValueOnce(mockResponse);
       
-      const transport = createTransport({ fetch: fetchMock as any }, 'google');
+      const transport = createTransport('google', { fetch: fetchMock as any });
       
       const result = await transport.request({
         method: 'POST',
@@ -102,7 +102,7 @@ describe('Transport', () => {
       
       fetchMock.mockResolvedValueOnce(mockResponse);
       
-      const transport = createTransport({ fetch: fetchMock as any }, 'google');
+      const transport = createTransport('google', { fetch: fetchMock as any });
       
       const result = await transport.request({
         method: 'DELETE',
@@ -134,10 +134,10 @@ describe('Transport', () => {
         .mockResolvedValueOnce(errorResponse)
         .mockResolvedValueOnce(successResponse);
       
-      const transport = createTransport({ 
+      const transport = createTransport('google', { 
         fetch: fetchMock as any,
         retryOptions: { ...defaultRetryOptions, maxRetries: 1 },
-      }, 'google');
+      });
       
       const result = await transport.request({
         path: '/test',
@@ -166,10 +166,10 @@ describe('Transport', () => {
         .mockResolvedValueOnce(errorResponse)
         .mockResolvedValueOnce(successResponse);
       
-      const transport = createTransport({ 
+      const transport = createTransport('google', { 
         fetch: fetchMock as any,
         retryOptions: { ...defaultRetryOptions, maxRetries: 1 },
-      }, 'google');
+      });
       
       const result = await transport.request({
         path: '/test',
@@ -188,10 +188,10 @@ describe('Transport', () => {
       
       fetchMock.mockResolvedValueOnce(errorResponse);
       
-      const transport = createTransport({ 
+      const transport = createTransport('google', { 
         fetch: fetchMock as any,
         retryOptions: { ...defaultRetryOptions, maxRetries: 1 },
-      }, 'google');
+      });
       
       try {
         await transport.request({
@@ -224,10 +224,10 @@ describe('Transport', () => {
         .mockResolvedValueOnce(errorResponse)
         .mockResolvedValueOnce(successResponse);
       
-      const transport = createTransport({ 
+      const transport = createTransport('google', { 
         fetch: fetchMock as any,
         retryOptions: { ...defaultRetryOptions, maxRetries: 1 },
-      }, 'google');
+      });
       
       const start = Date.now();
       await transport.request({ path: '/test' });
@@ -241,7 +241,7 @@ describe('Transport', () => {
     it('should throw on network error', async () => {
       fetchMock.mockRejectedValueOnce(new Error('Network error'));
       
-      const transport = createTransport({ fetch: fetchMock as any }, 'google');
+      const transport = createTransport('google', { fetch: fetchMock as any });
       
       try {
         await transport.request({ path: '/test' });
@@ -251,19 +251,15 @@ describe('Transport', () => {
     });
 
     it('should handle timeout', async () => {
-      const controller = new AbortController();
-      
-      fetchMock.mockImplementation(() => {
-        return new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('AbortError')), 100);
-        });
-      });
-      
-      const transport = createTransport({ 
+      fetchMock.mockRejectedValueOnce(
+        Object.assign(new Error('The operation was aborted'), { name: 'AbortError' }),
+      );
+
+      const transport = createTransport('google', {
         fetch: fetchMock as any,
         timeout: 50,
-      }, 'google');
-      
+      });
+
       try {
         await transport.request({ path: '/test' });
       } catch (e: any) {
@@ -283,7 +279,7 @@ describe('Transport', () => {
       
       fetchMock.mockResolvedValueOnce(mockResponse);
       
-      const transport = createTransport({ fetch: fetchMock as any }, 'google');
+      const transport = createTransport('google', { fetch: fetchMock as any });
       
       await transport.request({
         path: '/test',
@@ -308,7 +304,7 @@ describe('Transport', () => {
       
       fetchMock.mockResolvedValueOnce(mockResponse);
       
-      const transport = createTransport({ fetch: fetchMock as any }, 'google');
+      const transport = createTransport('google', { fetch: fetchMock as any });
       
       await transport.request({
         method: 'POST',

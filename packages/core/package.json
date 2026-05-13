@@ -18,18 +18,17 @@
     "test:unit": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage --passWithNoTests",
     "lint": "biome lint --config-path ../../biome.json ../../packages/core",
     "lint:fix": "biome lint --config-path ../../biome.json --write ../../packages/core",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
   },
   "dependencies": {
-    "uuid": "^9.0.1",
     "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
-    "@types/uuid": "^9.0.8",
     "dotenv": "^17.4.2",
     "tsup": "^8.0.2",
     "typescript": "^5.3.3",

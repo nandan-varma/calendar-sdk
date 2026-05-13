@@ -3,7 +3,7 @@ import type { ProviderAdapter, TokenSet } from '../adapters/provider.js';
 import type { StorageAdapter } from '../storage/index.js';
 import type { Logger } from '../logger/index.js';
 import { CalendarSdkError, errors } from '../errors/index.js';
-import { v4 as uuidv4 } from 'uuid';
+import { randomUUID } from 'node:crypto';
 
 export class CalendarsService {
   private storage: StorageAdapter;
@@ -79,7 +79,7 @@ export class CalendarsService {
 
     const calendar: Calendar = {
       ...created,
-      id: uuidv4(),
+      id: randomUUID(),
       accountId,
       capabilities: this.getCalendarCapabilities(created.accessRole),
     };

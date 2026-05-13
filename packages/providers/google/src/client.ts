@@ -8,6 +8,9 @@ import type {
   AvailabilityProviderMethods,
   SyncProviderMethods,
   SubscriptionsProviderMethods,
+  SyncResult,
+  ExpandedOccurrence,
+  DateTimeValue,
 } from '@calendar-sdk/core';
 import type { Logger } from '@calendar-sdk/core';
 import type { 
@@ -528,12 +531,16 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
       }
 
       const data: GoogleEventsResponse = await response.json();
-      return data.items.map(e => ({
+      return data.items.map((e): ExpandedOccurrence => ({
         id: e.id,
         eventId,
         title: e.summary || '(No title)',
-        start: e.start?.dateTime ? { dateTime: e.start.dateTime, timezone: e.start.timeZone || 'UTC' } : { date: e.start?.date || '' },
-        end: e.end?.dateTime ? { dateTime: e.end.dateTime, timezone: e.end.timeZone || 'UTC' } : { date: e.end?.date || '' },
+        start: (e.start?.dateTime
+          ? { dateTime: e.start.dateTime, timezone: e.start.timeZone || 'UTC' }
+          : { date: e.start?.date || '' }) as DateTimeValue,
+        end: (e.end?.dateTime
+          ? { dateTime: e.end.dateTime, timezone: e.end.timeZone || 'UTC' }
+          : { date: e.end?.date || '' }) as DateTimeValue,
         allDay: !!e.start?.date,
         status: e.status === 'confirmed' ? 'confirmed' : e.status === 'tentative' ? 'tentative' : 'cancelled',
         location: e.location,
@@ -607,6 +614,8 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
       const mapped = mapEventsResponse(data, '', '', calendarId);
 
       return {
+        accountId: '',
+        scope: 'events' as const,
         events: mapped.items.map(e => ({
           type: 'created' as const,
           event: e,
@@ -615,7 +624,7 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
         nextCursor: mapped.nextSyncToken ? { token: mapped.nextSyncToken, expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) } : undefined,
         expiredToken: false,
         hasMore: !!mapped.nextPageToken,
-      };
+      } as SyncResult;
     },
 
     incrementalSync: async (token, calendarId, cursor) => {
@@ -632,11 +641,13 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
 
       if (response.status === 410) {
         return {
+          accountId: '',
+          scope: 'events' as const,
           events: [],
           deletions: [],
           expiredToken: true,
           hasMore: false,
-        };
+        } as SyncResult;
       }
 
       if (!response.ok) {
@@ -657,12 +668,14 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
       }
 
       return {
+        accountId: '',
+        scope: 'events' as const,
         events,
         deletions: [],
         nextCursor: mapped.nextSyncToken ? { token: mapped.nextSyncToken, expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) } : undefined,
         expiredToken: false,
         hasMore: !!mapped.nextPageToken,
-      };
+      } as SyncResult;
     },
   };
 
@@ -698,7 +711,7 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
         provider: 'google',
         resource: config.resource,
         webhookUrl: config.webhookUrl,
-        leaseExpiry: new Date(parseInt(data.expiration)),
+        leaseExpiry: new Date(Number.parseInt(data.expiration)),
         secret: config.secret,
         renewalPolicy: 'auto',
         status: 'active',

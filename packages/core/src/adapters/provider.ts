@@ -151,7 +151,7 @@ function createGoogleAdapter(config: ProviderConfig, logger?: Logger): ProviderA
       sync: { incremental: true, webhook: true, polling: true },
       availability: { freeBusy: true, suggestedTimes: false },
     }),
-    createTransport: () => createTransport({ baseUrl: 'https://www.googleapis.com/calendar/v3' }, 'google', logger),
+    createTransport: () => createTransport('google', { baseUrl: 'https://www.googleapis.com/calendar/v3' }, logger),
   } as ProviderAdapter;
 }
 
@@ -168,7 +168,7 @@ function createMicrosoftAdapter(config: ProviderConfig, logger?: Logger): Provid
       sync: { incremental: true, webhook: true, polling: true },
       availability: { freeBusy: true, suggestedTimes: true },
     }),
-    createTransport: () => createTransport({ baseUrl: 'https://graph.microsoft.com/v1.0' }, 'microsoft', logger),
+    createTransport: () => createTransport('microsoft', { baseUrl: 'https://graph.microsoft.com/v1.0' }, logger),
   } as ProviderAdapter;
 }
 
@@ -185,7 +185,7 @@ function createCalDavAdapter(config: ProviderConfig, logger?: Logger): ProviderA
       sync: { incremental: false, webhook: false, polling: true },
       availability: { freeBusy: true, suggestedTimes: false },
     }),
-    createTransport: () => createTransport({}, 'caldav', logger),
+    createTransport: () => createTransport('caldav', {}, logger),
   } as ProviderAdapter;
 }
 

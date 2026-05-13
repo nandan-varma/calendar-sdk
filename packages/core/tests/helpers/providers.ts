@@ -42,11 +42,14 @@ export async function loadGoogleProvider(options: TestProviderOptions = {}): Pro
   
   // Try to use stored token or get new one via OAuth
   let token: TokenSet;
-  let account: Account;
   
   // Check if we have a stored token (from previous test run in same process)
-  const storedToken = (global as any).__googleToken;
-  const storedRefresh = (global as any).__googleRefreshToken;
+  const globals = globalThis as typeof globalThis & {
+    __googleToken?: string;
+    __googleRefreshToken?: string;
+  };
+  const storedToken = globals.__googleToken;
+  const storedRefresh = globals.__googleRefreshToken;
   
   if (storedToken && storedRefresh && !options.forceReauth) {
     try {
@@ -64,10 +67,10 @@ export async function loadGoogleProvider(options: TestProviderOptions = {}): Pro
   }
   
   // Cache the refresh token for next test
-  (global as any).__googleToken = token.accessToken;
-  (global as any).__googleRefreshToken = token.refreshToken;
+  globals.__googleToken = token.accessToken;
+  globals.__googleRefreshToken = token.refreshToken;
   
-  account = await adapter.accounts.getAccount(token);
+  const account = await adapter.accounts.getAccount(token);
   
   const provider: TestProvider = {
     key: 'google',
@@ -104,11 +107,14 @@ export async function loadMicrosoftProvider(options: TestProviderOptions = {}): 
     clientSecret: testEnv.microsoft.clientSecret,
   });
   
-  const storedToken = (global as any).__microsoftToken;
-  const storedRefresh = (global as any).__microsoftRefreshToken;
+  const globals = globalThis as typeof globalThis & {
+    __microsoftToken?: string;
+    __microsoftRefreshToken?: string;
+  };
+  const storedToken = globals.__microsoftToken;
+  const storedRefresh = globals.__microsoftRefreshToken;
   
   let token: TokenSet;
-  let account: Account;
   
   if (storedToken && storedRefresh && !options.forceReauth) {
     try {
@@ -125,10 +131,10 @@ export async function loadMicrosoftProvider(options: TestProviderOptions = {}): 
     token = await interactMicrosoftOAuth();
   }
   
-  (global as any).__microsoftToken = token.accessToken;
-  (global as any).__microsoftRefreshToken = token.refreshToken;
+  globals.__microsoftToken = token.accessToken;
+  globals.__microsoftRefreshToken = token.refreshToken;
   
-  account = await adapter.accounts.getAccount(token);
+  const account = await adapter.accounts.getAccount(token);
   
   const provider: TestProvider = {
     key: 'microsoft',
@@ -163,8 +169,14 @@ export async function loadAllProviders(options: TestProviderOptions = {}): Promi
 
 export function clearProviderCache(): void {
   cachedProviders.clear();
-  (global as any).__googleToken = undefined;
-  (global as any).__googleRefreshToken = undefined;
-  (global as any).__microsoftToken = undefined;
-  (global as any).__microsoftRefreshToken = undefined;
+  const globals = globalThis as typeof globalThis & {
+    __googleToken?: string;
+    __googleRefreshToken?: string;
+    __microsoftToken?: string;
+    __microsoftRefreshToken?: string;
+  };
+  globals.__googleToken = undefined;
+  globals.__googleRefreshToken = undefined;
+  globals.__microsoftToken = undefined;
+  globals.__microsoftRefreshToken = undefined;
 }

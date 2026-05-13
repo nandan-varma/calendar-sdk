@@ -197,10 +197,10 @@ function parseRRule(rrule: string): ParsedRecurrenceRule {
         result.freq = value.toLowerCase() as ParsedRecurrenceRule['freq'];
         break;
       case 'COUNT':
-        result.count = parseInt(value, 10);
+        result.count = Number.parseInt(value, 10);
         break;
       case 'INTERVAL':
-        result.interval = parseInt(value, 10);
+        result.interval = Number.parseInt(value, 10);
         break;
       case 'UNTIL':
         result.until = new Date(value);
@@ -209,10 +209,10 @@ function parseRRule(rrule: string): ParsedRecurrenceRule {
         result.byDay = value.split(',');
         break;
       case 'BYMONTHDAY':
-        result.byMonthDay = value.split(',').map(v => parseInt(v, 10));
+        result.byMonthDay = value.split(',').map(v => Number.parseInt(v, 10));
         break;
       case 'BYMONTH':
-        result.byMonth = value.split(',').map(v => parseInt(v, 10));
+        result.byMonth = value.split(',').map(v => Number.parseInt(v, 10));
         break;
       case 'WKST':
         result.wkst = value as ParsedRecurrenceRule['wkst'];
@@ -233,8 +233,8 @@ function expandRecurrence(
   const occurrences: Date[] = [];
   const effectiveStart = rangeStart || start;
   
-  let current = new Date(start);
-  let count = parsed.count || 100;
+  const current = new Date(start);
+  const count = parsed.count || 100;
   
   while (occurrences.length < count && current.getTime() <= endDate.getTime()) {
     if (current.getTime() >= effectiveStart.getTime()) {

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { 
-  CapabilityMap, 
+  type CapabilityMap, 
   CalendarCapabilityMap, 
   EventCapabilityMap, 
   SyncCapabilityMap, 

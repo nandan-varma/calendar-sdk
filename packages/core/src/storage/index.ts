@@ -124,7 +124,11 @@ export function createMemoryStorage(_options?: MemoryStorageOptions): StorageAda
     },
     events: {
       save: async (event) => { events.set(event.id, event); },
-      saveMany: async (evts) => { evts.forEach(e => events.set(e.id, e)); },
+      saveMany: async (evts) => {
+        for (const event of evts) {
+          events.set(event.id, event);
+        }
+      },
       get: async (id) => events.get(id) ?? null,
       list: async (calendarId, query) => {
         let results = Array.from(events.values()).filter(e => e.calendarId === calendarId);
@@ -161,7 +165,9 @@ export function createMemoryStorage(_options?: MemoryStorageOptions): StorageAda
         const toDelete = Array.from(events.values())
           .filter(e => e.calendarId === calendarId)
           .map(e => e.id);
-        toDelete.forEach(id => events.delete(id));
+        for (const id of toDelete) {
+          events.delete(id);
+        }
       },
     },
     syncCursors: {
@@ -174,7 +180,9 @@ export function createMemoryStorage(_options?: MemoryStorageOptions): StorageAda
         const toDelete = Array.from(syncCursors.values())
           .filter(c => c.accountId === accountId)
           .map(c => `${c.accountId}:${c.scope}`);
-        toDelete.forEach(key => syncCursors.delete(key));
+        for (const key of toDelete) {
+          syncCursors.delete(key);
+        }
       },
     },
     subscriptions: {

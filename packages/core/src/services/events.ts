@@ -6,7 +6,8 @@ import type {
   EventOptions,
   AttendeeInput,
 } from '../types/event.js';
-import type { ProviderAdapter } from '../adapters/provider.js';
+import type { ProviderAdapter, TokenSet } from '../adapters/provider.js';
+import type { ProviderKey } from '../types/common.js';
 import type { StorageAdapter } from '../storage/index.js';
 import type { Logger } from '../logger/index.js';
 import { CalendarSdkError, errors } from '../errors/index.js';
@@ -14,14 +15,14 @@ import { v4 as uuidv4 } from 'uuid';
 
 export class EventsService {
   private storage: StorageAdapter;
-  private getToken: (accountId: string) => Promise<string | null>;
-  private getProvider: (accountId: string) => ProviderAdapter;
+  private getToken: (accountId: string) => Promise<TokenSet | null>;
+  private getProvider: (providerKey: ProviderKey) => ProviderAdapter;
   private logger: Logger;
 
   constructor(
     storage: StorageAdapter,
-    getToken: (accountId: string) => Promise<string | null>,
-    getProvider: (accountId: string) => ProviderAdapter,
+    getToken: (accountId: string) => Promise<TokenSet | null>,
+    getProvider: (providerKey: ProviderKey) => ProviderAdapter,
     logger: Logger
   ) {
     this.storage = storage;
@@ -199,6 +200,11 @@ export class EventsService {
       throw errors.notFound('google', 'Target calendar not found');
     }
 
+    const account = await this.storage.accounts.get(sourceCalendar.accountId);
+    if (!account) {
+      throw errors.notFound('google', 'Account not found');
+    }
+
     if (sourceCalendar.accountId !== targetCalendar.accountId) {
       throw new CalendarSdkError({
         code: 'VALIDATION_FAILED',
@@ -206,15 +212,10 @@ export class EventsService {
       });
     }
 
-    const caps = event.capabilities;
-    if (!caps?.move) {
-      throw errors.capabilityUnsupported('Event move', sourceCalendar.account.provider);
-    }
-
-    const provider = this.getProvider(sourceCalendar.accountId);
+    const provider = this.getProvider(account.provider);
     const token = await this.getToken(sourceCalendar.accountId);
     if (!token) {
-      throw errors.authRequired(sourceCalendar.accountId);
+      throw errors.authRequired(account.provider);
     }
 
     this.logger.info('Moving event', { eventId, from: event.calendarId, to: targetCalendarId });
@@ -250,15 +251,15 @@ export class EventsService {
       throw errors.notFound('google', 'Target calendar not found');
     }
 
-    const caps = event.capabilities;
-    if (!caps?.duplicate) {
-      throw errors.capabilityUnsupported('Event duplicate', sourceCalendar.accountId);
+    const account = await this.storage.accounts.get(sourceCalendar.accountId);
+    if (!account) {
+      throw errors.notFound('google', 'Account not found');
     }
 
-    const provider = this.getProvider(sourceCalendar.accountId);
+    const provider = this.getProvider(account.provider);
     const token = await this.getToken(sourceCalendar.accountId);
     if (!token) {
-      throw errors.authRequired(sourceCalendar.accountId);
+      throw errors.authRequired(account.provider);
     }
 
     this.logger.info('Duplicating event', { eventId, to: targetCalendarId });

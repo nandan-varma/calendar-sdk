@@ -1,4 +1,4 @@
-import * as readline from 'readline';
+import * as readline from 'node:readline';
 import type { TokenSet, RefreshToken } from '../../src/types/index.js';
 
 export interface OAuthConfig {
@@ -175,9 +175,15 @@ export async function promptUser(question: string): Promise<string> {
 }
 
 export async function interactGoogleOAuth(): Promise<TokenSet> {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    throw new Error('Google OAuth env vars missing');
+  }
+
   const config = {
-    clientId: process.env.GOOGLE_CLIENT_ID!,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    clientId,
+    clientSecret,
     redirectUri: process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/auth/google/callback',
     scopes: [
       'https://www.googleapis.com/auth/calendar',
@@ -215,9 +221,15 @@ export async function interactGoogleOAuth(): Promise<TokenSet> {
 }
 
 export async function interactMicrosoftOAuth(): Promise<TokenSet> {
+  const clientId = process.env.MICROSOFT_CLIENT_ID;
+  const clientSecret = process.env.MICROSOFT_CLIENT_SECRET;
+  if (!clientId || !clientSecret) {
+    throw new Error('Microsoft OAuth env vars missing');
+  }
+
   const config = {
-    clientId: process.env.MICROSOFT_CLIENT_ID!,
-    clientSecret: process.env.MICROSOFT_CLIENT_SECRET!,
+    clientId,
+    clientSecret,
     redirectUri: process.env.MICROSOFT_REDIRECT_URI || 'http://localhost:3000/auth/microsoft/callback',
     scopes: [
       'Calendars.ReadWrite',

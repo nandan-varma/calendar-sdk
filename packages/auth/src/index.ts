@@ -70,9 +70,17 @@ export function createAuthorizationUrl(options: AuthFlowOptions): string {
 
   const baseUrl = options.provider === 'google'
     ? 'https://accounts.google.com/o/oauth2/v2/auth'
-    : `https://login.microsoftonline.com/common/oauth2/v2.0/authorize`;
+    : 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
 
   return `${baseUrl}?${params}`;
+}
+
+interface OAuthTokenResponse {
+  access_token: string;
+  refresh_token?: string;
+  expires_in: number;
+  token_type: string;
+  scope?: string;
 }
 
 export async function exchangeCodeForTokens(options: {
@@ -105,7 +113,7 @@ export async function exchangeCodeForTokens(options: {
     throw new Error(`Token exchange failed: ${error}`);
   }
 
-  const data = await response.json();
+  const data = (await response.json()) as OAuthTokenResponse;
 
   return {
     accessToken: data.access_token,
@@ -138,7 +146,7 @@ export async function refreshToken(options: RefreshOptions, token: RefreshToken)
     throw new Error('Token refresh failed');
   }
 
-  const data = await response.json();
+  const data = (await response.json()) as OAuthTokenResponse;
 
   return {
     accessToken: data.access_token,
@@ -164,16 +172,12 @@ export function isTokenExpired(token: TokenSet): boolean {
   return Date.now() >= token.expiresAt.getTime();
 }
 
-export function shouldRefreshToken(token: TokenSet, bufferMs: number = 60000): boolean {
+export function shouldRefreshToken(token: TokenSet, bufferMs = 60000): boolean {
   if (!token.expiresAt) return false;
   return Date.now() >= token.expiresAt.getTime() - bufferMs;
 }
 
-export function createTokenManager(options: RefreshOptions): TokenManager {
-  return new TokenManager(options);
-}
-
-class TokenManager {
+class InternalTokenManager {
   private options: RefreshOptions;
   private cache = new Map<string, { token: TokenSet; refreshAt: Date }>();
 
@@ -181,18 +185,21 @@ class TokenManager {
     this.options = options;
   }
 
-  async getToken(accountId: string, getRefreshToken: () => Promise<RefreshToken | null>): Promise<TokenSet | null> {
+  async getToken(
+    accountId: string,
+    getRefreshToken: () => Promise<RefreshToken | null>
+  ): Promise<TokenSet | null> {
     const cached = this.cache.get(accountId);
     
     if (cached && !shouldRefreshToken(cached.token)) {
       return cached.token;
     }
 
-    const refreshToken = await getRefreshToken();
-    if (!refreshToken) return null;
+    const refreshTokenValue = await getRefreshToken();
+    if (!refreshTokenValue) return null;
 
     try {
-      const newToken = await refreshToken(this.options, refreshToken);
+      const newToken = await refreshToken(this.options, refreshTokenValue);
       this.cache.set(accountId, { token: newToken, refreshAt: new Date() });
       return newToken;
     } catch (error) {
@@ -210,7 +217,11 @@ class TokenManager {
   }
 }
 
-export interface TokenManager {
+export function createTokenManager(options: RefreshOptions): TokenManagerHandle {
+  return new InternalTokenManager(options);
+}
+
+export interface TokenManagerHandle {
   getToken(accountId: string, getRefreshToken: () => Promise<RefreshToken | null>): Promise<TokenSet | null>;
   invalidateToken(accountId: string): void;
   clear(): void;

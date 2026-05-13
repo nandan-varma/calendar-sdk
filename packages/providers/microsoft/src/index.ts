@@ -512,6 +512,8 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
 
       const data = await response.json();
       return {
+        accountId: '',
+        scope: 'events' as const,
         events: data.value.map((evt: any) => ({ type: 'created' as const, event: mapMicrosoftEvent(evt, calendarId) })),
         deletions: [],
         expiredToken: false,
@@ -544,7 +546,7 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
         throw new Error(`Failed to create subscription: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as { id: string; expirationDateTime: string; resource: string };
       return {
         id: data.id,
         accountId: '',
@@ -552,8 +554,8 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
         resource: config.resource,
         webhookUrl: config.webhookUrl,
         leaseExpiry: new Date(data.expirationDateTime),
-        renewalPolicy: 'auto',
-        status: 'active',
+        renewalPolicy: 'auto' as const,
+        status: 'active' as const,
         createdAt: new Date(),
         updatedAt: new Date(),
       };
@@ -575,15 +577,15 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
         throw new Error(`Failed to renew subscription: ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as { id: string; expirationDateTime: string; resource: string };
       return {
         id: data.id,
         accountId: '',
         provider: 'microsoft',
         resource: data.resource,
         leaseExpiry: new Date(data.expirationDateTime),
-        renewalPolicy: 'auto',
-        status: 'active',
+        renewalPolicy: 'auto' as const,
+        status: 'active' as const,
         createdAt: new Date(),
         updatedAt: new Date(),
       };

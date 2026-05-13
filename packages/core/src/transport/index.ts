@@ -50,8 +50,8 @@ export interface Transport {
 }
 
 export function createTransport(
-  config: TransportConfig = {},
   provider: ProviderKey,
+  config: TransportConfig = {},
   logger?: Logger
 ): Transport {
   const {
@@ -124,13 +124,13 @@ export function createTransport(
             const contentType = response.headers.get('content-type');
             
             if (contentType?.includes('application/json')) {
-              rawBody = await response.json().catch(() => null);
+              rawBody = await response.json().catch((): null => null);
             } else if (contentType?.includes('text/')) {
               rawBody = await response.text();
             }
 
             const retryAfterHeader = response.headers.get('retry-after');
-            const retryAfter = retryAfterHeader ? parseInt(retryAfterHeader, 10) : undefined;
+            const retryAfter = retryAfterHeader ? Number.parseInt(retryAfterHeader, 10) : undefined;
 
             const error = mapHttpError(response.status, provider, rawBody, requestId);
             
@@ -185,9 +185,9 @@ export function createTransport(
 
             const effectiveRetryOptions = retryOptions || defaultRetryOptions;
             const retryableErrors = effectiveRetryOptions?.retryableErrors ?? defaultRetryOptions.retryableErrors;
-            const isRetryableError = retryableErrors.some(
+            const isRetryableError = retryableErrors?.some(
               e => error.message.includes(e) || error.name === e
-            );
+            ) ?? false;
 
             if (isRetryableError && attempt < (retryOptions.maxRetries ?? defaultRetryOptions.maxRetries)) {
               const delay = calculateBackoff(attempt, retryOptions);
@@ -228,11 +228,11 @@ function buildUrl(baseUrl: string | undefined, path: string, query?: Record<stri
   }
 
   const params = new URLSearchParams();
-  Object.entries(query).forEach(([key, value]) => {
+  for (const [key, value] of Object.entries(query)) {
     if (value !== undefined && value !== null) {
       params.append(key, value);
     }
-  });
+  }
 
   return `${url}?${params.toString()}`;
 }
@@ -250,12 +250,12 @@ function calculateBackoff(
   options: RetryOptions,
   retryAfter?: number
 ): number {
-  if (retryAfter && !isNaN(retryAfter)) {
+  if (retryAfter && !Number.isNaN(retryAfter)) {
     return retryAfter * 1000;
   }
 
   const delay = Math.min(
-    options.initialDelayMs * Math.pow(options.backoffMultiplier, attempt),
+    options.initialDelayMs * options.backoffMultiplier ** attempt,
     options.maxDelayMs
   );
 

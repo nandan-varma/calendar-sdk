@@ -5,21 +5,23 @@
   "description": "Multi-provider calendar integration platform",
   "scripts": {
     "build": "pnpm -r run build",
+    "build:watch": "pnpm -r run build -- --watch",
     "test": "pnpm -r run test",
+    "test:unit": "pnpm -r run test:unit",
+    "test:integration": "pnpm -r run test:integration",
+    "test:watch": "pnpm -r run test:watch",
     "test:coverage": "pnpm -r run test -- --coverage",
-    "lint": "pnpm -r run lint",
-    "lint:fix": "eslint . --fix",
+    "lint": "biome lint .",
+    "lint:fix": "biome lint --write .",
     "typecheck": "pnpm -r run typecheck",
     "clean": "pnpm -r run clean",
-    "format": "prettier --write \"packages/**/*.ts\"",
-    "format:check": "prettier --check \"packages/**/*.ts\""
+    "format": "biome format --write .",
+    "format:check": "biome format ."
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "typescript": "^5.3.3",
-    "eslint": "^8.56.0",
-    "@typescript-eslint/eslint-plugin": "^6.21.0",
-    "@typescript-eslint/parser": "^6.21.0",
+    "@biomejs/biome": "^1.9.4",
     "prettier": "^3.2.0",
     "vitest": "^1.2.0",
     "@vitest/coverage-v8": "^1.2.0"

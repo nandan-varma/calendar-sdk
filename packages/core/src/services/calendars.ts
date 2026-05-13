@@ -1,5 +1,5 @@
 import type { Calendar, CreateCalendarInput, UpdateCalendarInput, ListCalendarsQuery } from '../types/calendar.js';
-import type { ProviderAdapter } from '../adapters/provider.js';
+import type { ProviderAdapter, TokenSet } from '../adapters/provider.js';
 import type { StorageAdapter } from '../storage/index.js';
 import type { Logger } from '../logger/index.js';
 import { CalendarSdkError, errors } from '../errors/index.js';
@@ -7,15 +7,18 @@ import { v4 as uuidv4 } from 'uuid';
 
 export class CalendarsService {
   private storage: StorageAdapter;
+  private getToken: (accountId: string) => Promise<TokenSet | null>;
   private getProvider: (accountId: string) => Promise<{ provider: ProviderAdapter; accountId: string }>;
   private logger: Logger;
 
   constructor(
     storage: StorageAdapter,
+    getToken: (accountId: string) => Promise<TokenSet | null>,
     getProvider: (accountId: string) => Promise<{ provider: ProviderAdapter; accountId: string }>,
     logger: Logger
   ) {
     this.storage = storage;
+    this.getToken = getToken;
     this.getProvider = getProvider;
     this.logger = logger;
   }
@@ -26,11 +29,6 @@ export class CalendarsService {
       throw errors.notFound('google', 'Account not found');
     }
 
-    const provider = this.providers.get(account.provider);
-    if (!provider) {
-      throw errors.providerError(account.provider, 'Provider not configured');
-    }
-
     const token = await this.getToken(accountId);
     if (!token) {
       throw errors.authRequired(account.provider);
@@ -38,6 +36,7 @@ export class CalendarsService {
 
     this.logger.debug('Listing calendars', { accountId });
 
+    const { provider } = await this.getProvider(accountId);
     const result = await provider.calendars.list(token, query);
 
     for (const cal of result.items) {
@@ -63,11 +62,7 @@ export class CalendarsService {
       throw errors.notFound('google', 'Account not found');
     }
 
-    const provider = this.providers.get(account.provider);
-    if (!provider) {
-      throw errors.providerError(account.provider, 'Provider not configured');
-    }
-
+    const { provider } = await this.getProvider(accountId);
     const caps = provider.getCapabilities();
     if (!caps.calendars.create) {
       throw errors.capabilityUnsupported('Calendar creation', account.provider);
@@ -110,11 +105,6 @@ export class CalendarsService {
       throw errors.capabilityUnsupported('Calendar update', account.provider);
     }
 
-    const provider = this.providers.get(account.provider);
-    if (!provider) {
-      throw errors.providerError(account.provider, 'Provider not configured');
-    }
-
     const token = await this.getToken(calendar.accountId);
     if (!token) {
       throw errors.authRequired(account.provider);
@@ -122,6 +112,7 @@ export class CalendarsService {
 
     this.logger.info('Updating calendar', { calendarId, updates: Object.keys(patch) });
 
+    const { provider } = await this.getProvider(calendar.accountId);
     const updated = await provider.calendars.update(token, calendar.providerId, patch);
 
     const result: Calendar = {
@@ -152,11 +143,6 @@ export class CalendarsService {
       throw errors.capabilityUnsupported('Calendar deletion', account.provider);
     }
 
-    const provider = this.providers.get(account.provider);
-    if (!provider) {
-      throw errors.providerError(account.provider, 'Provider not configured');
-    }
-
     const token = await this.getToken(calendar.accountId);
     if (!token) {
       throw errors.authRequired(account.provider);
@@ -164,6 +150,7 @@ export class CalendarsService {
 
     this.logger.info('Deleting calendar', { calendarId });
 
+    const { provider } = await this.getProvider(calendar.accountId);
     await provider.calendars.delete(token, calendar.providerId);
     await this.storage.events.deleteByCalendar(calendarId);
     await this.storage.calendars.delete(calendarId);
@@ -188,9 +175,6 @@ export class CalendarsService {
     this.logger.info('Calendar sharing not implemented for this provider', { calendarId, provider: account.provider });
   }
 
-  private getToken(accountId: string): Promise<string | null> {
-    return Promise.resolve(null);
-  }
 
   private getCalendarCapabilities(accessRole: string): Calendar['capabilities'] {
     return {

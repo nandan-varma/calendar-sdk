@@ -1,5 +1,3 @@
-import type { Date } from './common.js';
-
 export type SyncScope = 'calendars' | 'events' | 'all';
 
 export interface SyncCursor {

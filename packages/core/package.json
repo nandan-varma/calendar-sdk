@@ -13,10 +13,13 @@
   },
   "scripts": {
     "build": "tsup",
+    "build:watch": "tsup --watch",
     "test": "vitest run",
     "test:unit": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.ts",
-    "lint": "tsc --noEmit",
+    "test:watch": "vitest",
+    "lint": "biome lint --config-path ../../biome.json ../../packages/core",
+    "lint:fix": "biome lint --config-path ../../biome.json --write ../../packages/core",
     "typecheck": "tsc --noEmit",
     "clean": "rm -rf dist"
   },

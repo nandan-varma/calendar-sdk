@@ -1,0 +1,95 @@
+{
+  "$schema": "https://biomejs.dev/schemas/1.9.4/schema.json",
+  "files": {
+    "ignore": ["dist", "node_modules", "coverage"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true
+    }
+  },
+  "overrides": [
+    {
+      "include": ["**/tests/**", "**/*.test.*", "**/*.spec.*"],
+      "linter": {
+        "rules": {
+          "complexity": {
+            "noForEach": "off"
+          },
+          "style": {
+            "noUnusedTemplateLiteral": "off",
+            "noNonNullAssertion": "off",
+            "useConst": "off"
+          },
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
+    },
+    {
+      "include": ["**/tests/**/*.ts", "**/tests/**/*.tsx", "**/tests/**/*.mjs"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNodejsImportProtocol": "off"
+          }
+        }
+      }
+    },
+    {
+      "include": ["packages/providers/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          },
+          "style": {
+            "noNonNullAssertion": "off"
+          },
+          "performance": {
+            "noDelete": "off"
+          }
+        }
+      }
+    },
+    {
+      "include": ["packages/auth/**"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noUnsafeDeclarationMerging": "off"
+          },
+          "style": {
+            "noUnusedTemplateLiteral": "off"
+          }
+        }
+      }
+    },
+    {
+      "include": ["packages/providers/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "useNodejsImportProtocol": "off"
+          }
+        }
+      }
+    }
+  ],
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single",
+      "semicolons": "always",
+      "trailingCommas": "es5",
+      "arrowParentheses": "always"
+    }
+  }
+}

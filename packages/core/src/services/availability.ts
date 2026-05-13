@@ -1,19 +1,20 @@
 import type { FreeBusyQuery, FreeBusyResult, SuggestMeetingQuery, SuggestMeetingResult } from '../types/availability.js';
-import type { ProviderAdapter } from '../adapters/provider.js';
+import type { ProviderAdapter, TokenSet } from '../adapters/provider.js';
+import type { ProviderKey } from '../types/common.js';
 import type { StorageAdapter } from '../storage/index.js';
 import type { Logger } from '../logger/index.js';
 import { errors } from '../errors/index.js';
 
 export class AvailabilityService {
   private storage: StorageAdapter;
-  private getToken: (accountId: string) => Promise<string | null>;
-  private getProvider: (accountId: string) => ProviderAdapter;
+  private getToken: (accountId: string) => Promise<TokenSet | null>;
+  private getProvider: (providerKey: ProviderKey) => ProviderAdapter;
   private logger: Logger;
 
   constructor(
     storage: StorageAdapter,
-    getToken: (accountId: string) => Promise<string | null>,
-    getProvider: (accountId: string) => ProviderAdapter,
+    getToken: (accountId: string) => Promise<TokenSet | null>,
+    getProvider: (providerKey: ProviderKey) => ProviderAdapter,
     logger: Logger
   ) {
     this.storage = storage;
@@ -41,10 +42,7 @@ export class AvailabilityService {
 
     this.logger.debug('Fetching free/busy', { accountId, timeMin: query.timeMin, timeMax: query.timeMax });
 
-    const result = await provider.availability.freeBusy(token, {
-      ...query,
-      accountId,
-    });
+    const result = await provider.availability.freeBusy(token, query);
 
     return result;
   }

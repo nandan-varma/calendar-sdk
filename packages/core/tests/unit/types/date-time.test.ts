@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { DateTime, DateOnly, DateTimeValue, isAllDay, toDate, toDateTimeString } from '../../../src/types/common.js';
+import { type DateTime, type DateOnly, type DateTimeValue, isAllDay, toDate, toDateTimeString } from '../../../src/types/common.js';
 
 describe('DateTime Types', () => {
   describe('isAllDay', () => {

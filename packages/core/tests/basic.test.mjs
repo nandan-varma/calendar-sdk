@@ -94,11 +94,11 @@ test('Error has required properties', () => {
   assert(err.message.length > 0, 'Should have message');
 });
 
-console.log(`\n========================================`);
+console.log('\n========================================');
 console.log(`Tests: ${passed + failed}`);
 console.log(`Passed: ${passed} ✅`);
 console.log(`Failed: ${failed} ❌`);
-console.log(`========================================`);
+console.log('========================================');
 
 if (failed > 0) {
   process.exit(1);

@@ -1,0 +1,96 @@
+---
+title: Quickstart
+description: Connect a provider, list calendars, and create your first event in a few lines.
+sidebar:
+  order: 2
+---
+
+This walkthrough connects a Google account, lists its calendars, creates an event, and checks free/busy. The same code works for Microsoft and CalDAV — only the provider factory changes.
+
+## 1. Create the SDK
+
+```typescript
+import { createCalendarSdk } from "@nandan-varma/calendar-sdk";
+import { createGoogleProvider } from "@nandan-varma/calendar-sdk-google";
+
+const sdk = createCalendarSdk({
+  providers: [
+    {
+      key: "google",
+      adapter: createGoogleProvider({
+        clientId: process.env.GOOGLE_CLIENT_ID!,
+        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      }),
+    },
+  ],
+  // storage defaults to in-memory; plug in your database via a StorageAdapter
+});
+```
+
+`createCalendarSdk` returns a `CalendarSdk` object exposing six services — `accounts`, `calendars`, `events`, `availability`, `subscriptions`, and `sync` — plus `hooks`, `storage`, and `getProvider(key)`. See [Configuration](/reference/configuration/) for every option.
+
+## 2. Connect an account
+
+Pass tokens from your OAuth callback (or an authorization code — see [Authentication](/guides/authentication/)):
+
+```typescript
+const account = await sdk.accounts.connect("google", {
+  authInput: { accessToken, refreshToken },
+});
+```
+
+The SDK fetches the account profile, stores the account and its tokens in storage, and returns an `Account` with a stable SDK-generated `id`. From here on, every call is provider-agnostic.
+
+## 3. List calendars and events
+
+```typescript
+const calendars = await sdk.calendars.list(account.id);
+
+const events = await sdk.events.list(calendars[0].id, {
+  timeMin: new Date(),
+  timeMax: new Date(Date.now() + 7 * 86400_000),
+});
+```
+
+:::note
+Call `sdk.calendars.list(accountId)` before working with a calendar's events. Services resolve calendars from **storage**, and `calendars.list` is what fetches and persists them.
+:::
+
+## 4. Create an event
+
+```typescript
+await sdk.events.create(calendars[0].id, {
+  title: "Coffee",
+  start: { dateTime: "2026-08-01T10:00:00Z", timezone: "UTC" },
+  end: { dateTime: "2026-08-01T10:30:00Z", timezone: "UTC" },
+});
+```
+
+All-day events use the `{ date: "2026-08-01" }` form instead — see [Working with events](/guides/events/).
+
+## 5. Check availability
+
+```typescript
+const freeBusy = await sdk.availability.freeBusy(account.id, {
+  timeMin: new Date(),
+  timeMax: new Date(Date.now() + 86400_000),
+  calendars: [calendars[0].providerId],
+});
+```
+
+## Swapping providers
+
+```typescript
+import { createMicrosoftProvider } from "@nandan-varma/calendar-sdk-microsoft";
+// or
+import { createCalDavProvider } from "@nandan-varma/calendar-sdk-caldav";
+```
+
+Register them under their key (`"microsoft"` / `"caldav"`) and the rest of your code stays identical. A single SDK instance can hold all three providers at once, with accounts from each.
+
+## Where to go next
+
+- [Architecture](/guides/architecture/) — how the core, adapters, and storage fit together
+- [Authentication](/guides/authentication/) — full OAuth flows with `@nandan-varma/calendar-sdk-auth`
+- [Storage](/guides/storage/) — persist accounts and tokens in your own database
+- [Sync](/guides/sync/) and [Webhooks](/guides/webhooks/) — keep local state up to date

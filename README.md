@@ -95,11 +95,20 @@ const flow = createAuthFlow({
 
 See [SPEC.md](SPEC.md) for the full v1 design rationale.
 
+## Documentation
+
+Comprehensive docs (guides for every service, provider setup, storage, sync, webhooks, and full reference) are published at **<https://nandan-varma.github.io/calendar-sdk/>** and live in [`docs/`](docs), built with [Astro Starlight](https://starlight.astro.build):
+
+```bash
+pnpm --filter @nandan-varma/calendar-sdk-docs dev    # local docs at http://localhost:4321
+pnpm --filter @nandan-varma/calendar-sdk-docs build  # static site in docs/dist
+```
+
 ## Development
 
 ```bash
 pnpm install
-pnpm build       # build all packages
+pnpm build       # build all packages (including the docs site)
 pnpm test        # run all test suites
 pnpm typecheck
 pnpm lint

@@ -1,4 +1,4 @@
-import type { ProviderAdapter, TokenSet, RefreshToken, CreateAuthUrlOptions } from '@calendar-sdk/core';
+import type { ProviderAdapter, TokenSet, RefreshToken, CreateAuthUrlOptions } from '@nandan-varma/calendar-sdk';
 
 export interface MicrosoftProviderConfig {
   clientId: string;

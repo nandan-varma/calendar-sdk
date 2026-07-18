@@ -1,4 +1,4 @@
-import type { TokenSet, RefreshToken } from '@calendar-sdk/core';
+import type { TokenSet, RefreshToken } from '@nandan-varma/calendar-sdk';
 
 export interface AuthSession {
   accountId: string;

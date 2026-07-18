@@ -25,8 +25,8 @@ const baseConfig = defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@calendar-sdk/google': path.resolve(__dirname, '../providers/google/src/index.ts'),
-      '@calendar-sdk/microsoft': path.resolve(__dirname, '../providers/microsoft/src/index.ts'),
+      '@nandan-varma/calendar-sdk-google': path.resolve(__dirname, '../providers/google/src/index.ts'),
+      '@nandan-varma/calendar-sdk-microsoft': path.resolve(__dirname, '../providers/microsoft/src/index.ts'),
     },
   },
 });

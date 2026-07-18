@@ -1,6 +1,6 @@
-import type { Account } from '@calendar-sdk/core';
+import type { Account } from '@nandan-varma/calendar-sdk';
 import type { GoogleUser } from '../types/index.js';
-import { getCapabilitiesForProvider } from '@calendar-sdk/core';
+import { getCapabilitiesForProvider } from '@nandan-varma/calendar-sdk';
 
 export function mapAccount(user: GoogleUser): Account {
   return {

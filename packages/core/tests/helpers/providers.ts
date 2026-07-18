@@ -1,7 +1,7 @@
 import type { ProviderAdapter, TokenSet } from '../../src/types/index.js';
 import type { Account } from '../../src/types/account.js';
-import { createGoogleProvider } from '@calendar-sdk/google';
-import { createMicrosoftProvider } from '@calendar-sdk/microsoft';
+import { createGoogleProvider } from '@nandan-varma/calendar-sdk-google';
+import { createMicrosoftProvider } from '@nandan-varma/calendar-sdk-microsoft';
 import { testEnv, hasGoogleCredentials, hasMicrosoftCredentials } from './env.js';
 import { interactGoogleOAuth, interactMicrosoftOAuth, refreshGoogleToken, refreshMicrosoftToken } from './oauth.js';
 

@@ -1,4 +1,4 @@
-import type { Calendar } from '@calendar-sdk/core';
+import type { Calendar } from '@nandan-varma/calendar-sdk';
 import type { GoogleCalendarListEntry, GoogleCalendarListResponse } from '../types/index.js';
 import { randomUUID } from 'node:crypto';
 

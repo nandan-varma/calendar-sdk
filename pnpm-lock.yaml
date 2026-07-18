@@ -26,7 +26,7 @@ importers:
 
   packages/auth:
     dependencies:
-      '@calendar-sdk/core':
+      '@nandan-varma/calendar-sdk':
         specifier: workspace:*
         version: link:../core
     devDependencies:
@@ -67,7 +67,7 @@ importers:
 
   packages/providers/caldav:
     dependencies:
-      '@calendar-sdk/core':
+      '@nandan-varma/calendar-sdk':
         specifier: workspace:*
         version: link:../../core
     devDependencies:
@@ -86,7 +86,7 @@ importers:
 
   packages/providers/google:
     dependencies:
-      '@calendar-sdk/core':
+      '@nandan-varma/calendar-sdk':
         specifier: workspace:*
         version: link:../../core
     devDependencies:
@@ -105,7 +105,7 @@ importers:
 
   packages/providers/microsoft:
     dependencies:
-      '@calendar-sdk/core':
+      '@nandan-varma/calendar-sdk':
         specifier: workspace:*
         version: link:../../core
     devDependencies:

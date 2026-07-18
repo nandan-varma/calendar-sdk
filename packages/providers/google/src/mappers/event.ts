@@ -11,7 +11,7 @@ import type {
   EventStatus,
   EventTransparency,
   EventVisibility,
-} from '@calendar-sdk/core';
+} from '@nandan-varma/calendar-sdk';
 import type { GoogleEvent, GoogleEventsResponse } from '../types/index.js';
 import { randomUUID } from 'node:crypto';
 

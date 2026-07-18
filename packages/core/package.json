@@ -1,6 +1,6 @@
 {
-  "name": "@calendar-sdk/core",
-  "version": "1.0.0",
+  "name": "@nandan-varma/calendar-sdk",
+  "version": "0.0.1",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -36,5 +36,41 @@
   },
   "peerDependencies": {
     "typescript": "^5.3.3"
+  },
+  "description": "Provider-agnostic TypeScript calendar SDK: one API for events, calendars, availability, sync, and webhooks across Google Calendar, Microsoft Graph, and CalDAV",
+  "license": "MIT",
+  "author": "Nandan Varma",
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "keywords": [
+    "calendar",
+    "google-calendar",
+    "microsoft-graph",
+    "outlook",
+    "caldav",
+    "icloud",
+    "ical",
+    "scheduling",
+    "availability",
+    "sync",
+    "sdk",
+    "typescript"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nandan-varma/calendar-sdk.git",
+    "directory": "packages/core"
+  },
+  "homepage": "https://github.com/nandan-varma/calendar-sdk#readme",
+  "bugs": {
+    "url": "https://github.com/nandan-varma/calendar-sdk/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

@@ -11,8 +11,8 @@ import type {
   SyncResult,
   ExpandedOccurrence,
   DateTimeValue,
-} from '@calendar-sdk/core';
-import type { Logger } from '@calendar-sdk/core';
+} from '@nandan-varma/calendar-sdk';
+import type { Logger } from '@nandan-varma/calendar-sdk';
 import type { 
   GoogleCalendarListResponse, 
   GoogleEventsResponse, 

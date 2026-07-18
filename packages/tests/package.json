@@ -1,6 +1,6 @@
 {
-  "name": "@calendar-sdk/tests",
-  "version": "1.0.0",
+  "name": "@nandan-varma/calendar-sdk-tests",
+  "version": "0.0.1",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -28,5 +28,6 @@
     "typescript": "^5.3.3",
     "tsup": "^8.0.2",
     "vitest": "^1.2.0"
-  }
+  },
+  "private": true
 }

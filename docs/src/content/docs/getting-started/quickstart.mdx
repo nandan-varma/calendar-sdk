@@ -5,6 +5,8 @@ sidebar:
   order: 2
 ---
 
+import { CardGrid, LinkCard } from '@astrojs/starlight/components';
+
 This walkthrough connects a Google account, lists its calendars, creates an event, and checks free/busy. The same code works for Microsoft and CalDAV — only the provider factory changes.
 
 ## 1. Create the SDK
@@ -24,7 +26,9 @@ const sdk = createCalendarSdk({
 });
 ```
 
-No credentials handy yet? Swap in `createMockProvider()` from `@nandan-varma/calendar-sdk-mock` and every call below runs immediately, in memory — see [`examples/quickstart.ts`](https://github.com/nandan-varma/calendar-sdk/blob/main/examples/quickstart.ts).
+:::tip[No credentials handy yet?]
+Swap in `createMockProvider()` from `@nandan-varma/calendar-sdk-mock` and every call below runs immediately, in memory — see [`examples/quickstart.ts`](https://github.com/nandan-varma/calendar-sdk/blob/main/examples/quickstart.ts).
+:::
 
 `createCalendarSdk` returns a `CalendarSdk` object exposing six services — `accounts`, `calendars`, `events`, `availability`, `subscriptions`, and `sync` — plus `hooks`, `storage`, and `getProvider(key)`. See [Configuration](/reference/configuration/) for every option.
 
@@ -89,7 +93,9 @@ Register them under their key (`"microsoft"` / `"caldav"`) and the rest of your 
 
 ## Where to go next
 
-- [Architecture](/guides/architecture/) — how the core, adapters, and storage fit together
-- [Authentication](/guides/authentication/) — full OAuth flows with `@nandan-varma/calendar-sdk-auth`
-- [Storage](/guides/storage/) — persist accounts and tokens in your own database
-- [Sync](/guides/sync/) and [Webhooks](/guides/webhooks/) — keep local state up to date
+<CardGrid>
+  <LinkCard title="Architecture" description="How the core, adapters, and storage fit together." href="/guides/architecture/" />
+  <LinkCard title="Authentication" description="Full OAuth flows with @nandan-varma/calendar-sdk-auth." href="/guides/authentication/" />
+  <LinkCard title="Storage" description="Persist accounts and tokens in your own database." href="/guides/storage/" />
+  <LinkCard title="Sync & Webhooks" description="Keep local state up to date." href="/guides/sync/" />
+</CardGrid>

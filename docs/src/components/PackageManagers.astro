@@ -1,0 +1,29 @@
+---
+import { Code, TabItem, Tabs } from '@astrojs/starlight/components';
+
+interface Props {
+  packages: string[];
+  dev?: boolean;
+}
+
+const { packages, dev = false } = Astro.props;
+const flag = dev ? ' -D' : '';
+const list = packages.join(' ');
+
+const managers = [
+  { label: 'npm', command: `npm install${flag} ${list}` },
+  { label: 'pnpm', command: `pnpm add${flag} ${list}` },
+  { label: 'yarn', command: `yarn add${flag} ${list}` },
+  { label: 'bun', command: `bun add${flag} ${list}` },
+];
+---
+
+<Tabs syncKey="package-manager">
+  {
+    managers.map((manager) => (
+      <TabItem label={manager.label}>
+        <Code code={manager.command} lang="bash" />
+      </TabItem>
+    ))
+  }
+</Tabs>

@@ -5,6 +5,8 @@ sidebar:
   order: 11
 ---
 
+import ErrorCodeTable from '../../../components/ErrorCodeTable.astro';
+
 Every failure the SDK raises is a `CalendarSdkError` — one class, a stable `code` you can switch on, and enough context to log, retry, or show a useful message.
 
 ## The error shape
@@ -50,21 +52,7 @@ try {
 
 ## Error codes
 
-| Code | Meaning | Typical trigger |
-| --- | --- | --- |
-| `AUTH_REQUIRED` | No usable token | HTTP 401, missing/unrefreshable tokens |
-| `AUTH_EXPIRED` | Token expired and refresh failed | Refresh rejection |
-| `PERMISSION_DENIED` | Authenticated but not allowed | HTTP 403 |
-| `NOT_FOUND` | Resource missing | HTTP 404; unknown SDK ids |
-| `CONFLICT` | Concurrent modification | HTTP 409 / etag mismatch |
-| `RATE_LIMITED` | Provider throttling | HTTP 429 |
-| `CAPABILITY_UNSUPPORTED` | Feature not supported by this provider | Capability check before the network call |
-| `VALIDATION_FAILED` | Bad input | e.g. connect without code or token |
-| `SYNC_CURSOR_EXPIRED` | Sync token invalidated | HTTP 410 — run a full sync |
-| `SUBSCRIPTION_EXPIRED` | Webhook lease lapsed | Renewal missed |
-| `NETWORK_ERROR` | Transport-level failure | DNS/reset/timeout/abort |
-| `PROVIDER_ERROR` | Vendor 5xx or unclassified failure | HTTP ≥ 500 |
-| `INTERNAL_ERROR` | SDK-internal invariant broke | — |
+<ErrorCodeTable />
 
 ## Retryability
 

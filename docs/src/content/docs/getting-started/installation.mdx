@@ -1,0 +1,58 @@
+---
+title: Installation
+description: Install the calendar-sdk core and the provider adapters you need.
+sidebar:
+  order: 1
+---
+
+import { Tabs, TabItem, CardGrid, LinkCard } from '@astrojs/starlight/components';
+import PackageManagers from '../../../components/PackageManagers.astro';
+
+calendar-sdk is split into a provider-agnostic core plus one small adapter package per provider. Install the core and only the adapters you need:
+
+<Tabs>
+  <TabItem label="Google Calendar">
+    <PackageManagers packages={['@nandan-varma/calendar-sdk', '@nandan-varma/calendar-sdk-google']} />
+  </TabItem>
+  <TabItem label="Microsoft Graph">
+    <PackageManagers packages={['@nandan-varma/calendar-sdk', '@nandan-varma/calendar-sdk-microsoft']} />
+  </TabItem>
+  <TabItem label="CalDAV">
+    <PackageManagers packages={['@nandan-varma/calendar-sdk', '@nandan-varma/calendar-sdk-caldav']} />
+  </TabItem>
+</Tabs>
+
+Optionally add the OAuth helper package if you want ready-made authorization-URL, code-exchange, and token-refresh utilities for your own auth routes:
+
+<PackageManagers packages={['@nandan-varma/calendar-sdk-auth']} />
+
+## Requirements
+
+- **Node.js ≥ 18** (the SDK uses the built-in `fetch`, `crypto`, and Web `AbortController` APIs).
+- **TypeScript ≥ 5.3** if you consume the types (the core lists TypeScript as a peer dependency).
+
+All packages ship both ESM and CommonJS builds with bundled type declarations, so `import` and `require` both work.
+
+## Your own OAuth credentials
+
+calendar-sdk is *bring-your-own-credentials*: it never proxies traffic through a third-party service.
+
+<CardGrid>
+  <LinkCard
+    title="Google"
+    description="Create OAuth 2.0 credentials in the Google Cloud Console and enable the Calendar API."
+    href="/providers/google/"
+  />
+  <LinkCard
+    title="Microsoft"
+    description="Register an app in the Azure Portal and grant it Calendars.ReadWrite."
+    href="/providers/microsoft/"
+  />
+  <LinkCard
+    title="CalDAV"
+    description="Just a server URL and credentials — an app-specific password for iCloud."
+    href="/providers/caldav/"
+  />
+</CardGrid>
+
+<LinkCard title="Next: Quickstart" description="Connect an account and make your first calls." href="/getting-started/quickstart/" />

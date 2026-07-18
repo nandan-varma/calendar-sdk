@@ -5,6 +5,8 @@ sidebar:
   order: 3
 ---
 
+import CapabilityMatrix from '../../../components/CapabilityMatrix.astro';
+
 `@nandan-varma/calendar-sdk-caldav` speaks [CalDAV](https://datatracker.ietf.org/doc/html/rfc4791) (calendar access over WebDAV, with iCalendar payloads). It is the interoperability path for **iCloud/Apple Calendar**, Fastmail, Nextcloud, Radicale, Baïkal, and any other standards-compliant server.
 
 ## Setup
@@ -52,15 +54,11 @@ One `createCalDavProvider(...)` instance carries one set of credentials. To serv
 
 ## Capabilities
 
-CalDAV is deliberately the most conservative provider:
+CalDAV is deliberately the most conservative provider — see [Capabilities](/guides/capabilities/) for the full cross-provider matrix.
 
-- ✅ calendars: create / update / delete
-- ✅ events: list / create / update / delete
-- ✅ free/busy, polling sync
-- ❌ incremental sync tokens, webhooks — poll with [`sdk.sync`](/guides/sync/) on a schedule
-- ❌ event move/duplicate, attachments, conference data, calendar sharing, meeting suggestions
+<CapabilityMatrix provider="caldav" />
 
-Because `sync.incremental` is `false`, a periodic `fullSync` (optionally windowed with `timeMin`/`timeMax`) is the synchronization strategy.
+Because `sync.incremental` is `false`, a periodic `fullSync` (optionally windowed with `timeMin`/`timeMax`) via [`sdk.sync`](/guides/sync/) is the synchronization strategy — there are no sync tokens or webhooks to fall back on.
 
 ## Notes
 

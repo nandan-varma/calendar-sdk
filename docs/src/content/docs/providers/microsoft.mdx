@@ -5,6 +5,8 @@ sidebar:
   order: 2
 ---
 
+import CapabilityMatrix from '../../../components/CapabilityMatrix.astro';
+
 `@nandan-varma/calendar-sdk-microsoft` adapts [Microsoft Graph](https://learn.microsoft.com/graph/api/resources/calendar) calendars (Outlook / Microsoft 365) to the canonical model, including delta-query incremental sync, change-notification webhooks, and Graph's unique `findMeetingTimes` suggestions.
 
 ## Credentials
@@ -43,10 +45,9 @@ Include `offline_access` or Microsoft will not return a refresh token.
 
 ## Capabilities
 
-- ✅ incremental sync (delta queries), webhooks (Graph subscriptions), polling
-- ✅ event move, attachments, conference data (Teams)
-- ✅ free/busy **and suggested meeting times** — the only provider with `suggestedTimes: true`
-- ❌ event duplicate (create a copy instead)
+The only provider with `suggestedTimes: true` — see [Capabilities](/guides/capabilities/) for the full cross-provider matrix.
+
+<CapabilityMatrix provider="microsoft" />
 
 ## Microsoft-specific notes
 

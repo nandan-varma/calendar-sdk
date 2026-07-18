@@ -118,4 +118,72 @@ describe('Transport request options', () => {
 
     expect(result.data).toBeNull();
   });
+
+  describe('debug logging cost', () => {
+    const fetchMock = () => vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ 'content-type': 'application/json' }),
+      json: () => Promise.resolve({ ok: true }),
+    });
+
+    it('skips building the request debug log (with its expensive redaction) when the logger reports debug is disabled', async () => {
+      const debug = vi.fn();
+      const logger = { debug, info: vi.fn(), warn: vi.fn(), error: vi.fn(), isLevelEnabled: () => false };
+
+      const transport = createTransport('google', { fetch: fetchMock() }, logger);
+      await transport.request({ path: '/test', body: { secret: 'do-not-touch' } });
+
+      const requestLogCalls = debug.mock.calls.filter(([, meta]) => meta && 'body' in meta);
+      expect(requestLogCalls).toHaveLength(0);
+    });
+
+    it('still logs request details (redacted body/headers included) when the logger reports debug is enabled', async () => {
+      const debug = vi.fn();
+      const logger = { debug, info: vi.fn(), warn: vi.fn(), error: vi.fn(), isLevelEnabled: () => true };
+
+      const transport = createTransport('google', { fetch: fetchMock() }, logger);
+      await transport.request({ path: '/test', body: { title: 'Test' } });
+
+      const requestLogCalls = debug.mock.calls.filter(([, meta]) => meta && 'body' in meta);
+      expect(requestLogCalls).toHaveLength(1);
+    });
+
+    it('defaults to logging when the logger does not implement isLevelEnabled (custom/bridged loggers)', async () => {
+      const debug = vi.fn();
+      const logger = { debug, info: vi.fn(), warn: vi.fn(), error: vi.fn() };
+
+      const transport = createTransport('google', { fetch: fetchMock() }, logger);
+      await transport.request({ path: '/test', body: { title: 'Test' } });
+
+      const requestLogCalls = debug.mock.calls.filter(([, meta]) => meta && 'body' in meta);
+      expect(requestLogCalls).toHaveLength(1);
+    });
+
+    it('redacts secrets in urlencoded string bodies (OAuth token exchange), not just JSON objects', async () => {
+      const debug = vi.fn();
+      const logger = { debug, info: vi.fn(), warn: vi.fn(), error: vi.fn(), isLevelEnabled: () => true };
+
+      const transport = createTransport('google', { fetch: fetchMock() }, logger);
+      const body = new URLSearchParams({
+        code: 'auth-code-value',
+        client_id: 'public-client-id',
+        client_secret: 'super-secret-value',
+        refresh_token: 'refresh-token-value',
+        grant_type: 'authorization_code',
+      }).toString();
+
+      await transport.request({ method: 'POST', path: '/token', body });
+
+      const [, loggedMeta] = debug.mock.calls.find(([, meta]) => meta && 'body' in meta)!;
+      const loggedBody = String(loggedMeta.body);
+
+      expect(loggedBody).not.toContain('super-secret-value');
+      expect(loggedBody).not.toContain('refresh-token-value');
+      expect(loggedBody).not.toContain('auth-code-value');
+      // Non-sensitive fields survive so the log is still useful for debugging.
+      expect(loggedBody).toContain('public-client-id');
+      expect(loggedBody).toContain('grant_type=authorization_code');
+    });
+  });
 });

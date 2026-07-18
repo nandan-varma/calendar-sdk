@@ -254,7 +254,9 @@ describe('SyncService', () => {
     it('applies created/updated/deleted changes to storage', async () => {
       const calendar = fakeCalendar();
       await storage.calendars.save(calendar);
-      await storage.events.save(fakeEvent({ id: 'evt-to-delete' }));
+      // Real providers report deletions by their own (provider) id, not the SDK-local id -
+      // the two are deliberately different here to exercise that translation.
+      await storage.events.save(fakeEvent({ id: 'evt-to-delete', providerId: 'provider-evt-to-delete' }));
 
       getProvider.mockReturnValue(fakeProvider({
         incrementalSync: vi.fn().mockResolvedValue({
@@ -262,7 +264,7 @@ describe('SyncService', () => {
           scope: 'events',
           events: [
             { type: 'created', event: fakeEvent({ id: 'evt-created' }) },
-            { type: 'deleted', eventId: 'evt-to-delete' },
+            { type: 'deleted', eventId: 'provider-evt-to-delete' },
           ],
           deletions: [],
           expiredToken: false,
@@ -275,6 +277,26 @@ describe('SyncService', () => {
       expect(result.events).toHaveLength(2);
       expect(await storage.events.get('evt-created')).not.toBeNull();
       expect(await storage.events.get('evt-to-delete')).toBeNull();
+    });
+
+    it('ignores a reported deletion for a provider event id that was never synced locally', async () => {
+      const calendar = fakeCalendar();
+      await storage.calendars.save(calendar);
+
+      getProvider.mockReturnValue(fakeProvider({
+        incrementalSync: vi.fn().mockResolvedValue({
+          accountId: '',
+          scope: 'events',
+          events: [{ type: 'deleted', eventId: 'never-synced-provider-id' }],
+          deletions: [],
+          expiredToken: false,
+          hasMore: false,
+        } as SyncResult),
+      }));
+
+      await expect(
+        sync.incrementalSync('account-1', cursor, { calendarId: calendar.id })
+      ).resolves.toMatchObject({ events: expect.any(Array) });
     });
 
     it('deletes the cursor and returns expiredToken without throwing when the provider reports expiry', async () => {
@@ -358,6 +380,61 @@ describe('SyncService', () => {
       expect(result.deleted).toBe(1);
       expect(await storage.events.get('evt-remote-only')).not.toBeNull();
       expect(await storage.events.get('evt-stale')).toBeNull();
+    });
+
+    it('does not delete an event that still exists remotely, even when its local id differs from its providerId', async () => {
+      const calendar = fakeCalendar();
+      await storage.calendars.save(calendar);
+
+      // The SDK-local id and the provider id are deliberately different here - e.g. after
+      // EventsService.move() reassigns a fresh local id while the vendor keeps its own.
+      // Comparing the wrong id spaces would misclassify this still-live event as "missing
+      // locally" and delete it.
+      const stillLive = fakeEvent({ id: 'sdk-local-id', providerId: 'vendor-event-id', title: 'Original' });
+      await storage.events.save(stillLive);
+
+      getProvider.mockReturnValue(fakeProvider({
+        fullSync: vi.fn().mockResolvedValue({
+          accountId: '',
+          scope: 'events',
+          events: [{ type: 'updated', event: { ...stillLive, title: 'Updated' } }],
+          deletions: [],
+          expiredToken: false,
+          hasMore: false,
+        } as SyncResult),
+      }));
+
+      const result = await sync.reconcile('account-1', 'events', { calendarId: calendar.id });
+
+      expect(result.deleted).toBe(0);
+      expect(result.updated).toBe(1);
+      const stored = await storage.events.get('sdk-local-id');
+      expect(stored).not.toBeNull();
+      expect(stored?.title).toBe('Updated');
+    });
+
+    it('deletes a local event when the provider reports it deleted, resolving by providerId', async () => {
+      const calendar = fakeCalendar();
+      await storage.calendars.save(calendar);
+
+      const local = fakeEvent({ id: 'sdk-local-id', providerId: 'vendor-event-id' });
+      await storage.events.save(local);
+
+      getProvider.mockReturnValue(fakeProvider({
+        fullSync: vi.fn().mockResolvedValue({
+          accountId: '',
+          scope: 'events',
+          events: [{ type: 'deleted', eventId: 'vendor-event-id' }],
+          deletions: [],
+          expiredToken: false,
+          hasMore: false,
+        } as SyncResult),
+      }));
+
+      const result = await sync.reconcile('account-1', 'events', { calendarId: calendar.id });
+
+      expect(result.deleted).toBe(1);
+      expect(await storage.events.get('sdk-local-id')).toBeNull();
     });
   });
 

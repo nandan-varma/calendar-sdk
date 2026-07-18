@@ -8,6 +8,6 @@ export default defineConfig({
   sourcemap: true,
   clean: true,
   treeshake: true,
-  minify: false,
+  minify: true,
   external: ['@nandan-varma/calendar-sdk'],
 });

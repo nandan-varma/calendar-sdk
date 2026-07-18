@@ -42,10 +42,16 @@ export class AccountsService {
           options.authInput.redirectUri || providerKey
         );
       } else if (options.authInput.accessToken) {
+        // Prefer the caller's real expiry when they know it; otherwise fall back to a guessed
+        // 1-hour lifetime (only meaningful if a refresh token exists to recover with).
+        const fallbackExpiresAt = options.authInput.refreshToken
+          ? new Date(Date.now() + 3600000)
+          : undefined;
+
         tokenSet = {
           accessToken: options.authInput.accessToken,
           refreshToken: options.authInput.refreshToken,
-          expiresAt: options.authInput.refreshToken ? new Date(Date.now() + 3600000) : undefined,
+          expiresAt: options.authInput.expiresAt ?? fallbackExpiresAt,
         };
       } else {
         throw new CalendarSdkError({

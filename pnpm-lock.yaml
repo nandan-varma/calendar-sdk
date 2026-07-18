@@ -78,10 +78,6 @@ importers:
         version: 1.6.1(@types/node@20.19.40)
 
   packages/core:
-    dependencies:
-      zod:
-        specifier: ^3.22.4
-        version: 3.25.76
     devDependencies:
       '@types/node':
         specifier: ^20.11.0

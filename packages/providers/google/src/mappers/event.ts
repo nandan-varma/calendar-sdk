@@ -37,6 +37,7 @@ export function mapEvent(
   const start = mapDateTime(event.start);
   const end = mapDateTime(event.end);
   const allDay = !!event.start?.date;
+  const organizerAttendee = event.attendees?.find(a => a.organizer);
 
   return {
     id: event.id,
@@ -55,8 +56,8 @@ export function mapEvent(
     transparency: mapTransparency(event.transparency),
     visibility: mapVisibility(event.visibility),
     attendees: mapAttendees(event.attendees),
-    organizer: event.attendees?.find(a => a.organizer)?.email 
-      ? { email: event.attendees.find(a => a.organizer)!.email, displayName: event.attendees.find(a => a.organizer)?.displayName, self: event.attendees.find(a => a.organizer)?.self }
+    organizer: organizerAttendee?.email
+      ? { email: organizerAttendee.email, displayName: organizerAttendee.displayName, self: organizerAttendee.self }
       : undefined,
     reminders: mapReminders(event.reminders),
     recurrence: mapRecurrence(event.recurrence),

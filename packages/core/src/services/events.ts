@@ -91,6 +91,12 @@ export class EventsService {
     if (!caps.create) {
       throw errors.capabilityUnsupported('Event creation', account.provider);
     }
+    // Per-calendar gate, derived from the caller's accessRole on this specific calendar
+    // (owner/writer) - a provider-wide "events.create: true" doesn't mean every calendar is
+    // writable, e.g. a calendar shared with the account as a reader.
+    if (!calendar.capabilities.create) {
+      throw errors.capabilityUnsupported('Event creation on this calendar (insufficient access role)', account.provider);
+    }
 
     const provider = this.getProvider(account.provider);
     const token = await this.getToken(calendar.accountId);
@@ -135,6 +141,9 @@ export class EventsService {
     if (!caps.update) {
       throw errors.capabilityUnsupported('Event update', account.provider);
     }
+    if (!calendar.capabilities.update) {
+      throw errors.capabilityUnsupported('Event update on this calendar (insufficient access role)', account.provider);
+    }
 
     const provider = this.getProvider(account.provider);
     const token = await this.getToken(calendar.accountId);
@@ -178,6 +187,12 @@ export class EventsService {
     if (!caps.delete) {
       throw errors.capabilityUnsupported('Event deletion', account.provider);
     }
+    // Deleting an event is a writer-level action (same gate as create/update), not an
+    // owner-only one - `calendar.capabilities.delete` means "delete this calendar itself"
+    // (owner-only) and would incorrectly block a writer from deleting events they can edit.
+    if (!calendar.capabilities.update) {
+      throw errors.capabilityUnsupported('Event deletion on this calendar (insufficient access role)', account.provider);
+    }
 
     const provider = this.getProvider(account.provider);
     const token = await this.getToken(calendar.accountId);
@@ -217,6 +232,10 @@ export class EventsService {
         code: 'VALIDATION_FAILED',
         message: 'Cannot move event between accounts',
       });
+    }
+
+    if (!account.capabilities.events.move) {
+      throw errors.capabilityUnsupported('Event move', account.provider);
     }
 
     const provider = this.getProvider(account.provider);
@@ -261,6 +280,10 @@ export class EventsService {
     const account = await this.storage.accounts.get(sourceCalendar.accountId);
     if (!account) {
       throw errors.notFound(undefined, 'Account not found');
+    }
+
+    if (!account.capabilities.events.duplicate) {
+      throw errors.capabilityUnsupported('Event duplicate', account.provider);
     }
 
     const provider = this.getProvider(account.provider);

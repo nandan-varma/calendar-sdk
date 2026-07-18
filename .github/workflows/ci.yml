@@ -11,14 +11,16 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [20, 22]
+        # pnpm 11 requires Node >= 22.13; Node 20 is EOL since April 2026
+        node-version: [22, 24]
     steps:
       - uses: actions/checkout@v4
 
-      # standalone: pnpm 11 needs Node >= 22.13, which the Node 20 matrix job lacks
-      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
-          standalone: true
+          node-version: ${{ matrix.node-version }}
+
+      - run: corepack enable
 
       - uses: actions/setup-node@v4
         with:

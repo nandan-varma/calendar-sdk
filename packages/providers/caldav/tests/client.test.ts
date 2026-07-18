@@ -81,6 +81,26 @@ describe('createCalDavProvider', () => {
       expect(result.items[0].providerId).toBe('/calendars/ada/work/');
       expect(result.items[0].primary).toBe(true);
     });
+
+    it('parses hrefs regardless of XML namespace prefix (different servers use different prefixes)', async () => {
+      fetchMock.mockResolvedValueOnce(xmlResponse(
+        '<cal:multistatus xmlns:cal="DAV:"><cal:response><cal:href>/calendars/ada/work/</cal:href></cal:response></cal:multistatus>'
+      ));
+
+      const result = await provider().calendars.list(TOKEN);
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].providerId).toBe('/calendars/ada/work/');
+    });
+
+    it('parses hrefs with no namespace prefix at all (default namespace)', async () => {
+      fetchMock.mockResolvedValueOnce(xmlResponse(
+        '<multistatus xmlns="DAV:"><response><href>/calendars/ada/work/</href></response></multistatus>'
+      ));
+
+      const result = await provider().calendars.list(TOKEN);
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].providerId).toBe('/calendars/ada/work/');
+    });
   });
 
   describe('events', () => {
@@ -122,6 +142,16 @@ describe('createCalDavProvider', () => {
       expect(result.items[0].providerId).toBe('evt-1');
     });
 
+    it('parses calendar-data blocks regardless of XML namespace prefix', async () => {
+      fetchMock.mockResolvedValueOnce(xmlResponse(
+        `<multistatus xmlns="DAV:"><response><cal:calendar-data xmlns:cal="urn:ietf:params:xml:ns:caldav">${icsEvent}</cal:calendar-data></response></multistatus>`
+      ));
+
+      const result = await provider().events.list(TOKEN, '/calendars/ada/work/');
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0].title).toBe('Standup');
+    });
+
     it('creates an event by PUTting a generated .ics document', async () => {
       fetchMock.mockResolvedValueOnce(xmlResponse('', 201));
 
@@ -136,6 +166,47 @@ describe('createCalDavProvider', () => {
       expect(url).toMatch(/^\/calendars\/ada\/work\/.*\.ics$/);
       expect(init.body).toContain('SUMMARY:Standup');
       expect(created.title).toBe('Standup');
+    });
+
+    it('escapes newlines/commas/semicolons/backslashes in text fields instead of injecting raw iCalendar lines', async () => {
+      fetchMock.mockResolvedValueOnce(xmlResponse('', 201));
+
+      const maliciousTitle = 'Meeting\nEND:VEVENT\nBEGIN:VEVENT\nSUMMARY:Injected';
+      const created = await provider().events.create(TOKEN, '/calendars/ada/work/', {
+        title: maliciousTitle,
+        description: 'a, b; c\\d',
+        start: { dateTime: '2026-08-01T10:00:00Z', timezone: 'UTC' },
+        end: { dateTime: '2026-08-01T10:15:00Z', timezone: 'UTC' },
+      });
+
+      const [, init] = fetchMock.mock.calls[0];
+      const body = init.body as string;
+
+      // No raw newline was introduced into the SUMMARY line - it's a single escaped line.
+      expect(body).toContain('SUMMARY:Meeting\\nEND:VEVENT\\nBEGIN:VEVENT\\nSUMMARY:Injected');
+      expect(body).not.toContain('\nEND:VEVENT\nBEGIN:VEVENT\n');
+      expect(body).toContain('DESCRIPTION:a\\, b\\; c\\\\d');
+
+      // Round-trips back to the original, unescaped values.
+      expect(created.title).toBe(maliciousTitle);
+      expect(created.description).toBe('a, b; c\\d');
+    });
+
+    it('does not let a newline in RRULE inject additional iCalendar lines', async () => {
+      fetchMock.mockResolvedValueOnce(xmlResponse('', 201));
+
+      await provider().events.create(TOKEN, '/calendars/ada/work/', {
+        title: 'Standup',
+        start: { dateTime: '2026-08-01T10:00:00Z', timezone: 'UTC' },
+        end: { dateTime: '2026-08-01T10:15:00Z', timezone: 'UTC' },
+        recurrence: { rrule: 'FREQ=DAILY;COUNT=5\nEND:VEVENT\nBEGIN:VEVENT' },
+      });
+
+      const [, init] = fetchMock.mock.calls[0];
+      const body = init.body as string;
+
+      expect(body).toContain('RRULE:FREQ=DAILY;COUNT=5END:VEVENTBEGIN:VEVENT');
+      expect(body).not.toMatch(/RRULE:[^\r\n]*\n/);
     });
 
     it('round-trips all-day events through DTSTART/DTEND date-only values', async () => {

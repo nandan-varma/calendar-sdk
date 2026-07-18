@@ -5,6 +5,7 @@ import type { StorageAdapter } from '../storage/index.js';
 import type { ProviderAdapter, TokenSet } from '../adapters/provider.js';
 import type { ProviderKey } from '../types/common.js';
 import type { Logger } from '../logger/index.js';
+import type { Hooks } from '../hooks/index.js';
 import { CalendarSdkError, errors } from '../errors/index.js';
 
 export interface SyncServiceOptions {
@@ -12,6 +13,7 @@ export interface SyncServiceOptions {
   logger: Logger;
   getToken: (accountId: string) => Promise<TokenSet | null>;
   getProvider: (providerKey: ProviderKey) => ProviderAdapter;
+  hooks: Hooks;
 }
 
 export class SyncService {
@@ -19,12 +21,14 @@ export class SyncService {
   private logger: Logger;
   private getToken: (accountId: string) => Promise<TokenSet | null>;
   private getProvider: (providerKey: ProviderKey) => ProviderAdapter;
+  private hooks: Hooks;
 
   constructor(options: SyncServiceOptions) {
     this.storage = options.storage;
     this.logger = options.logger;
     this.getToken = options.getToken;
     this.getProvider = options.getProvider;
+    this.hooks = options.hooks;
   }
 
   private async resolveAccountAndToken(accountId: string) {
@@ -61,10 +65,14 @@ export class SyncService {
 
   async fullSync(accountId: string, options?: FullSyncOptions): Promise<SyncResult> {
     const { calendarId, timeMin, timeMax, limit } = options || {};
+    const startedAt = Date.now();
+    let resolvedProvider: ProviderKey | undefined;
     this.logger.info('Starting full sync', { accountId, calendarId, timeMin, timeMax });
 
     try {
       const { account, provider, token } = await this.resolveAccountAndToken(accountId);
+      resolvedProvider = account.provider;
+      this.hooks.emit({ type: 'sync', event: 'start', provider: account.provider, accountId, scope: 'events' });
       const calendars = await this.resolveCalendars(accountId, calendarId);
 
       const results: SyncResult = {
@@ -114,16 +122,35 @@ export class SyncService {
         results.nextCursor = cursor;
       }
 
-      this.logger.info('Full sync completed', {
+      const created = results.events.filter(e => e.type === 'created').length;
+      const updated = results.events.filter(e => e.type === 'updated').length;
+      this.logger.info('Full sync completed', { accountId, created, updated, deleted: results.deletions.length });
+      this.hooks.emit({
+        type: 'sync',
+        event: 'end',
+        provider: account.provider,
         accountId,
-        created: results.events.filter(e => e.type === 'created').length,
-        updated: results.events.filter(e => e.type === 'updated').length,
+        scope: 'events',
+        created,
+        updated,
         deleted: results.deletions.length,
+        duration: Date.now() - startedAt,
       });
 
       return results;
     } catch (error) {
       this.logger.error('Full sync failed', { accountId, error });
+      if (resolvedProvider) {
+        this.hooks.emit({
+          type: 'sync',
+          event: 'end',
+          provider: resolvedProvider,
+          accountId,
+          scope: 'events',
+          duration: Date.now() - startedAt,
+          error: error instanceof CalendarSdkError ? error : undefined,
+        });
+      }
       throw error;
     }
   }
@@ -133,6 +160,8 @@ export class SyncService {
     cursor: SyncCursor,
     options?: IncrementalSyncOptions
   ): Promise<SyncResult> {
+    const startedAt = Date.now();
+    let resolvedProvider: ProviderKey | undefined;
     this.logger.info('Starting incremental sync', {
       accountId,
       scope: cursor.scope,
@@ -140,7 +169,9 @@ export class SyncService {
     });
 
     try {
-      const { provider, token } = await this.resolveAccountAndToken(accountId);
+      const { account, provider, token } = await this.resolveAccountAndToken(accountId);
+      resolvedProvider = account.provider;
+      this.hooks.emit({ type: 'sync', event: 'start', provider: account.provider, accountId, scope: cursor.scope });
       const [calendar] = await this.resolveCalendars(accountId, options?.calendarId);
       if (!calendar) {
         throw new CalendarSdkError({
@@ -185,10 +216,24 @@ export class SyncService {
         });
       }
 
+      const created = result.events.filter(e => e.type === 'created').length;
+      const updated = result.events.filter(e => e.type === 'updated').length;
+      const deleted = result.events.filter(e => e.type === 'deleted').length + result.deletions.length;
       this.logger.info('Incremental sync completed', {
         accountId,
         changes: result.events.length + result.deletions.length,
         hasMore: result.hasMore,
+      });
+      this.hooks.emit({
+        type: 'sync',
+        event: 'end',
+        provider: account.provider,
+        accountId,
+        scope: cursor.scope,
+        created,
+        updated,
+        deleted,
+        duration: Date.now() - startedAt,
       });
 
       return result;
@@ -205,6 +250,17 @@ export class SyncService {
           expiredToken: true,
           hasMore: false,
         };
+      }
+      if (resolvedProvider) {
+        this.hooks.emit({
+          type: 'sync',
+          event: 'end',
+          provider: resolvedProvider,
+          accountId,
+          scope: cursor.scope,
+          duration: Date.now() - startedAt,
+          error: error instanceof CalendarSdkError ? error : undefined,
+        });
       }
       throw error;
     }

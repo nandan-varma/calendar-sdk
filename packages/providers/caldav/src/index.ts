@@ -1,6 +1,7 @@
 import type { ProviderAdapter, TokenSet, RefreshToken, CreateAuthUrlOptions, RetryOptions } from '@nandan-varma/calendar-sdk';
 import type { Logger } from '@nandan-varma/calendar-sdk';
 import { CalendarSdkError, createTransport, defaultRetryOptions } from '@nandan-varma/calendar-sdk';
+import { randomUUID } from 'node:crypto';
 
 export interface CalDavProviderConfig {
   serverUrl: string;
@@ -352,21 +353,28 @@ async function deleteIgnoring404(fn: () => Promise<unknown>): Promise<void> {
   }
 }
 
+// XML namespace prefixes are arbitrary (only the namespace URI is meaningful) - a server may
+// reply with `<cal:calendar-data>`, `<a:calendar-data>`, or no prefix at all via a default
+// namespace, and all of those are equally standards-compliant. Matching on the local element
+// name only (ignoring whatever prefix, if any, precedes it) is what makes parsing robust across
+// iCloud/Fastmail/Nextcloud/Radicale/Baïkal instead of silently returning nothing.
+function extractElementText(xml: string, localName: string): string[] {
+  const pattern = new RegExp(`<(?:[\\w.-]+:)?${localName}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/(?:[\\w.-]+:)?${localName}>`, 'gi');
+  const matches: string[] = [];
+  for (const match of xml.matchAll(pattern)) {
+    matches.push(match[1]);
+  }
+  return matches;
+}
+
 function parseCalendarIdsFromPropfind(xml: string): string[] {
-  const hrefMatches = xml.match(/<D:href>([^<]+)<\/D:href>/g) || [];
-  return hrefMatches.map(m => m.replace(/<[^>]+>/g, '')).filter(u => u.includes('/'));
+  return extractElementText(xml, 'href')
+    .map(text => text.replace(/<[^>]+>/g, '').trim())
+    .filter(u => u.includes('/'));
 }
 
 function parseEventsFromReport(xml: string): any[] {
-  const events: any[] = [];
-  const eventMatches = xml.match(/<C:calendar-data>([\s\S]*?)<\/C:calendar-data>/g) || [];
-
-  for (const match of eventMatches) {
-    const ics = match.replace(/<[^>]+>/g, '').trim();
-    events.push(parseIcsEvent(ics, ''));
-  }
-
-  return events;
+  return extractElementText(xml, 'calendar-data').map(text => parseIcsEvent(text.trim(), ''));
 }
 
 function parseIcsEvent(ics: string, calendarId: string): any {
@@ -429,13 +437,13 @@ function processIcsField(event: any, field: string, value: string) {
       event.providerId = value;
       break;
     case 'SUMMARY':
-      event.title = value;
+      event.title = unescapeIcsText(value);
       break;
     case 'DESCRIPTION':
-      event.description = value;
+      event.description = unescapeIcsText(value);
       break;
     case 'LOCATION':
-      event.location = value;
+      event.location = unescapeIcsText(value);
       break;
     case 'DTSTART':
       if (value.includes('T')) {
@@ -462,21 +470,44 @@ function processIcsField(event: any, field: string, value: string) {
   }
 }
 
+// RFC 5545 SS3.3.11 TEXT escaping: backslash, comma, and semicolon must be backslash-escaped and
+// newlines become the literal two-character sequence \n. Without this, event content containing
+// those characters (e.g. a title or description with a newline) would inject extra iCalendar
+// properties or components into the payload sent to the CalDAV server.
+function escapeIcsText(value: string): string {
+  return value
+    .replace(/\\/g, '\\\\')
+    .replace(/;/g, '\\;')
+    .replace(/,/g, '\\,')
+    .replace(/\r\n|\r|\n/g, '\\n');
+}
+
+function unescapeIcsText(value: string): string {
+  return value.replace(/\\([\\;,nN])/g, (_, ch: string) => (ch === 'n' || ch === 'N' ? '\n' : ch));
+}
+
+// RRULE is a structured value (not TEXT) where `;` and `,` are meaningful syntax, so they must
+// not be escaped - but a raw embedded newline would still let attacker-controlled input inject
+// additional iCalendar lines, and a valid RRULE never legitimately contains one.
+function sanitizeIcsStructuredValue(value: string): string {
+  return value.replace(/\r\n|\r|\n/g, '');
+}
+
 function buildIcsEvent(uid: string, input: any): string {
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//Calendar SDK//EN',
     'BEGIN:VEVENT',
-    `UID:${uid}`,
+    `UID:${sanitizeIcsStructuredValue(uid)}`,
     `DTSTART:${formatIcsDate(input.start)}`,
     `DTEND:${formatIcsDate(input.end)}`,
-    `SUMMARY:${input.title || ''}`,
+    `SUMMARY:${escapeIcsText(input.title || '')}`,
   ];
 
-  if (input.description) lines.push(`DESCRIPTION:${input.description}`);
-  if (input.location) lines.push(`LOCATION:${input.location}`);
-  if (input.recurrence?.rrule) lines.push(`RRULE:${input.recurrence.rrule}`);
+  if (input.description) lines.push(`DESCRIPTION:${escapeIcsText(input.description)}`);
+  if (input.location) lines.push(`LOCATION:${escapeIcsText(input.location)}`);
+  if (input.recurrence?.rrule) lines.push(`RRULE:${sanitizeIcsStructuredValue(input.recurrence.rrule)}`);
 
   lines.push('END:VEVENT', 'END:VCALENDAR');
   return lines.join('\r\n');
@@ -489,7 +520,7 @@ function formatIcsDate(dt: any): string {
 }
 
 function generateUid(): string {
-  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}@caldav`;
+  return `${randomUUID()}@caldav`;
 }
 
 function parseFreeBusyFromReport(_xml: string): any[] {

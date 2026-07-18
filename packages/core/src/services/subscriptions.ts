@@ -3,6 +3,7 @@ import type { ProviderAdapter, TokenSet } from '../adapters/provider.js';
 import type { ProviderKey } from '../types/common.js';
 import type { StorageAdapter } from '../storage/index.js';
 import type { Logger } from '../logger/index.js';
+import type { Hooks } from '../hooks/index.js';
 import { CalendarSdkError, errors } from '../errors/index.js';
 import { randomUUID } from 'node:crypto';
 
@@ -11,17 +12,20 @@ export class SubscriptionsService {
   private getToken: (accountId: string) => Promise<TokenSet | null>;
   private getProvider: (providerKey: ProviderKey) => ProviderAdapter;
   private logger: Logger;
+  private hooks: Hooks;
 
   constructor(
     storage: StorageAdapter,
     getToken: (accountId: string) => Promise<TokenSet | null>,
     getProvider: (providerKey: ProviderKey) => ProviderAdapter,
-    logger: Logger
+    logger: Logger,
+    hooks: Hooks
   ) {
     this.storage = storage;
     this.getToken = getToken;
     this.getProvider = getProvider;
     this.logger = logger;
+    this.hooks = hooks;
   }
 
   async create(accountId: string, config: SubscriptionConfig): Promise<Subscription> {
@@ -50,7 +54,7 @@ export class SubscriptionsService {
       id: created.id || randomUUID(),
       accountId,
       provider: account.provider,
-       renewalPolicy: 'auto',
+      renewalPolicy: 'auto',
       status: 'active',
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -59,6 +63,7 @@ export class SubscriptionsService {
     await this.storage.subscriptions.save(subscription);
 
     this.logger.info('Subscription created', { subscriptionId: subscription.id });
+    this.hooks.emit({ type: 'subscription', event: 'created', provider: account.provider, accountId, subscription });
 
     return subscription;
   }
@@ -94,6 +99,7 @@ export class SubscriptionsService {
     await this.storage.subscriptions.save(updated);
 
     this.logger.info('Subscription renewed', { subscriptionId, newExpiry: renewed.leaseExpiry });
+    this.hooks.emit({ type: 'subscription', event: 'renewed', provider: account.provider, accountId: subscription.accountId, subscription: updated });
 
     return updated;
   }
@@ -107,6 +113,7 @@ export class SubscriptionsService {
     const account = await this.storage.accounts.get(subscription.accountId);
     if (!account) {
       await this.storage.subscriptions.delete(subscriptionId);
+      this.hooks.emit({ type: 'subscription', event: 'deleted', provider: subscription.provider, accountId: subscription.accountId, subscription });
       return;
     }
 
@@ -123,6 +130,7 @@ export class SubscriptionsService {
     await this.storage.subscriptions.delete(subscriptionId);
 
     this.logger.info('Subscription deleted', { subscriptionId });
+    this.hooks.emit({ type: 'subscription', event: 'deleted', provider: account.provider, accountId: subscription.accountId, subscription });
   }
 
   async list(accountId: string): Promise<Subscription[]> {
@@ -142,7 +150,7 @@ export class SubscriptionsService {
       return;
     }
 
-    this.logger.info('Processing webhook notification', { 
+    this.logger.info('Processing webhook notification', {
       subscriptionId: subscription.id,
       changes: notification.changes?.length || 0,
     });
@@ -150,6 +158,14 @@ export class SubscriptionsService {
     await this.storage.subscriptions.update(subscription.id, {
       lastNotificationAt: notification.timestamp,
       lastNotificationStatus: 'success',
+    });
+    this.hooks.emit({
+      type: 'subscription',
+      event: 'notification',
+      provider: subscription.provider,
+      accountId: subscription.accountId,
+      subscription,
+      notification,
     });
   }
 
@@ -172,6 +188,13 @@ export class SubscriptionsService {
           await this.storage.subscriptions.update(sub.id, {
             status: 'expired',
             errorMessage: 'Subscription lease expired',
+          });
+          this.hooks.emit({
+            type: 'subscription',
+            event: 'expired',
+            provider: sub.provider,
+            accountId: sub.accountId,
+            subscription: sub,
           });
         }
 

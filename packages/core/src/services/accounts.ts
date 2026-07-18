@@ -4,6 +4,7 @@ import type { ProviderAdapter, TokenSet } from '../adapters/provider.js';
 import type { StorageAdapter } from '../storage/index.js';
 import type { Logger } from '../logger/index.js';
 import type { TokenManager } from '../token-manager.js';
+import type { Hooks } from '../hooks/index.js';
 import { CalendarSdkError, errors } from '../errors/index.js';
 import { randomUUID } from 'node:crypto';
 
@@ -12,17 +13,20 @@ export class AccountsService {
   private providers: Map<ProviderKey, ProviderAdapter>;
   private logger: Logger;
   private tokenManager: TokenManager;
+  private hooks: Hooks;
 
   constructor(
     storage: StorageAdapter,
     providers: Map<ProviderKey, ProviderAdapter>,
     logger: Logger,
-    tokenManager: TokenManager
+    tokenManager: TokenManager,
+    hooks: Hooks
   ) {
     this.storage = storage;
     this.providers = providers;
     this.logger = logger;
     this.tokenManager = tokenManager;
+    this.hooks = hooks;
   }
 
   async connect(providerKey: ProviderKey, options: ConnectOptions): Promise<Account> {
@@ -88,11 +92,19 @@ export class AccountsService {
       }
 
       this.logger.info('Account connected successfully', { accountId: account.id, provider: providerKey });
+      this.hooks.emit({ type: 'auth', event: 'connected', provider: providerKey, accountId: account.id });
 
       return account;
 
     } catch (error) {
       this.logger.error('Account connection failed', { provider: providerKey, error });
+      this.hooks.emit({
+        type: 'auth',
+        event: 'error',
+        provider: providerKey,
+        accountId: '',
+        error: error instanceof CalendarSdkError ? error : undefined,
+      });
       throw error;
     }
   }
@@ -126,11 +138,14 @@ export class AccountsService {
         updatedAt: new Date(),
       };
       await this.storage.accounts.save(updatedAccount);
+      this.hooks.emit({ type: 'auth', event: 'refreshed', provider: account.provider, accountId });
 
       return updatedAccount;
     } catch (error) {
       await this.storage.accounts.update(accountId, { status: 'expired' });
-      throw errors.authExpired(account.provider, 'Failed to refresh authentication');
+      const sdkError = errors.authExpired(account.provider, 'Failed to refresh authentication');
+      this.hooks.emit({ type: 'auth', event: 'expired', provider: account.provider, accountId, error: sdkError });
+      throw sdkError;
     }
   }
 
@@ -146,8 +161,16 @@ export class AccountsService {
       if (tokens?.accessToken) {
         try {
           await provider.auth.revokeToken(tokens.accessToken);
+          this.hooks.emit({ type: 'auth', event: 'revoked', provider: account.provider, accountId });
         } catch (error) {
           this.logger.warn('Failed to revoke token', { accountId, error });
+          this.hooks.emit({
+            type: 'auth',
+            event: 'error',
+            provider: account.provider,
+            accountId,
+            error: error instanceof CalendarSdkError ? error : undefined,
+          });
         }
       }
     }

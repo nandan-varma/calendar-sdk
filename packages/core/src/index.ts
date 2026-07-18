@@ -71,12 +71,12 @@ export function createCalendarSdk(config: SdkConfig): CalendarSdk {
   const tokenManager = createTokenManager(storage, providerMap, effectiveLogger);
   const getToken = (accountId: string) => tokenManager.getToken(accountId);
 
-  const accountsService = new AccountsService(storage, providerMap, effectiveLogger, tokenManager);
+  const accountsService = new AccountsService(storage, providerMap, effectiveLogger, tokenManager, effectiveHooks);
   const calendarsService = new CalendarsService(storage, getToken, getProvider, effectiveLogger);
   const eventsService = new EventsService(storage, getToken, getProvider, effectiveLogger);
   const availabilityService = new AvailabilityService(storage, getToken, getProvider, effectiveLogger);
-  const subscriptionsService = new SubscriptionsService(storage, getToken, getProvider, effectiveLogger);
-  const syncService = new SyncService({ storage, logger: effectiveLogger, getToken, getProvider });
+  const subscriptionsService = new SubscriptionsService(storage, getToken, getProvider, effectiveLogger, effectiveHooks);
+  const syncService = new SyncService({ storage, logger: effectiveLogger, getToken, getProvider, hooks: effectiveHooks });
 
   effectiveLogger.info('Calendar SDK initialized', {
     providers: providers.map((p) => p.key),

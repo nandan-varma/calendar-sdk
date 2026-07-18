@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SyncService } from '../../../src/sync/index.js';
 import { createMemoryStorage, type StorageAdapter } from '../../../src/storage/index.js';
 import { noopLogger } from '../../../src/logger/index.js';
+import { createHooks } from '../../../src/hooks/index.js';
 import { CalendarSdkError } from '../../../src/errors/index.js';
 import type { Account } from '../../../src/types/account.js';
 import type { Calendar } from '../../../src/types/calendar.js';
@@ -94,6 +95,7 @@ describe('SyncService', () => {
   let storage: StorageAdapter;
   let getToken: ReturnType<typeof vi.fn>;
   let getProvider: ReturnType<typeof vi.fn>;
+  let hooks: ReturnType<typeof createHooks>;
   let sync: SyncService;
 
   beforeEach(async () => {
@@ -101,7 +103,8 @@ describe('SyncService', () => {
     await storage.accounts.save(fakeAccount());
     getToken = vi.fn().mockResolvedValue(TOKEN);
     getProvider = vi.fn();
-    sync = new SyncService({ storage, logger: noopLogger, getToken, getProvider });
+    hooks = createHooks();
+    sync = new SyncService({ storage, logger: noopLogger, getToken, getProvider, hooks });
   });
 
   describe('fullSync', () => {
@@ -211,6 +214,50 @@ describe('SyncService', () => {
 
       const calledProviderIds = fullSyncFn.mock.calls.map(call => call[1]);
       expect(calledProviderIds.sort()).toEqual(['provider-cal-1', 'provider-cal-2']);
+    });
+
+    it('emits sync/start then sync/end hooks with created/updated/deleted counts', async () => {
+      const calendar = fakeCalendar();
+      await storage.calendars.save(calendar);
+      const events: unknown[] = [];
+      hooks.on('sync', (e) => { events.push(e); });
+
+      getProvider.mockReturnValue(fakeProvider({
+        fullSync: vi.fn().mockResolvedValue({
+          accountId: '',
+          scope: 'events',
+          events: [{ type: 'created', event: fakeEvent({ id: 'evt-new' }) }],
+          deletions: [],
+          expiredToken: false,
+          hasMore: false,
+        } as SyncResult),
+      }));
+
+      await sync.fullSync('account-1', { calendarId: calendar.id });
+
+      expect(events).toEqual([
+        expect.objectContaining({ type: 'sync', event: 'start', provider: 'google', accountId: 'account-1' }),
+        expect.objectContaining({ type: 'sync', event: 'end', created: 1, updated: 0, deleted: 0 }),
+      ]);
+    });
+
+    it('emits a sync/end hook with the error when full sync fails', async () => {
+      const calendar = fakeCalendar();
+      await storage.calendars.save(calendar);
+      const events: unknown[] = [];
+      hooks.on('sync', (e) => { events.push(e); });
+
+      getProvider.mockReturnValue(fakeProvider({
+        fullSync: vi.fn().mockRejectedValue(
+          new CalendarSdkError({ code: 'PROVIDER_ERROR', message: 'boom', provider: 'google' })
+        ),
+      }));
+
+      await expect(sync.fullSync('account-1', { calendarId: calendar.id })).rejects.toMatchObject({ code: 'PROVIDER_ERROR' });
+
+      expect(events).toContainEqual(
+        expect.objectContaining({ type: 'sync', event: 'end', error: expect.objectContaining({ code: 'PROVIDER_ERROR' }) })
+      );
     });
   });
 

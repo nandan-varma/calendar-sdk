@@ -21,15 +21,12 @@ import { createMicrosoftProvider } from "@nandan-varma/calendar-sdk-microsoft";
 
 const sdk = createCalendarSdk({
   providers: [
-    {
-      key: "microsoft",
-      adapter: createMicrosoftProvider({
-        clientId: process.env.MICROSOFT_CLIENT_ID!,
-        clientSecret: process.env.MICROSOFT_CLIENT_SECRET!,
-        redirectUri: "https://app.example.com/oauth/microsoft/callback", // optional default
-        tenantId: "common", // default; use your tenant id for single-tenant apps
-      }),
-    },
+    createMicrosoftProvider({
+      clientId: process.env.MICROSOFT_CLIENT_ID!,
+      clientSecret: process.env.MICROSOFT_CLIENT_SECRET!,
+      redirectUri: "https://app.example.com/oauth/microsoft/callback", // optional default
+      tenantId: "common", // default; use your tenant id for single-tenant apps
+    }),
   ],
 });
 ```

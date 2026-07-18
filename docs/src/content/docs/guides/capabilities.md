@@ -35,7 +35,7 @@ interface CapabilityMap {
 | Capability | Google | Microsoft | CalDAV |
 | --- | :-: | :-: | :-: |
 | **Calendars** — create / update / delete | ✅ | ✅ | ✅ |
-| Calendars — share | ✅* | ✅* | ❌ |
+| Calendars — share | ✅ | ✅ | ❌ |
 | Calendars — manage notifications | ✅ | ❌ | ❌ |
 | **Events** — list / create / update / delete | ✅ | ✅ | ✅ |
 | Events — move between calendars | ✅ | ✅ | ❌ |
@@ -48,7 +48,7 @@ interface CapabilityMap {
 | **Availability** — free/busy | ✅ | ✅ | ✅ |
 | Availability — suggested meeting times | ❌ | ✅ | ❌ |
 
-\* The `share` capability is reported, but `sdk.calendars.share()` is not yet wired to provider ACL APIs — see [Calendars](/guides/calendars/).
+`sdk.calendars.share()` is wired to Google's Calendar ACL API and Microsoft Graph's `calendarPermissions` API — see [Calendars](/guides/calendars/). CalDAV has no standard sharing protocol, so it reports `share: false`.
 
 ## Per-calendar capabilities
 

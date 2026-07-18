@@ -1,8 +1,9 @@
-import type { Account, AuthInput, ConnectOptions } from '../types/account.js';
+import type { Account, ConnectOptions } from '../types/account.js';
 import type { ProviderKey } from '../types/common.js';
 import type { ProviderAdapter, TokenSet } from '../adapters/provider.js';
 import type { StorageAdapter } from '../storage/index.js';
 import type { Logger } from '../logger/index.js';
+import type { TokenManager } from '../token-manager.js';
 import { CalendarSdkError, errors } from '../errors/index.js';
 import { randomUUID } from 'node:crypto';
 
@@ -10,15 +11,18 @@ export class AccountsService {
   private storage: StorageAdapter;
   private providers: Map<ProviderKey, ProviderAdapter>;
   private logger: Logger;
+  private tokenManager: TokenManager;
 
   constructor(
     storage: StorageAdapter,
     providers: Map<ProviderKey, ProviderAdapter>,
-    logger: Logger
+    logger: Logger,
+    tokenManager: TokenManager
   ) {
     this.storage = storage;
     this.providers = providers;
     this.logger = logger;
+    this.tokenManager = tokenManager;
   }
 
   async connect(providerKey: ProviderKey, options: ConnectOptions): Promise<Account> {
@@ -105,47 +109,22 @@ export class AccountsService {
       throw errors.notFound(undefined, 'Account not found');
     }
 
-    const provider = this.providers.get(account.provider);
-    if (!provider) {
-      throw errors.providerError(account.provider, 'Provider not configured');
-    }
-
-    const tokens = await this.storage.tokens.get(accountId);
-    if (!tokens?.refreshToken) {
-      throw errors.authExpired(account.provider, 'No refresh token available');
-    }
-
     this.logger.info('Refreshing account tokens', { accountId });
 
     try {
-      const newTokens = await provider.auth.refreshToken({
-        refreshToken: tokens.refreshToken,
-      });
-
-      await this.storage.tokens.save(accountId, {
-        accessToken: newTokens.accessToken,
-        refreshToken: newTokens.refreshToken || tokens.refreshToken,
-        expiresAt: newTokens.expiresAt,
-        tokenType: newTokens.tokenType,
-        scope: newTokens.scope,
-      });
+      await this.tokenManager.refresh(accountId);
 
       const updatedAccount: Account = {
         ...account,
         status: 'connected',
         updatedAt: new Date(),
       };
-
       await this.storage.accounts.save(updatedAccount);
 
       return updatedAccount;
-
     } catch (error) {
-      if (error instanceof CalendarSdkError && (error.code === 'AUTH_EXPIRED' || error.code === 'AUTH_REQUIRED')) {
-        await this.storage.accounts.update(accountId, { status: 'expired' });
-        throw errors.authExpired(account.provider, 'Failed to refresh authentication');
-      }
-      throw error;
+      await this.storage.accounts.update(accountId, { status: 'expired' });
+      throw errors.authExpired(account.provider, 'Failed to refresh authentication');
     }
   }
 
@@ -169,34 +148,17 @@ export class AccountsService {
 
     await this.storage.tokens.delete(accountId);
     await this.storage.syncCursors.deleteByAccount(accountId);
-    await this.storage.subscriptions.list(accountId).then(subs => 
+    await this.storage.subscriptions.list(accountId).then(subs =>
       Promise.all(subs.map(s => this.storage.subscriptions.delete(s.id)))
     );
     await this.storage.accounts.delete(accountId);
+    this.tokenManager.invalidate(accountId);
 
     this.logger.info('Account disconnected', { accountId });
   }
 
   async getToken(accountId: string): Promise<string | null> {
-    const tokens = await this.storage.tokens.get(accountId);
-    if (!tokens) {
-      return null;
-    }
-
-    if (tokens.expiresAt && tokens.expiresAt.getTime() < Date.now()) {
-      const account = await this.storage.accounts.get(accountId);
-      if (account && account.status === 'connected') {
-        try {
-          await this.refresh(accountId);
-          const refreshed = await this.storage.tokens.get(accountId);
-          return refreshed?.accessToken ?? null;
-        } catch {
-          return null;
-        }
-      }
-      return null;
-    }
-
-    return tokens.accessToken;
+    const token = await this.tokenManager.getToken(accountId);
+    return token?.accessToken ?? null;
   }
 }

@@ -29,11 +29,15 @@ export const defaultRetryOptions: RetryOptions = {
 };
 
 export interface RequestOptions {
-  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  /** Standard verbs or a custom method (e.g. CalDAV's PROPFIND/REPORT). */
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | (string & {});
   path: string;
   query?: Record<string, string>;
   headers?: Record<string, string>;
+  /** Objects are JSON-serialized; strings (e.g. XML/iCalendar payloads) are sent as-is. */
   body?: unknown;
+  /** How to parse a successful response body. Defaults to 'json'. */
+  responseType?: 'json' | 'text';
   timeout?: number;
   signal?: AbortSignal;
 }
@@ -65,12 +69,13 @@ export function createTransport(
 
   return {
     async request<T>(options: RequestOptions): Promise<TransportResponse<T>> {
-      const { 
-        method = 'GET', 
-        path, 
-        query, 
-        headers: requestHeaders = {}, 
-        body, 
+      const {
+        method = 'GET',
+        path,
+        query,
+        headers: requestHeaders = {},
+        body,
+        responseType = 'json',
         timeout: requestTimeout,
         signal: requestSignal,
       } = options;
@@ -87,16 +92,18 @@ export function createTransport(
 
       const url = buildUrl(config.baseUrl, path, query);
       
-      const mergedHeaders = {
-        'Content-Type': 'application/json',
+      const mergedHeaders: Record<string, string> = {
         'User-Agent': 'calendar-sdk/1.0',
         ...headers,
         ...requestHeaders,
       };
 
-      if (body) {
+      const isStringBody = typeof body === 'string';
+      if (body !== undefined && !isStringBody && !hasHeader(mergedHeaders, 'content-type')) {
         mergedHeaders['Content-Type'] = 'application/json';
       }
+
+      const serializedBody = body === undefined ? undefined : isStringBody ? (body as string) : JSON.stringify(body);
 
       logger?.debug(`[${provider}] ${method} ${url}`, { 
         body: redactSensitive(body),
@@ -110,7 +117,7 @@ export function createTransport(
           const response = await fetchImpl(url, {
             method,
             headers: mergedHeaders,
-            body: body ? JSON.stringify(body) : undefined,
+            body: serializedBody,
             signal: combinedSignal,
           });
 
@@ -148,7 +155,11 @@ export function createTransport(
             throw error;
           }
 
-          const data: T = response.status === 204 ? (null as T) : await response.json() as T;
+          const data: T = response.status === 204
+            ? (null as T)
+            : responseType === 'text'
+              ? (await response.text() as unknown as T)
+              : (await response.json() as T);
 
           logger?.debug(`[${provider}] Response ${response.status}`, { 
             requestId,
@@ -218,6 +229,11 @@ export function createTransport(
       });
     },
   };
+}
+
+function hasHeader(headers: Record<string, string>, name: string): boolean {
+  const target = name.toLowerCase();
+  return Object.keys(headers).some(key => key.toLowerCase() === target);
 }
 
 function buildUrl(baseUrl: string | undefined, path: string, query?: Record<string, string>): string {

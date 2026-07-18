@@ -26,7 +26,7 @@ export class AvailabilityService {
   async freeBusy(accountId: string, query: FreeBusyQuery): Promise<FreeBusyResult> {
     const account = await this.storage.accounts.get(accountId);
     if (!account) {
-      throw errors.notFound('google', 'Account not found');
+      throw errors.notFound(undefined, 'Account not found');
     }
 
     const caps = account.capabilities.availability;
@@ -50,7 +50,7 @@ export class AvailabilityService {
   async suggest(accountId: string, query: SuggestMeetingQuery): Promise<SuggestMeetingResult> {
     const account = await this.storage.accounts.get(accountId);
     if (!account) {
-      throw errors.notFound('google', 'Account not found');
+      throw errors.notFound(undefined, 'Account not found');
     }
 
     const caps = account.capabilities.availability;

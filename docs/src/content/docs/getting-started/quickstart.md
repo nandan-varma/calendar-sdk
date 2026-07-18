@@ -15,17 +15,16 @@ import { createGoogleProvider } from "@nandan-varma/calendar-sdk-google";
 
 const sdk = createCalendarSdk({
   providers: [
-    {
-      key: "google",
-      adapter: createGoogleProvider({
-        clientId: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      }),
-    },
+    createGoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
   ],
   // storage defaults to in-memory; plug in your database via a StorageAdapter
 });
 ```
+
+No credentials handy yet? Swap in `createMockProvider()` from `@nandan-varma/calendar-sdk-mock` and every call below runs immediately, in memory — see [`examples/quickstart.ts`](https://github.com/nandan-varma/calendar-sdk/blob/main/examples/quickstart.ts).
 
 `createCalendarSdk` returns a `CalendarSdk` object exposing six services — `accounts`, `calendars`, `events`, `availability`, `subscriptions`, and `sync` — plus `hooks`, `storage`, and `getProvider(key)`. See [Configuration](/reference/configuration/) for every option.
 

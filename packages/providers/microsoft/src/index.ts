@@ -1,14 +1,28 @@
-import type { ProviderAdapter, TokenSet, RefreshToken, CreateAuthUrlOptions } from '@nandan-varma/calendar-sdk';
+import type { ProviderAdapter, TokenSet, RefreshToken, CreateAuthUrlOptions, ShareCalendarInput, RetryOptions } from '@nandan-varma/calendar-sdk';
+import type { Logger } from '@nandan-varma/calendar-sdk';
+import { CalendarSdkError, createTransport, defaultRetryOptions } from '@nandan-varma/calendar-sdk';
+
+const GRAPH_BASE_URL = 'https://graph.microsoft.com/v1.0';
 
 export interface MicrosoftProviderConfig {
   clientId: string;
   clientSecret?: string;
   redirectUri?: string;
   tenantId?: string;
+  logger?: Logger;
+  /** Bring your own fetch (proxying, instrumentation, test doubles, ...). */
+  fetch?: typeof fetch;
+  /** Overrides for the SDK's default retry/backoff policy. */
+  retryOptions?: Partial<RetryOptions>;
 }
 
 export function createMicrosoftProvider(config: MicrosoftProviderConfig): ProviderAdapter {
   const tenantId = config.tenantId || 'common';
+  const logger = config.logger;
+  const retryOptions: RetryOptions = { ...defaultRetryOptions, ...config.retryOptions };
+  const transport = createTransport('microsoft', { fetch: config.fetch, retryOptions }, logger);
+
+  const authHeader = (token: TokenSet) => ({ Authorization: `Bearer ${token.accessToken}` });
 
   const auth = {
     createAuthorizationUrl: async (options: CreateAuthUrlOptions) => {
@@ -24,8 +38,9 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
     },
 
     exchangeCode: async (code: string, redirectUri: string) => {
-      const response = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
+      const { data } = await transport.request<any>({
         method: 'POST',
+        path: `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
           code,
@@ -33,15 +48,9 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
           client_secret: config.clientSecret || '',
           redirect_uri: redirectUri,
           grant_type: 'authorization_code',
-        }),
+        }).toString(),
       });
 
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Token exchange failed: ${error}`);
-      }
-
-      const data = await response.json();
       return {
         accessToken: data.access_token,
         refreshToken: data.refresh_token,
@@ -52,23 +61,18 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
     },
 
     refreshToken: async (token: RefreshToken) => {
-      const response = await fetch(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
+      const { data } = await transport.request<any>({
         method: 'POST',
+        path: `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`,
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
           refresh_token: token.refreshToken,
           client_id: config.clientId,
           client_secret: config.clientSecret || '',
           grant_type: 'refresh_token',
-        }),
+        }).toString(),
       });
 
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Token refresh failed: ${error}`);
-      }
-
-      const data = await response.json();
       return {
         accessToken: data.access_token,
         refreshToken: data.refresh_token || token.refreshToken,
@@ -79,21 +83,17 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
     },
 
     revokeToken: async (_token: string) => {
-      // Microsoft doesn't have a revoke endpoint
+      // Microsoft identity platform has no token revocation endpoint for confidential clients.
     },
   };
 
   const accounts = {
     getAccount: async (token: TokenSet) => {
-      const response = await fetch('https://graph.microsoft.com/v1.0/me', {
-        headers: { Authorization: `Bearer ${token.accessToken}` },
+      const { data: user } = await transport.request<any>({
+        path: `${GRAPH_BASE_URL}/me`,
+        headers: authHeader(token),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to get account info');
-      }
-
-      const user = await response.json();
       return {
         id: user.id,
         provider: 'microsoft' as const,
@@ -116,19 +116,15 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
 
   const calendars = {
     list: async (token: TokenSet, query?: { pageToken?: string; limit?: number }) => {
-      const params = new URLSearchParams();
-      if (query?.limit) params.set('$top', String(query.limit));
+      const params: Record<string, string> = {};
+      if (query?.limit) params.$top = String(query.limit);
 
-      const response = await fetch(
-        `https://graph.microsoft.com/v1.0/me/calendars?${params}`,
-        { headers: { Authorization: `Bearer ${token.accessToken}` } }
-      );
+      const { data } = await transport.request<any>({
+        path: `${GRAPH_BASE_URL}/me/calendars`,
+        query: params,
+        headers: authHeader(token),
+      });
 
-      if (!response.ok) {
-        throw new Error(`Failed to list calendars: ${response.statusText}`);
-      }
-
-      const data = await response.json();
       return {
         items: data.value.map((cal: any) => ({
           id: cal.id,
@@ -153,16 +149,11 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
     },
 
     get: async (token: TokenSet, id: string) => {
-      const response = await fetch(
-        `https://graph.microsoft.com/v1.0/me/calendars/${id}`,
-        { headers: { Authorization: `Bearer ${token.accessToken}` } }
-      );
+      const { data: cal } = await transport.request<any>({
+        path: `${GRAPH_BASE_URL}/me/calendars/${id}`,
+        headers: authHeader(token),
+      });
 
-      if (!response.ok) {
-        throw new Error(`Failed to get calendar: ${response.statusText}`);
-      }
-
-      const cal = await response.json();
       return {
         id: cal.id,
         accountId: '',
@@ -184,24 +175,17 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
     },
 
     create: async (token: TokenSet, input: { name: string; description?: string; timezone?: string }) => {
-      const response = await fetch('https://graph.microsoft.com/v1.0/me/calendars', {
+      const { data: cal } = await transport.request<any>({
         method: 'POST',
-        headers: { 
-          Authorization: `Bearer ${token.accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+        path: `${GRAPH_BASE_URL}/me/calendars`,
+        headers: authHeader(token),
+        body: {
           name: input.name,
           description: input.description,
           color: 'auto',
-        }),
+        },
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to create calendar: ${response.statusText}`);
-      }
-
-      const cal = await response.json();
       return {
         id: cal.id,
         accountId: '',
@@ -223,20 +207,13 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
     },
 
     update: async (token: TokenSet, id: string, patch: { name?: string; description?: string }) => {
-      const response = await fetch(`https://graph.microsoft.com/v1.0/me/calendars/${id}`, {
+      const { data: cal } = await transport.request<any>({
         method: 'PATCH',
-        headers: { 
-          Authorization: `Bearer ${token.accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(patch),
+        path: `${GRAPH_BASE_URL}/me/calendars/${id}`,
+        headers: authHeader(token),
+        body: patch,
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to update calendar: ${response.statusText}`);
-      }
-
-      const cal = await response.json();
       return {
         id: cal.id,
         accountId: '',
@@ -258,46 +235,42 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
     },
 
     delete: async (token: TokenSet, id: string) => {
-      const response = await fetch(`https://graph.microsoft.com/v1.0/me/calendars/${id}`, {
+      await deleteIgnoring404(() => transport.request({
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token.accessToken}` },
-      });
+        path: `${GRAPH_BASE_URL}/me/calendars/${id}`,
+        headers: authHeader(token),
+        responseType: 'text',
+      }));
+    },
 
-      if (!response.ok && response.status !== 404) {
-        throw new Error(`Failed to delete calendar: ${response.statusText}`);
-      }
+    // Microsoft Graph calendarPermissions: https://learn.microsoft.com/en-us/graph/api/calendar-post-calendarpermissions
+    share: async (token: TokenSet, calendarId: string, input: ShareCalendarInput) => {
+      await transport.request({
+        method: 'POST',
+        path: `${GRAPH_BASE_URL}/me/calendars/${calendarId}/calendarPermissions`,
+        headers: authHeader(token),
+        body: {
+          emailAddress: { address: input.email },
+          role: mapShareRole(input.role),
+        },
+      });
     },
   };
 
   const events = {
     list: async (token: TokenSet, calendarId: string, query?: { pageToken?: string; limit?: number; timeMin?: Date; timeMax?: Date; showDeleted?: boolean }) => {
-      const params = new URLSearchParams();
-      if (query?.limit) params.set('$top', String(query.limit));
+      const params: Record<string, string> = {
+        startDateTime: (query?.timeMin || new Date()).toISOString(),
+        endDateTime: (query?.timeMax || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)).toISOString(),
+      };
+      if (query?.limit) params.$top = String(query.limit);
 
-      const startDate = query?.timeMin || new Date();
-      const endDate = query?.timeMax || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      const { data } = await transport.request<any>({
+        path: `${GRAPH_BASE_URL}/me/calendars/${calendarId}/calendarView`,
+        query: params,
+        headers: authHeader(token),
+      });
 
-      const response = await fetch(
-        `https://graph.microsoft.com/v1.0/me/calendars/${calendarId}/calendarView?${params}`,
-        { 
-          headers: { 
-            Authorization: `Bearer ${token.accessToken}`,
-            'Content-Type': 'application/json',
-            Prefer: `outlook.timezone="${startDate.toTimezoneOffset()}"`,
-          },
-          method: 'POST',
-          body: JSON.stringify({
-            startDateTime: startDate.toISOString(),
-            endDateTime: endDate.toISOString(),
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to list events: ${response.statusText}`);
-      }
-
-      const data = await response.json();
       return {
         items: data.value.map((evt: any) => mapMicrosoftEvent(evt, calendarId)),
         nextPageToken: data['@odata.nextLink'] ? 'next' : undefined,
@@ -305,16 +278,11 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
     },
 
     get: async (token: TokenSet, calendarId: string, id: string) => {
-      const response = await fetch(
-        `https://graph.microsoft.com/v1.0/me/calendars/${calendarId}/events/${id}`,
-        { headers: { Authorization: `Bearer ${token.accessToken}` } }
-      );
+      const { data: evt } = await transport.request<any>({
+        path: `${GRAPH_BASE_URL}/me/calendars/${calendarId}/events/${id}`,
+        headers: authHeader(token),
+      });
 
-      if (!response.ok) {
-        throw new Error(`Failed to get event: ${response.statusText}`);
-      }
-
-      const evt = await response.json();
       return mapMicrosoftEvent(evt, calendarId);
     },
 
@@ -336,28 +304,17 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
           type: 'required',
         }));
       }
-
       if (input.recurrence?.rrule) {
         body.recurrence = parseRRuleToOutlook(input.recurrence.rrule);
       }
 
-      const response = await fetch(
-        `https://graph.microsoft.com/v1.0/me/calendars/${calendarId}/events`,
-        {
-          method: 'POST',
-          headers: { 
-            Authorization: `Bearer ${token.accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(body),
-        }
-      );
+      const { data: evt } = await transport.request<any>({
+        method: 'POST',
+        path: `${GRAPH_BASE_URL}/me/calendars/${calendarId}/events`,
+        headers: authHeader(token),
+        body,
+      });
 
-      if (!response.ok) {
-        throw new Error(`Failed to create event: ${response.statusText}`);
-      }
-
-      const evt = await response.json();
       return mapMicrosoftEvent(evt, calendarId);
     },
 
@@ -369,75 +326,64 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
       if (patch.start !== undefined) body.start = { dateTime: patch.start.dateTime || patch.start.date, timeZone: patch.start.timezone || 'UTC' };
       if (patch.end !== undefined) body.end = { dateTime: patch.end.dateTime || patch.end.date, timeZone: patch.end.timezone || 'UTC' };
 
-      const response = await fetch(
-        `https://graph.microsoft.com/v1.0/me/calendars/${calendarId}/events/${id}`,
-        {
-          method: 'PATCH',
-          headers: { 
-            Authorization: `Bearer ${token.accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(body),
-        }
-      );
+      const { data: evt } = await transport.request<any>({
+        method: 'PATCH',
+        path: `${GRAPH_BASE_URL}/me/calendars/${calendarId}/events/${id}`,
+        headers: authHeader(token),
+        body,
+      });
 
-      if (!response.ok) {
-        throw new Error(`Failed to update event: ${response.statusText}`);
-      }
-
-      const evt = await response.json();
       return mapMicrosoftEvent(evt, calendarId);
     },
 
     delete: async (token: TokenSet, calendarId: string, id: string, _options?: any) => {
-      const response = await fetch(
-        `https://graph.microsoft.com/v1.0/me/calendars/${calendarId}/events/${id}`,
-        {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${token.accessToken}` },
-        }
-      );
-
-      if (!response.ok && response.status !== 404) {
-        throw new Error(`Failed to delete event: ${response.statusText}`);
-      }
+      await deleteIgnoring404(() => transport.request({
+        method: 'DELETE',
+        path: `${GRAPH_BASE_URL}/me/calendars/${calendarId}/events/${id}`,
+        headers: authHeader(token),
+        responseType: 'text',
+      }));
     },
 
-    move: async (_token: TokenSet, _eventId: string, _sourceCalendarId: string, _targetCalendarId: string) => {
-      throw new Error('Event move not supported by Microsoft Graph');
+    move: async () => {
+      throw new CalendarSdkError({
+        code: 'CAPABILITY_UNSUPPORTED',
+        message: 'Event move is not supported by Microsoft Graph',
+        provider: 'microsoft',
+      });
     },
 
-    duplicate: async (_token: TokenSet, _eventId: string, _targetCalendarId: string) => {
-      throw new Error('Event duplicate not supported by Microsoft Graph');
+    duplicate: async () => {
+      throw new CalendarSdkError({
+        code: 'CAPABILITY_UNSUPPORTED',
+        message: 'Event duplicate is not supported by Microsoft Graph',
+        provider: 'microsoft',
+      });
     },
 
-    expandRecurrence: async (_token: TokenSet, _calendarId: string, _eventId: string, _timeMin: Date, _timeMax: Date) => {
-      throw new Error('Recurrence expansion not supported by Microsoft Graph');
+    expandRecurrence: async () => {
+      throw new CalendarSdkError({
+        code: 'CAPABILITY_UNSUPPORTED',
+        message: 'Recurrence expansion is not supported by Microsoft Graph',
+        provider: 'microsoft',
+      });
     },
   };
 
   const availability = {
     freeBusy: async (token: TokenSet, query: { timeMin: Date; timeMax: Date; calendars: string[]; timezone?: string }) => {
-      const response = await fetch('https://graph.microsoft.com/v1.0/me/calendar/getSchedule', {
+      const { data } = await transport.request<any>({
         method: 'POST',
-        headers: { 
-          Authorization: `Bearer ${token.accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+        path: `${GRAPH_BASE_URL}/me/calendar/getSchedule`,
+        headers: authHeader(token),
+        body: {
           schedules: query.calendars,
           startTime: { dateTime: query.timeMin.toISOString(), timeZone: query.timezone || 'UTC' },
           endTime: { dateTime: query.timeMax.toISOString(), timeZone: query.timezone || 'UTC' },
-        }),
+        },
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to get free/busy: ${response.statusText}`);
-      }
-
-      const data = await response.json();
       const result: Record<string, any[]> = {};
-
       for (const schedule of data.value || []) {
         result[schedule.scheduleId] = (schedule.scheduleItems || []).map((item: any) => ({
           start: new Date(item.start.dateTime),
@@ -450,13 +396,11 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
     },
 
     suggestMeeting: async (token: TokenSet, query: { timeMin: Date; timeMax: Date; meetingDuration: number; attendees: string[] }) => {
-      const response = await fetch('https://graph.microsoft.com/v1.0/me/findMeetingTimes', {
+      const { data } = await transport.request<any>({
         method: 'POST',
-        headers: { 
-          Authorization: `Bearer ${token.accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+        path: `${GRAPH_BASE_URL}/me/findMeetingTimes`,
+        headers: authHeader(token),
+        body: {
           attendees: query.attendees.map(a => ({ emailAddress: { address: a }, type: 'required' })),
           timeConstraint: {
             activityDomain: 'work',
@@ -466,14 +410,9 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
             }],
           },
           meetingDuration: `PT${query.meetingDuration}M`,
-        }),
+        },
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to suggest meeting times: ${response.statusText}`);
-      }
-
-      const data = await response.json();
       return {
         meetingSuggestions: (data.meetingTimeSuggestions || []).map((s: any) => ({
           meetingTime: new Date(s.meetingTimeSlot.start.dateTime),
@@ -488,29 +427,18 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
 
   const sync = {
     fullSync: async (token: TokenSet, calendarId: string, options?: { timeMin?: Date; timeMax?: Date; limit?: number }) => {
-      const params = new URLSearchParams();
-      if (options?.limit) params.set('$top', String(options.limit));
+      const params: Record<string, string> = {
+        startDateTime: (options?.timeMin || new Date()).toISOString(),
+        endDateTime: (options?.timeMax || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)).toISOString(),
+      };
+      if (options?.limit) params.$top = String(options.limit);
 
-      const startDate = options?.timeMin || new Date();
-      const endDate = options?.timeMax || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+      const { data } = await transport.request<any>({
+        path: `${GRAPH_BASE_URL}/me/calendars/${calendarId}/calendarView`,
+        query: params,
+        headers: authHeader(token),
+      });
 
-      const response = await fetch(
-        `https://graph.microsoft.com/v1.0/me/calendars/${calendarId}/calendarView?${params}`,
-        { 
-          headers: { Authorization: `Bearer ${token.accessToken}`, 'Content-Type': 'application/json' },
-          method: 'POST',
-          body: JSON.stringify({
-            startDateTime: startDate.toISOString(),
-            endDateTime: endDate.toISOString(),
-          }),
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to full sync: ${response.statusText}`);
-      }
-
-      const data = await response.json();
       return {
         accountId: '',
         scope: 'events' as const,
@@ -521,32 +449,29 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
       };
     },
 
-    incrementalSync: async (_token: TokenSet, _calendarId: string, _cursor: any) => {
-      throw new Error('Incremental sync requires delta query implementation');
+    incrementalSync: async () => {
+      throw new CalendarSdkError({
+        code: 'CAPABILITY_UNSUPPORTED',
+        message: 'Incremental sync requires Microsoft Graph delta query, which is not yet implemented',
+        provider: 'microsoft',
+      });
     },
   };
 
   const subscriptions = {
     create: async (token: TokenSet, config: { resource: string; webhookUrl?: string; leaseDurationSeconds?: number }) => {
-      const response = await fetch('https://graph.microsoft.com/v1.0/subscriptions', {
+      const { data } = await transport.request<{ id: string; expirationDateTime: string; resource: string }>({
         method: 'POST',
-        headers: { 
-          Authorization: `Bearer ${token.accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+        path: `${GRAPH_BASE_URL}/subscriptions`,
+        headers: authHeader(token),
+        body: {
           changeType: 'created,updated,deleted',
           notificationUrl: config.webhookUrl,
           resource: config.resource,
           expirationDateTime: new Date(Date.now() + (config.leaseDurationSeconds || 4230) * 1000).toISOString(),
-        }),
+        },
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to create subscription: ${response.statusText}`);
-      }
-
-      const data = await response.json() as { id: string; expirationDateTime: string; resource: string };
       return {
         id: data.id,
         accountId: '',
@@ -562,22 +487,13 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
     },
 
     renew: async (token: TokenSet, subscriptionId: string) => {
-      const response = await fetch(`https://graph.microsoft.com/v1.0/subscriptions/${subscriptionId}`, {
+      const { data } = await transport.request<{ id: string; expirationDateTime: string; resource: string }>({
         method: 'PATCH',
-        headers: { 
-          Authorization: `Bearer ${token.accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          expirationDateTime: new Date(Date.now() + 4230 * 1000).toISOString(),
-        }),
+        path: `${GRAPH_BASE_URL}/subscriptions/${subscriptionId}`,
+        headers: authHeader(token),
+        body: { expirationDateTime: new Date(Date.now() + 4230 * 1000).toISOString() },
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to renew subscription: ${response.statusText}`);
-      }
-
-      const data = await response.json() as { id: string; expirationDateTime: string; resource: string };
       return {
         id: data.id,
         accountId: '',
@@ -592,18 +508,23 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
     },
 
     delete: async (token: TokenSet, subscriptionId: string) => {
-      const response = await fetch(`https://graph.microsoft.com/v1.0/subscriptions/${subscriptionId}`, {
+      await transport.request({
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token.accessToken}` },
+        path: `${GRAPH_BASE_URL}/subscriptions/${subscriptionId}`,
+        headers: authHeader(token),
+        responseType: 'text',
       });
-
-      if (!response.ok && response.status !== 404) {
-        throw new Error(`Failed to delete subscription: ${response.statusText}`);
-      }
     },
 
     list: async (_token: TokenSet, _accountId: string) => [],
-    get: async (_token: TokenSet, _subscriptionId: string) => { throw new Error('Not implemented'); },
+
+    get: async () => {
+      throw new CalendarSdkError({
+        code: 'CAPABILITY_UNSUPPORTED',
+        message: 'Fetching a single Microsoft Graph subscription by id is not implemented',
+        provider: 'microsoft',
+      });
+    },
   };
 
   return {
@@ -622,17 +543,30 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
       sync: { incremental: true, webhook: true, polling: true },
       availability: { freeBusy: true, suggestedTimes: true },
     }),
-    createTransport: () => ({
-      request: async <T>(options: any) => {
-        const response = await fetch(`https://graph.microsoft.com/v1.0${options.path}`, {
-          method: options.method || 'GET',
-          headers: options.headers,
-          body: options.body ? JSON.stringify(options.body) : undefined,
-        });
-        return { data: await response.json() as T, status: response.status, headers: {} };
-      },
-    }),
+    createTransport: () => transport,
   };
+}
+
+// DELETE is idempotent: a 404 means the resource is already gone, which is a success from the caller's perspective.
+async function deleteIgnoring404(fn: () => Promise<unknown>): Promise<void> {
+  try {
+    await fn();
+  } catch (error) {
+    if (error instanceof CalendarSdkError && error.status === 404) return;
+    throw error;
+  }
+}
+
+function mapShareRole(role: string): string {
+  switch (role) {
+    case 'owner':
+    case 'writer':
+      return 'write';
+    case 'freeBusyReader':
+      return 'freeBusyRead';
+    default:
+      return 'read';
+  }
 }
 
 function mapMicrosoftEvent(evt: any, calendarId: string): any {
@@ -672,12 +606,6 @@ function mapMicrosoftEvent(evt: any, calendarId: string): any {
   };
 }
 
-function parseRRuleToOutlook(rrule: string): any {
+function parseRRuleToOutlook(_rrule: string): any {
   return { pattern: { type: 'daily' }, range: { type: 'numbered', numberOfOccurrences: 10 } };
-}
-
-declare global {
-  interface Date {
-    toTimezoneOffset(): string;
-  }
 }

@@ -2,9 +2,8 @@ import type {
   CalendarEvent, 
   CreateEventInput, 
   UpdateEventInput, 
-  ListEventsQuery, 
+  ListEventsQuery,
   EventOptions,
-  AttendeeInput,
 } from '../types/event.js';
 import type { ProviderAdapter, TokenSet } from '../adapters/provider.js';
 import type { ProviderKey } from '../types/common.js';
@@ -34,12 +33,12 @@ export class EventsService {
   async list(calendarId: string, query?: ListEventsQuery): Promise<CalendarEvent[]> {
     const calendar = await this.storage.calendars.get(calendarId);
     if (!calendar) {
-      throw errors.notFound('google', 'Calendar not found');
+      throw errors.notFound(undefined, 'Calendar not found');
     }
 
     const account = await this.storage.accounts.get(calendar.accountId);
     if (!account) {
-      throw errors.notFound('google', 'Account not found');
+      throw errors.notFound(undefined, 'Account not found');
     }
 
     const provider = this.getProvider(account.provider);
@@ -64,20 +63,28 @@ export class EventsService {
     return events;
   }
 
-  async get(eventId: string): Promise<CalendarEvent | null> {
+  // Reads from local storage only; call events.list(calendarId) first to sync a calendar's events.
+  async get(eventId: string): Promise<CalendarEvent> {
     const event = await this.storage.events.get(eventId);
+    if (!event) {
+      throw new CalendarSdkError({
+        code: 'NOT_FOUND',
+        message: 'Event not found in local storage',
+        remediation: 'Call events.list(calendarId) to sync this calendar before calling get() with an event id.',
+      });
+    }
     return event;
   }
 
   async create(calendarId: string, input: CreateEventInput, options?: EventOptions): Promise<CalendarEvent> {
     const calendar = await this.storage.calendars.get(calendarId);
     if (!calendar) {
-      throw errors.notFound('google', 'Calendar not found');
+      throw errors.notFound(undefined, 'Calendar not found');
     }
 
     const account = await this.storage.accounts.get(calendar.accountId);
     if (!account) {
-      throw errors.notFound('google', 'Account not found');
+      throw errors.notFound(undefined, 'Account not found');
     }
 
     const caps = account.capabilities.events;
@@ -111,17 +118,17 @@ export class EventsService {
   async update(eventId: string, patch: UpdateEventInput, options?: EventOptions): Promise<CalendarEvent> {
     const event = await this.storage.events.get(eventId);
     if (!event) {
-      throw errors.notFound('google', 'Event not found');
+      throw errors.notFound(undefined, 'Event not found');
     }
 
     const calendar = await this.storage.calendars.get(event.calendarId);
     if (!calendar) {
-      throw errors.notFound('google', 'Calendar not found');
+      throw errors.notFound(undefined, 'Calendar not found');
     }
 
     const account = await this.storage.accounts.get(calendar.accountId);
     if (!account) {
-      throw errors.notFound('google', 'Account not found');
+      throw errors.notFound(undefined, 'Account not found');
     }
 
     const caps = account.capabilities.events;
@@ -159,12 +166,12 @@ export class EventsService {
 
     const calendar = await this.storage.calendars.get(event.calendarId);
     if (!calendar) {
-      throw errors.notFound('google', 'Calendar not found');
+      throw errors.notFound(undefined, 'Calendar not found');
     }
 
     const account = await this.storage.accounts.get(calendar.accountId);
     if (!account) {
-      throw errors.notFound('google', 'Account not found');
+      throw errors.notFound(undefined, 'Account not found');
     }
 
     const caps = account.capabilities.events;
@@ -187,22 +194,22 @@ export class EventsService {
   async move(eventId: string, targetCalendarId: string): Promise<CalendarEvent> {
     const event = await this.storage.events.get(eventId);
     if (!event) {
-      throw errors.notFound('google', 'Event not found');
+      throw errors.notFound(undefined, 'Event not found');
     }
 
     const sourceCalendar = await this.storage.calendars.get(event.calendarId);
     if (!sourceCalendar) {
-      throw errors.notFound('google', 'Source calendar not found');
+      throw errors.notFound(undefined, 'Source calendar not found');
     }
 
     const targetCalendar = await this.storage.calendars.get(targetCalendarId);
     if (!targetCalendar) {
-      throw errors.notFound('google', 'Target calendar not found');
+      throw errors.notFound(undefined, 'Target calendar not found');
     }
 
     const account = await this.storage.accounts.get(sourceCalendar.accountId);
     if (!account) {
-      throw errors.notFound('google', 'Account not found');
+      throw errors.notFound(undefined, 'Account not found');
     }
 
     if (sourceCalendar.accountId !== targetCalendar.accountId) {
@@ -238,22 +245,22 @@ export class EventsService {
   async duplicate(eventId: string, targetCalendarId: string): Promise<CalendarEvent> {
     const event = await this.storage.events.get(eventId);
     if (!event) {
-      throw errors.notFound('google', 'Event not found');
+      throw errors.notFound(undefined, 'Event not found');
     }
 
     const sourceCalendar = await this.storage.calendars.get(event.calendarId);
     if (!sourceCalendar) {
-      throw errors.notFound('google', 'Source calendar not found');
+      throw errors.notFound(undefined, 'Source calendar not found');
     }
 
     const targetCalendar = await this.storage.calendars.get(targetCalendarId);
     if (!targetCalendar) {
-      throw errors.notFound('google', 'Target calendar not found');
+      throw errors.notFound(undefined, 'Target calendar not found');
     }
 
     const account = await this.storage.accounts.get(sourceCalendar.accountId);
     if (!account) {
-      throw errors.notFound('google', 'Account not found');
+      throw errors.notFound(undefined, 'Account not found');
     }
 
     const provider = this.getProvider(account.provider);
@@ -263,22 +270,6 @@ export class EventsService {
     }
 
     this.logger.info('Duplicating event', { eventId, to: targetCalendarId });
-
-    const input: CreateEventInput = {
-      title: event.title,
-      description: event.description,
-      location: event.location,
-      start: event.start,
-      end: event.end,
-      allDay: event.allDay,
-      timezone: event.timezone,
-      status: event.status,
-      transparency: event.transparency,
-      visibility: event.visibility,
-      attendees: event.attendees.map(a => ({ email: a.email, displayName: a.displayName })),
-      reminders: event.reminders,
-      recurrence: event.recurrence,
-    };
 
     const duplicated = await provider.events.duplicate(token, event.providerId, targetCalendar.providerId);
 

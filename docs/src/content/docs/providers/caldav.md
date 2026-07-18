@@ -17,15 +17,12 @@ import { createCalDavProvider } from "@nandan-varma/calendar-sdk-caldav";
 
 const sdk = createCalendarSdk({
   providers: [
-    {
-      key: "caldav",
-      adapter: createCalDavProvider({
-        serverUrl: "https://caldav.example.com",
-        username: "ada@example.com",
-        password: process.env.CALDAV_PASSWORD!,
-        headers: {},              // optional extra headers on every request
-      }),
-    },
+    createCalDavProvider({
+      serverUrl: "https://caldav.example.com",
+      username: "ada@example.com",
+      password: process.env.CALDAV_PASSWORD!,
+      headers: {},              // optional extra headers on every request
+    }),
   ],
 });
 ```

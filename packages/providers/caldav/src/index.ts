@@ -1,72 +1,77 @@
-import type { ProviderAdapter, TokenSet, RefreshToken, CreateAuthUrlOptions } from '@nandan-varma/calendar-sdk';
+import type { ProviderAdapter, TokenSet, RefreshToken, CreateAuthUrlOptions, RetryOptions } from '@nandan-varma/calendar-sdk';
+import type { Logger } from '@nandan-varma/calendar-sdk';
+import { CalendarSdkError, createTransport, defaultRetryOptions } from '@nandan-varma/calendar-sdk';
 
 export interface CalDavProviderConfig {
   serverUrl: string;
   username: string;
   password: string;
   headers?: Record<string, string>;
+  logger?: Logger;
+  /** Bring your own fetch (proxying, instrumentation, test doubles, ...). */
+  fetch?: typeof fetch;
+  /** Overrides for the SDK's default retry/backoff policy. */
+  retryOptions?: Partial<RetryOptions>;
 }
 
 export function createCalDavProvider(config: CalDavProviderConfig): ProviderAdapter {
   const baseUrl = config.serverUrl.replace(/\/$/, '');
+  const logger = config.logger;
+  const retryOptions: RetryOptions = { ...defaultRetryOptions, ...config.retryOptions };
+  const transport = createTransport('caldav', { fetch: config.fetch, retryOptions }, logger);
 
-  const makeHeaders = (token?: TokenSet): Record<string, string> => ({
+  const basicAuth = Buffer.from(`${config.username}:${config.password}`).toString('base64');
+  const davHeaders = (): Record<string, string> => ({
     'Content-Type': 'application/xml',
-    ...(token ? { Authorization: `Basic ${Buffer.from(`${config.username}:${config.password}`).toString('base64')}` } : {}),
+    Authorization: `Basic ${basicAuth}`,
     ...config.headers,
   });
 
   const auth = {
-    createAuthorizationUrl: async (_options: CreateAuthUrlOptions) => {
-      return baseUrl;
-    },
+    createAuthorizationUrl: async (_options: CreateAuthUrlOptions) => baseUrl,
 
-    exchangeCode: async (_code: string, _redirectUri: string) => {
-      return {
-        accessToken: Buffer.from(`${config.username}:${config.password}`).toString('base64'),
-        tokenType: 'Basic',
-      };
-    },
+    exchangeCode: async (_code: string, _redirectUri: string) => ({
+      accessToken: basicAuth,
+      tokenType: 'Basic',
+    }),
 
-    refreshToken: async (_token: RefreshToken) => {
-      return {
-        accessToken: Buffer.from(`${config.username}:${config.password}`).toString('base64'),
-        tokenType: 'Basic',
-      };
-    },
+    refreshToken: async (_token: RefreshToken) => ({
+      accessToken: basicAuth,
+      tokenType: 'Basic',
+    }),
 
     revokeToken: async (_token: string) => {
-      // No revocation for CalDAV basic auth
+      // No revocation concept for CalDAV basic auth.
     },
   };
 
   const accounts = {
-    getAccount: async (_token: TokenSet) => {
-      return {
-        id: config.username,
-        provider: 'caldav' as const,
-        displayName: config.username,
-        email: config.username,
-        status: 'connected' as const,
-        capabilities: {
-          calendars: { create: true, update: true, delete: true, share: false, manageNotifications: false },
-          events: { list: true, create: true, update: true, delete: true, move: false, duplicate: false, attachments: false, conferenceData: false },
-          sync: { incremental: false, webhook: false, polling: true },
-          availability: { freeBusy: true, suggestedTimes: false },
-        },
-        raw: { serverUrl: config.serverUrl },
-        extensions: {},
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
-    },
+    getAccount: async (_token: TokenSet) => ({
+      id: config.username,
+      provider: 'caldav' as const,
+      displayName: config.username,
+      email: config.username,
+      status: 'connected' as const,
+      capabilities: {
+        calendars: { create: true, update: true, delete: true, share: false, manageNotifications: false },
+        events: { list: true, create: true, update: true, delete: true, move: false, duplicate: false, attachments: false, conferenceData: false },
+        sync: { incremental: false, webhook: false, polling: true },
+        availability: { freeBusy: true, suggestedTimes: false },
+      },
+      raw: { serverUrl: config.serverUrl },
+      extensions: {},
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }),
   };
 
   const calendars = {
     list: async (_token: TokenSet, _query?: { pageToken?: string; limit?: number }) => {
-      const response = await fetch(baseUrl, {
+      const { data: text } = await transport.request<string>({
         method: 'PROPFIND',
-        headers: makeHeaders(),
+        path: baseUrl,
+        headers: davHeaders(),
+        responseType: 'text',
         body: `<?xml version="1.0" encoding="UTF-8"?>
 <D:propfind xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
   <D:prop>
@@ -78,11 +83,6 @@ export function createCalDavProvider(config: CalDavProviderConfig): ProviderAdap
 </D:propfind>`,
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to list calendars: ${response.statusText}`);
-      }
-
-      const text = await response.text();
       const calendarIds = parseCalendarIdsFromPropfind(text);
 
       return {
@@ -160,19 +160,24 @@ export function createCalDavProvider(config: CalDavProviderConfig): ProviderAdap
     }),
 
     delete: async (_token: TokenSet, _id: string) => {
-      // Deletion would require a DELETE to the calendar collection
+      // Deletion would require a DELETE against the calendar collection URL; most CalDAV
+      // servers don't support removing a calendar collection this way, so this is a no-op.
     },
+    // No share(): CalDAV has no standard sharing protocol, and the capability map
+    // reports `share: false`, so the core service layer never calls this.
   };
 
   const events = {
     list: async (_token: TokenSet, calendarId: string, query?: { timeMin?: Date; timeMax?: Date }) => {
-      const filter = query?.timeMin && query?.timeMax 
+      const filter = query?.timeMin && query?.timeMax
         ? `<C:time-range start="${query.timeMin.toISOString()}" end="${query.timeMax.toISOString()}"/>`
         : '';
 
-      const response = await fetch(calendarId, {
+      const { data: text } = await transport.request<string>({
         method: 'REPORT',
-        headers: makeHeaders(),
+        path: calendarId,
+        headers: davHeaders(),
+        responseType: 'text',
         body: `<?xml version="1.0" encoding="UTF-8"?>
 <C:calendar-query xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
   <D:prop>
@@ -187,75 +192,66 @@ export function createCalDavProvider(config: CalDavProviderConfig): ProviderAdap
 </C:calendar-query>`,
       });
 
-      if (!response.ok && response.status !== 404) {
-        throw new Error(`Failed to list events: ${response.statusText}`);
-      }
-
-      const text = await response.text();
-      const events = parseEventsFromReport(text);
-
-      return { items: events };
+      return { items: parseEventsFromReport(text) };
     },
 
     get: async (_token: TokenSet, calendarId: string, id: string) => {
-      const response = await fetch(`${calendarId}/${id}.ics`, {
-        method: 'GET',
-        headers: makeHeaders(),
+      const { data: text } = await transport.request<string>({
+        path: `${calendarId}/${id}.ics`,
+        headers: davHeaders(),
+        responseType: 'text',
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to get event: ${response.statusText}`);
-      }
-
-      const text = await response.text();
       return parseIcsEvent(text, calendarId);
     },
 
     create: async (_token: TokenSet, calendarId: string, input: any) => {
       const uid = generateUid();
       const ics = buildIcsEvent(uid, input);
-      const response = await fetch(`${calendarId}/${uid}.ics`, {
+
+      await transport.request({
         method: 'PUT',
-        headers: makeHeaders(),
+        path: `${calendarId}/${uid}.ics`,
+        headers: davHeaders(),
+        responseType: 'text',
         body: ics,
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to create event: ${response.statusText}`);
-      }
 
       return parseIcsEvent(ics, calendarId);
     },
 
     update: async (_token: TokenSet, calendarId: string, id: string, input: any) => {
       const ics = buildIcsEvent(id, input);
-      const response = await fetch(`${calendarId}/${id}.ics`, {
+
+      await transport.request({
         method: 'PUT',
-        headers: makeHeaders(),
+        path: `${calendarId}/${id}.ics`,
+        headers: davHeaders(),
+        responseType: 'text',
         body: ics,
       });
-
-      if (!response.ok) {
-        throw new Error(`Failed to update event: ${response.statusText}`);
-      }
 
       return parseIcsEvent(ics, calendarId);
     },
 
     delete: async (_token: TokenSet, calendarId: string, id: string) => {
-      const response = await fetch(`${calendarId}/${id}.ics`, {
+      await deleteIgnoring404(() => transport.request({
         method: 'DELETE',
-        headers: makeHeaders(),
-      });
-
-      if (!response.ok && response.status !== 404) {
-        throw new Error(`Failed to delete event: ${response.statusText}`);
-      }
+        path: `${calendarId}/${id}.ics`,
+        headers: davHeaders(),
+        responseType: 'text',
+      }));
     },
 
-    move: async () => { throw new Error('Move not supported in CalDAV'); },
-    duplicate: async () => { throw new Error('Duplicate not supported in CalDAV'); },
-    expandRecurrence: async () => { throw new Error('Expansion not supported in CalDAV'); },
+    move: async () => {
+      throw new CalendarSdkError({ code: 'CAPABILITY_UNSUPPORTED', message: 'Event move is not supported by CalDAV', provider: 'caldav' });
+    },
+    duplicate: async () => {
+      throw new CalendarSdkError({ code: 'CAPABILITY_UNSUPPORTED', message: 'Event duplicate is not supported by CalDAV', provider: 'caldav' });
+    },
+    expandRecurrence: async () => {
+      throw new CalendarSdkError({ code: 'CAPABILITY_UNSUPPORTED', message: 'Recurrence expansion is not supported by CalDAV', provider: 'caldav' });
+    },
   };
 
   const availability = {
@@ -265,22 +261,21 @@ export function createCalDavProvider(config: CalDavProviderConfig): ProviderAdap
       for (const calendarId of query.calendars) {
         const filter = `<C:time-range start="${query.timeMin.toISOString()}" end="${query.timeMax.toISOString()}"/>`;
 
-        const response = await fetch(calendarId, {
-          method: 'REPORT',
-          headers: makeHeaders(),
-          body: `<?xml version="1.0" encoding="UTF-8"?>
+        try {
+          const { data: text } = await transport.request<string>({
+            method: 'REPORT',
+            path: calendarId,
+            headers: davHeaders(),
+            responseType: 'text',
+            body: `<?xml version="1.0" encoding="UTF-8"?>
 <C:free-busy-query xmlns:D="DAV:" xmlns:C="urn:ietf:params:xml:ns:caldav">
   <C:free-busy>
     ${filter}
   </C:free-busy>
 </C:free-busy-query>`,
-        });
-
-        if (response.ok) {
-          const text = await response.text();
-          const busySlots = parseFreeBusyFromReport(text);
-          results[calendarId] = busySlots;
-        } else {
+          });
+          results[calendarId] = parseFreeBusyFromReport(text);
+        } catch {
           results[calendarId] = [];
         }
       }
@@ -289,13 +284,13 @@ export function createCalDavProvider(config: CalDavProviderConfig): ProviderAdap
     },
 
     suggestMeeting: async () => {
-      throw new Error('Meeting suggestions not supported in CalDAV');
+      throw new CalendarSdkError({ code: 'CAPABILITY_UNSUPPORTED', message: 'Meeting time suggestions are not supported by CalDAV', provider: 'caldav' });
     },
   };
 
   const sync = {
-    fullSync: async (_token: TokenSet, calendarId: string, options?: { timeMin?: Date; timeMax?: Date }) => {
-      const result = await events.list(_token, calendarId, { timeMin: options?.timeMin, timeMax: options?.timeMax });
+    fullSync: async (token: TokenSet, calendarId: string, options?: { timeMin?: Date; timeMax?: Date }) => {
+      const result = await events.list(token, calendarId, { timeMin: options?.timeMin, timeMax: options?.timeMax });
       return {
         accountId: '',
         scope: 'events' as const,
@@ -307,16 +302,24 @@ export function createCalDavProvider(config: CalDavProviderConfig): ProviderAdap
     },
 
     incrementalSync: async () => {
-      throw new Error('Incremental sync not supported in CalDAV');
+      throw new CalendarSdkError({ code: 'CAPABILITY_UNSUPPORTED', message: 'Incremental sync is not supported by CalDAV', provider: 'caldav' });
     },
   };
 
   const subscriptions = {
-    create: async () => { throw new Error('Webhooks not supported in CalDAV'); },
-    renew: async () => { throw new Error('Webhooks not supported in CalDAV'); },
-    delete: async () => { throw new Error('Webhooks not supported in CalDAV'); },
+    create: async () => {
+      throw new CalendarSdkError({ code: 'CAPABILITY_UNSUPPORTED', message: 'Webhooks are not supported by CalDAV', provider: 'caldav' });
+    },
+    renew: async () => {
+      throw new CalendarSdkError({ code: 'CAPABILITY_UNSUPPORTED', message: 'Webhooks are not supported by CalDAV', provider: 'caldav' });
+    },
+    delete: async () => {
+      throw new CalendarSdkError({ code: 'CAPABILITY_UNSUPPORTED', message: 'Webhooks are not supported by CalDAV', provider: 'caldav' });
+    },
     list: async () => [],
-    get: async () => { throw new Error('Not supported'); },
+    get: async () => {
+      throw new CalendarSdkError({ code: 'CAPABILITY_UNSUPPORTED', message: 'Webhooks are not supported by CalDAV', provider: 'caldav' });
+    },
   };
 
   return {
@@ -335,17 +338,18 @@ export function createCalDavProvider(config: CalDavProviderConfig): ProviderAdap
       sync: { incremental: false, webhook: false, polling: true },
       availability: { freeBusy: true, suggestedTimes: false },
     }),
-    createTransport: () => ({
-      request: async <T>(options: any) => {
-        const response = await fetch(`${baseUrl}${options.path}`, {
-          method: options.method || 'GET',
-          headers: makeHeaders(),
-          body: options.body,
-        });
-        return { data: await response.text() as any as T, status: response.status, headers: {} };
-      },
-    }),
+    createTransport: () => transport,
   };
+}
+
+// DELETE is idempotent: a 404 means the resource is already gone, which is a success from the caller's perspective.
+async function deleteIgnoring404(fn: () => Promise<unknown>): Promise<void> {
+  try {
+    await fn();
+  } catch (error) {
+    if (error instanceof CalendarSdkError && error.status === 404) return;
+    throw error;
+  }
 }
 
 function parseCalendarIdsFromPropfind(xml: string): string[] {
@@ -488,6 +492,6 @@ function generateUid(): string {
   return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}@caldav`;
 }
 
-function parseFreeBusyFromReport(xml: string): any[] {
+function parseFreeBusyFromReport(_xml: string): any[] {
   return [];
 }

@@ -189,7 +189,7 @@ Plus `SubscriptionConfig` (`resource`, `webhookUrl`, `leaseDurationSeconds`, `se
 ## Common
 
 ```typescript
-type ProviderKey = "google" | "microsoft" | "caldav";
+type ProviderKey = "google" | "microsoft" | "caldav" | (string & {}); // the three built-ins, or any key a custom/testing provider registers under
 
 interface Paginated<T> {
   items: T[];

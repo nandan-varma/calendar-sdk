@@ -1,13 +1,14 @@
 import type { ProviderKey } from './types/common.js';
-import type { ProviderAdapter, TokenSet } from './adapters/provider.js';
+import type { ProviderAdapter } from './adapters/provider.js';
 import type { StorageAdapter } from './storage/index.js';
 import type { Logger, LoggerOptions } from './logger/index.js';
 import type { Hooks } from './hooks/index.js';
-import type { RetryOptions } from './transport/index.js';
 
 import { createLogger } from './logger/index.js';
 import { createHooks } from './hooks/index.js';
 import { createMemoryStorage } from './storage/index.js';
+import { createTokenManager } from './token-manager.js';
+import { CalendarSdkError } from './errors/index.js';
 
 import { AccountsService } from './services/accounts.js';
 import { CalendarsService } from './services/calendars.js';
@@ -17,18 +18,12 @@ import { SubscriptionsService } from './services/subscriptions.js';
 import { SyncService } from './sync/index.js';
 
 export interface SdkConfig {
-  providers: ProviderInstance[];
+  /** One adapter per provider you want to support - createGoogleProvider(...), createMicrosoftProvider(...), createCalDavProvider(...), etc. */
+  providers: ProviderAdapter[];
   storage?: StorageAdapter;
   logger?: Logger;
   loggerOptions?: LoggerOptions;
-  fetch?: typeof fetch;
-  retryOptions?: RetryOptions;
   hooks?: Hooks;
-}
-
-export interface ProviderInstance {
-  key: ProviderKey;
-  adapter: ProviderAdapter;
 }
 
 export interface CalendarSdk {
@@ -57,88 +52,31 @@ export function createCalendarSdk(config: SdkConfig): CalendarSdk {
   const effectiveHooks = hooks ?? createHooks();
 
   const providerMap = new Map<ProviderKey, ProviderAdapter>();
-  const tokenCache = new Map<string, { token: TokenSet; expiresAt?: Date }>();
-
   for (const provider of providers) {
-    providerMap.set(provider.key, provider.adapter);
-  }
-
-  async function getToken(accountId: string): Promise<TokenSet | null> {
-    const cached = tokenCache.get(accountId);
-    if (cached?.expiresAt && cached.expiresAt.getTime() > Date.now()) {
-      return cached.token;
-    }
-
-    const tokens = await storage.tokens.get(accountId);
-    if (!tokens) {
-      return null;
-    }
-
-    if (tokens.expiresAt && tokens.expiresAt.getTime() < Date.now()) {
-      const account = await storage.accounts.get(accountId);
-      if (account && account.status === 'connected') {
-        try {
-          const provider = providerMap.get(account.provider);
-          if (provider) {
-            if (!tokens.refreshToken) {
-              return null;
-            }
-            const newTokens = await provider.auth.refreshToken({ refreshToken: tokens.refreshToken });
-            await storage.tokens.save(accountId, {
-              accessToken: newTokens.accessToken,
-              refreshToken: newTokens.refreshToken || tokens.refreshToken,
-              expiresAt: newTokens.expiresAt,
-            });
-            tokenCache.set(accountId, { 
-              token: newTokens, 
-              expiresAt: newTokens.expiresAt 
-            });
-            return newTokens;
-          }
-        } catch (error) {
-          effectiveLogger.warn('Token refresh failed', { accountId, error });
-          await storage.accounts.update(accountId, { status: 'expired' });
-          return null;
-        }
-      }
-      return null;
-    }
-
-    const tokenSet: TokenSet = {
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-      expiresAt: tokens.expiresAt,
-      tokenType: tokens.tokenType,
-      scope: tokens.scope,
-    };
-    tokenCache.set(accountId, { token: tokenSet, expiresAt: tokens.expiresAt });
-    return tokenSet;
+    providerMap.set(provider.key, provider);
   }
 
   function getProvider(providerKey: ProviderKey): ProviderAdapter {
     const provider = providerMap.get(providerKey);
     if (!provider) {
-      throw new Error(`Provider not configured: ${providerKey}`);
+      throw new CalendarSdkError({
+        code: 'VALIDATION_FAILED',
+        message: `Provider not configured: ${providerKey}`,
+        remediation: `Pass a ${providerKey} adapter (e.g. createGoogleProvider(...)) in createCalendarSdk({ providers: [...] }).`,
+      });
     }
     return provider;
   }
 
-  const accountsService = new AccountsService(storage, providerMap, effectiveLogger);
-  const calendarsService = new CalendarsService(storage, getToken, async (accountId) => {
-    const account = await storage.accounts.get(accountId);
-    if (!account) throw new Error('Account not found');
-    const provider = providerMap.get(account.provider);
-    if (!provider) throw new Error('Provider not configured');
-    return { provider, accountId };
-  }, effectiveLogger);
+  const tokenManager = createTokenManager(storage, providerMap, effectiveLogger);
+  const getToken = (accountId: string) => tokenManager.getToken(accountId);
+
+  const accountsService = new AccountsService(storage, providerMap, effectiveLogger, tokenManager);
+  const calendarsService = new CalendarsService(storage, getToken, getProvider, effectiveLogger);
   const eventsService = new EventsService(storage, getToken, getProvider, effectiveLogger);
   const availabilityService = new AvailabilityService(storage, getToken, getProvider, effectiveLogger);
   const subscriptionsService = new SubscriptionsService(storage, getToken, getProvider, effectiveLogger);
-  const syncService = new SyncService({ storage, logger: effectiveLogger });
-
-  for (const provider of providers) {
-    calendarsService.setProvider(provider.adapter);
-  }
+  const syncService = new SyncService({ storage, logger: effectiveLogger, getToken, getProvider });
 
   effectiveLogger.info('Calendar SDK initialized', {
     providers: providers.map((p) => p.key),
@@ -154,7 +92,7 @@ export function createCalendarSdk(config: SdkConfig): CalendarSdk {
     sync: syncService,
     hooks: effectiveHooks,
     storage,
-    getProvider: (key: ProviderKey) => getProvider(key),
+    getProvider,
   };
 }
 
@@ -162,7 +100,14 @@ export { createMemoryStorage } from './storage/index.js';
 export { createLogger, noopLogger } from './logger/index.js';
 export type { Logger } from './logger/index.js';
 export { createHooks, EventEmitter } from './hooks/index.js';
-export { defaultRetryOptions } from './transport/index.js';
+export { createTransport, defaultRetryOptions } from './transport/index.js';
+export type {
+  Transport,
+  TransportConfig,
+  TransportResponse,
+  RetryOptions,
+  RequestOptions as TransportRequestOptions,
+} from './transport/index.js';
 
 export { 
   Account, AccountStatus, AccountInput, AuthInput, ConnectOptions,
@@ -181,8 +126,8 @@ export {
   defaultCapabilityMap, mergeCapabilities, getCapabilitiesForProvider,
 } from './capabilities/index.js';
 
-export { 
-  ProviderAdapter, AuthProviderMethods, CreateAuthUrlOptions, TokenSet, RefreshToken, AccountsProviderMethods, 
-  CalendarsProviderMethods, EventsProviderMethods, AvailabilityProviderMethods, SyncProviderMethods, 
-  SubscriptionsProviderMethods, ProviderConfig, createProviderAdapter,
+export {
+  ProviderAdapter, AuthProviderMethods, CreateAuthUrlOptions, TokenSet, RefreshToken, AccountsProviderMethods,
+  CalendarsProviderMethods, EventsProviderMethods, AvailabilityProviderMethods, SyncProviderMethods,
+  SubscriptionsProviderMethods,
 } from './adapters/provider.js';

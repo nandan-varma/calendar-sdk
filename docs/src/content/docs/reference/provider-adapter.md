@@ -13,7 +13,7 @@ A provider adapter is pure translation: canonical types in, vendor wire format o
 import type { ProviderAdapter } from "@nandan-varma/calendar-sdk";
 
 interface ProviderAdapter {
-  readonly key: "google" | "microsoft" | "caldav";
+  readonly key: ProviderKey; // "google" | "microsoft" | "caldav", or any custom string for a third-party/testing provider
   readonly displayName: string;
 
   auth: AuthProviderMethods;
@@ -51,6 +51,7 @@ interface CalendarsProviderMethods {
   create(token, input): Promise<Calendar>;
   update(token, id, patch): Promise<Calendar>;
   delete(token, id): Promise<void>;
+  share?(token, id, input: ShareCalendarInput): Promise<void>; // omit entirely if the provider can't share (report `share: false`)
 }
 
 interface EventsProviderMethods {
@@ -113,7 +114,7 @@ export interface MyProviderConfig {
 
 export function createMyProvider(config: MyProviderConfig): ProviderAdapter {
   return {
-    key: "caldav", // ProviderKey is a closed union today — reuse the closest key
+    key: "my-provider", // any string - ProviderKey accepts custom keys alongside the three built-ins
     displayName: "My Calendar Server",
     auth: { /* createAuthorizationUrl, exchangeCode, refreshToken, revokeToken */ },
     accounts: { /* getAccount */ },
@@ -134,5 +135,5 @@ export function createMyProvider(config: MyProviderConfig): ProviderAdapter {
 ```
 
 :::note
-`ProviderKey` is currently the closed union `"google" | "microsoft" | "caldav"`, so a fully custom key requires extending that type in core. In practice, third-party backends that speak CalDAV should register under `"caldav"`.
+Want to try your adapter, or test code that depends on the SDK, without live credentials? `@nandan-varma/calendar-sdk-mock` (`packages/providers/mock`) is a complete in-memory `ProviderAdapter` you can read as a second reference implementation alongside Google's.
 :::

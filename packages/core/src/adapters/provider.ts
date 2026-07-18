@@ -1,6 +1,6 @@
 import type { ProviderKey } from '../types/common.js';
-import type { Account, AuthInput, ConnectOptions } from '../types/account.js';
-import type { Calendar, CreateCalendarInput, UpdateCalendarInput, ListCalendarsQuery } from '../types/calendar.js';
+import type { Account } from '../types/account.js';
+import type { Calendar, CreateCalendarInput, UpdateCalendarInput, ListCalendarsQuery, ShareCalendarInput } from '../types/calendar.js';
 import type { 
   CalendarEvent, 
   CreateEventInput, 
@@ -15,8 +15,6 @@ import type { Subscription, SubscriptionInput, SubscriptionConfig } from '../typ
 import type { CapabilityMap } from '../capabilities/index.js';
 import type { Paginated } from '../types/common.js';
 import type { Transport } from '../transport/index.js';
-import type { Logger } from '../logger/index.js';
-import { CalendarSdkError } from '../errors/index.js';
 
 export interface ProviderAdapter {
   readonly key: ProviderKey;
@@ -74,6 +72,8 @@ export interface CalendarsProviderMethods {
   create(token: TokenSet, input: CreateCalendarInput): Promise<Calendar>;
   update(token: TokenSet, id: string, patch: UpdateCalendarInput): Promise<Calendar>;
   delete(token: TokenSet, id: string): Promise<void>;
+  /** Omit entirely for providers that can't share calendars (capability map should report `share: false`). */
+  share?(token: TokenSet, id: string, input: ShareCalendarInput): Promise<void>;
 }
 
 export interface EventsProviderMethods {
@@ -112,81 +112,3 @@ export interface SubscriptionsProviderMethods {
   validateWebhook?(webhookUrl: string, validationToken?: string): Promise<boolean>;
 }
 
-export interface ProviderConfig {
-  clientId: string;
-  clientSecret?: string;
-  redirectUri?: string;
-}
-
-export function createProviderAdapter(
-  key: ProviderKey,
-  config: ProviderConfig,
-  logger?: Logger
-): ProviderAdapter {
-  switch (key) {
-    case 'google':
-      return createGoogleAdapter(config, logger);
-    case 'microsoft':
-      return createMicrosoftAdapter(config, logger);
-    case 'caldav':
-      return createCalDavAdapter(config, logger);
-    default:
-      throw new CalendarSdkError({
-        code: 'VALIDATION_FAILED',
-        message: `Unknown provider: ${key}`,
-      });
-  }
-}
-
-function createGoogleAdapter(config: ProviderConfig, logger?: Logger): ProviderAdapter {
-  return {
-    key: 'google',
-    displayName: 'Google Calendar',
-    getCapabilities: () => ({
-      calendars: { create: true, update: true, delete: true, share: true, manageNotifications: true },
-      events: {
-        list: true, create: true, update: true, delete: true,
-        move: true, duplicate: true, attachments: true, conferenceData: true,
-      },
-      sync: { incremental: true, webhook: true, polling: true },
-      availability: { freeBusy: true, suggestedTimes: false },
-    }),
-    createTransport: () => createTransport('google', { baseUrl: 'https://www.googleapis.com/calendar/v3' }, logger),
-  } as ProviderAdapter;
-}
-
-function createMicrosoftAdapter(config: ProviderConfig, logger?: Logger): ProviderAdapter {
-  return {
-    key: 'microsoft',
-    displayName: 'Microsoft Outlook',
-    getCapabilities: () => ({
-      calendars: { create: true, update: true, delete: true, share: true, manageNotifications: false },
-      events: {
-        list: true, create: true, update: true, delete: true,
-        move: true, duplicate: false, attachments: true, conferenceData: true,
-      },
-      sync: { incremental: true, webhook: true, polling: true },
-      availability: { freeBusy: true, suggestedTimes: true },
-    }),
-    createTransport: () => createTransport('microsoft', { baseUrl: 'https://graph.microsoft.com/v1.0' }, logger),
-  } as ProviderAdapter;
-}
-
-function createCalDavAdapter(config: ProviderConfig, logger?: Logger): ProviderAdapter {
-  return {
-    key: 'caldav',
-    displayName: 'CalDAV',
-    getCapabilities: () => ({
-      calendars: { create: true, update: true, delete: true, share: false, manageNotifications: false },
-      events: {
-        list: true, create: true, update: true, delete: true,
-        move: false, duplicate: false, attachments: false, conferenceData: false,
-      },
-      sync: { incremental: false, webhook: false, polling: true },
-      availability: { freeBusy: true, suggestedTimes: false },
-    }),
-    createTransport: () => createTransport('caldav', {}, logger),
-  } as ProviderAdapter;
-}
-
-import { createTransport } from '../transport/index.js';

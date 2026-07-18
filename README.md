@@ -16,6 +16,7 @@ An open alternative to paid unified-calendar APIs: bring your own OAuth credenti
 | [`@nandan-varma/calendar-sdk-google`](packages/providers/google) | Google Calendar provider adapter |
 | [`@nandan-varma/calendar-sdk-microsoft`](packages/providers/microsoft) | Microsoft Graph calendar provider adapter |
 | [`@nandan-varma/calendar-sdk-caldav`](packages/providers/caldav) | CalDAV provider adapter (iCloud, Fastmail, Nextcloud, …) |
+| [`@nandan-varma/calendar-sdk-mock`](packages/providers/mock) | In-memory provider for tests and examples — no credentials or network calls |
 | [`@nandan-varma/calendar-sdk-auth`](packages/auth) | OAuth flow, token refresh, and encrypted token-set helpers |
 
 ## Install
@@ -32,13 +33,10 @@ import { createGoogleProvider } from "@nandan-varma/calendar-sdk-google";
 
 const sdk = createCalendarSdk({
   providers: [
-    {
-      key: "google",
-      adapter: createGoogleProvider({
-        clientId: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      }),
-    },
+    createGoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+    }),
   ],
   // storage defaults to in-memory; plug in your database via StorageAdapter
 });
@@ -57,18 +55,26 @@ const events = await sdk.events.list(calendars[0].id, {
 
 await sdk.events.create(calendars[0].id, {
   title: "Coffee",
-  start: { dateTime: "2026-08-01T10:00:00Z" },
-  end: { dateTime: "2026-08-01T10:30:00Z" },
+  start: { dateTime: "2026-08-01T10:00:00Z", timezone: "UTC" },
+  end: { dateTime: "2026-08-01T10:30:00Z", timezone: "UTC" },
 });
 
 // Free/busy across an account's calendars
 const freeBusy = await sdk.availability.freeBusy(account.id, {
   timeMin: new Date(),
   timeMax: new Date(Date.now() + 86400_000),
+  calendars: [calendars[0].providerId],
 });
 ```
 
-Swap `createGoogleProvider` for `createMicrosoftProvider` or `createCalDavProvider` and the rest of your code stays identical.
+Swap `createGoogleProvider` for `createMicrosoftProvider` or `createCalDavProvider` and the rest of your code stays identical. A single SDK instance can register more than one provider at once — just add another entry to `providers`.
+
+Want to try it with zero setup? [`examples/quickstart.ts`](examples/quickstart.ts) runs this same flow against `@nandan-varma/calendar-sdk-mock` — no credentials or network access needed:
+
+```bash
+pnpm install
+pnpm --filter @nandan-varma/calendar-sdk-examples quickstart
+```
 
 ### OAuth helper
 
@@ -82,7 +88,23 @@ const flow = createAuthFlow({
   redirectUri: "https://app.example.com/oauth/callback",
   scopes: ["https://www.googleapis.com/auth/calendar"],
 });
-// authorization URL, code exchange, token refresh with expiry buffer…
+
+const authorizationUrl = flow.getAuthorizationUrl(); // send the user here
+const tokens = await flow.exchangeCode(codeFromCallback); // then call sdk.accounts.connect(...) with these tokens
+// flow.refreshToken(...) / flow.revokeToken(...) are also available once you have a stored token
+```
+
+See [`examples/google-oauth.ts`](examples/google-oauth.ts) for the full connect flow wired up behind a small HTTP server.
+
+### Testing your integration
+
+[`@nandan-varma/calendar-sdk-mock`](packages/providers/mock) is a fully in-memory `ProviderAdapter` — no network calls, deterministic — so you can exercise your own code against the whole SDK surface without live credentials:
+
+```typescript
+import { createCalendarSdk } from "@nandan-varma/calendar-sdk";
+import { createMockProvider } from "@nandan-varma/calendar-sdk-mock";
+
+const sdk = createCalendarSdk({ providers: [createMockProvider()] });
 ```
 
 ## Design
@@ -90,7 +112,7 @@ const flow = createAuthFlow({
 - **Providers are adapters.** The core knows nothing about any vendor API; each provider implements one `ProviderAdapter` interface. Adding a provider does not touch the core.
 - **Storage is pluggable.** Accounts and token sets live behind a `StorageAdapter`; the default is in-memory, production apps supply their own (Postgres, Redis, …).
 - **Sync is incremental.** `sdk.sync` uses Google `syncToken` / Graph delta queries where available.
-- **Transport is resilient.** Built-in retry with backoff for rate limits and transient failures; bring your own `fetch`.
+- **Transport is resilient.** Built-in retry with backoff for rate limits and transient failures; pass `fetch`/`retryOptions` to a provider factory (e.g. `createGoogleProvider({ ..., fetch, retryOptions })`) to override its defaults.
 - **Hooks** let you observe/instrument every operation.
 
 See [SPEC.md](SPEC.md) for the full v1 design rationale.

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createCalendarSdk, createMemoryStorage, createLogger, type CalendarSdk } from '../../src/index.js';
+import { createCalendarSdk, createMemoryStorage, createLogger, isCalendarSdkError, type CalendarSdk } from '../../src/index.js';
 
 describe('SDK Integration', () => {
   let sdk: CalendarSdk;
@@ -62,9 +62,10 @@ describe('SDK Integration', () => {
       expect(typeof sdk.calendars.list).toBe('function');
     });
 
-    it('should have get method', async () => {
-      const calendar = await sdk.calendars.get('non-existent');
-      expect(calendar).toBeNull();
+    it('throws NOT_FOUND for a calendar id not yet synced via list()', async () => {
+      await expect(sdk.calendars.get('non-existent')).rejects.toSatisfy(
+        (error: unknown) => isCalendarSdkError(error) && error.code === 'NOT_FOUND'
+      );
     });
 
     it('should have create method', async () => {
@@ -85,9 +86,10 @@ describe('SDK Integration', () => {
       expect(typeof sdk.events.list).toBe('function');
     });
 
-    it('should have get method', async () => {
-      const event = await sdk.events.get('non-existent');
-      expect(event).toBeNull();
+    it('throws NOT_FOUND for an event id not yet synced via list()', async () => {
+      await expect(sdk.events.get('non-existent')).rejects.toSatisfy(
+        (error: unknown) => isCalendarSdkError(error) && error.code === 'NOT_FOUND'
+      );
     });
 
     it('should have create method', async () => {

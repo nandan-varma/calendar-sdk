@@ -28,17 +28,19 @@ interface SyncResult {
 ## Full sync
 
 ```typescript
-const provider = sdk.getProvider(account.provider);
-
-const result = await sdk.sync.fullSync(provider, account.id, {
-  calendarId,                       // optional — defaults to every stored calendar
+const result = await sdk.sync.fullSync(account.id, {
+  calendarId,                       // recommended — see the note below; omit to sync every stored calendar
   timeMin: new Date("2026-01-01"),
   timeMax: new Date("2027-01-01"),
   limit: 2500,
 });
 ```
 
-Clears any existing cursor, pulls events for the selected calendars, persists all changes, and saves the fresh cursor returned by the provider so the next pass can be incremental.
+Resolves the account's provider and a valid token for you (same as every other service — no need to call `sdk.getProvider()` yourself), pulls events for the selected calendars, persists all changes, and saves the fresh cursor returned by the provider so the next pass can be incremental.
+
+:::note
+Pass `calendarId` explicitly when you can. A cursor is tied to one calendar's event feed; if you omit `calendarId` on a multi-calendar account, only the *last* calendar synced in that pass gets a durable cursor. For correct independent tracking per calendar, call `fullSync`/`incrementalSync` once per `calendarId`.
+:::
 
 ## Incremental sync
 
@@ -46,13 +48,13 @@ Clears any existing cursor, pulls events for the selected calendars, persists al
 const cursor = await sdk.storage.syncCursors.get(account.id, "events");
 
 if (!cursor) {
-  await sdk.sync.fullSync(provider, account.id);
+  await sdk.sync.fullSync(account.id, { calendarId });
 } else {
-  const result = await sdk.sync.incrementalSync(provider, account.id, cursor);
+  const result = await sdk.sync.incrementalSync(account.id, cursor, { calendarId });
 
   if (result.expiredToken) {
     // Provider invalidated the token (e.g. HTTP 410 from Google) — start over
-    await sdk.sync.fullSync(provider, account.id);
+    await sdk.sync.fullSync(account.id, { calendarId });
   }
 }
 ```
@@ -65,10 +67,9 @@ For drift repair (missed webhooks, partial failures), `reconcile` diffs local st
 
 ```typescript
 const { created, updated, deleted } = await sdk.sync.reconcile(
-  provider,
   account.id,
   "events",
-  { timeMin, timeMax },
+  { calendarId, timeMin, timeMax },
 );
 ```
 
@@ -90,19 +91,15 @@ Useful for dashboards and deciding whether a full sync is due.
 ## A typical polling loop
 
 ```typescript
-async function syncAccount(accountId: string) {
-  const account = await sdk.accounts.get(accountId);
-  if (!account) return;
-
-  const provider = sdk.getProvider(account.provider);
+async function syncAccount(accountId: string, calendarId: string) {
   const cursor = await sdk.storage.syncCursors.get(accountId, "events");
 
   const result = cursor
-    ? await sdk.sync.incrementalSync(provider, accountId, cursor)
-    : await sdk.sync.fullSync(provider, accountId);
+    ? await sdk.sync.incrementalSync(accountId, cursor, { calendarId })
+    : await sdk.sync.fullSync(accountId, { calendarId });
 
   if (result.expiredToken) {
-    await sdk.sync.fullSync(provider, accountId);
+    await sdk.sync.fullSync(accountId, { calendarId });
   }
 }
 ```

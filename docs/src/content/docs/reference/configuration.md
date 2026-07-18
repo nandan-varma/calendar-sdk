@@ -11,13 +11,11 @@ sidebar:
 import { createCalendarSdk } from "@nandan-varma/calendar-sdk";
 
 const sdk = createCalendarSdk({
-  providers: [{ key: "google", adapter: createGoogleProvider({ ... }) }],
+  providers: [createGoogleProvider({ ... })],
   storage: myStorageAdapter,        // default: createMemoryStorage()
   logger: myLogger,                 // default: createLogger({ prettyPrint: true })
   loggerOptions: { minLevel: "warn" },
   hooks: myHooks,                   // default: createHooks()
-  fetch: myFetch,                   // custom fetch implementation
-  retryOptions: { maxRetries: 5, initialDelayMs: 500, maxDelayMs: 30000, backoffMultiplier: 2 },
 });
 ```
 
@@ -25,13 +23,13 @@ const sdk = createCalendarSdk({
 
 | Option | Type | Default | Purpose |
 | --- | --- | --- | --- |
-| `providers` | `ProviderInstance[]` | — (required) | Provider adapters keyed by `"google" \| "microsoft" \| "caldav"` |
+| `providers` | `ProviderAdapter[]` | — (required) | One adapter per provider you want to support — each adapter already carries its own `key` |
 | `storage` | `StorageAdapter` | in-memory | Persistence for accounts, tokens, calendars, events, cursors, subscriptions — see [Storage](/guides/storage/) |
 | `logger` | `Logger` | console logger | Structured logger used by all services |
 | `loggerOptions` | `LoggerOptions` | — | Options for the default logger (ignored when `logger` is set) |
 | `hooks` | `Hooks` | internal bus | Event bus for observability — see [Hooks](/guides/hooks/) |
-| `fetch` | `typeof fetch` | global `fetch` | Custom fetch (proxies, test doubles) |
-| `retryOptions` | `RetryOptions` | `defaultRetryOptions` | Backoff tuning — see [Transport](/reference/transport/) |
+
+`fetch`/`retryOptions` are configured per-provider, not on `createCalendarSdk` — the core never issues HTTP requests itself, only providers do. Pass them to the provider factory: `createGoogleProvider({ clientId, clientSecret, fetch: myFetch, retryOptions: { maxRetries: 5 } })`. See [Transport](/reference/transport/).
 
 ### `LoggerOptions`
 
@@ -68,9 +66,9 @@ interface CalendarSdk {
 ```typescript
 const sdk = createCalendarSdk({
   providers: [
-    { key: "google", adapter: createGoogleProvider({ ... }) },
-    { key: "microsoft", adapter: createMicrosoftProvider({ ... }) },
-    { key: "caldav", adapter: createCalDavProvider({ ... }) },
+    createGoogleProvider({ ... }),
+    createMicrosoftProvider({ ... }),
+    createCalDavProvider({ ... }),
   ],
   storage,
 });

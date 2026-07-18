@@ -60,10 +60,8 @@ app.post("/webhooks/calendar", async (req, res) => {
     timestamp: new Date(),
   });
 
-  const account = await sdk.accounts.get(accountId);
-  const provider = sdk.getProvider(account!.provider);
   const cursor = await sdk.storage.syncCursors.get(accountId, "events");
-  if (cursor) await sdk.sync.incrementalSync(provider, accountId, cursor);
+  if (cursor) await sdk.sync.incrementalSync(accountId, cursor);
 });
 ```
 

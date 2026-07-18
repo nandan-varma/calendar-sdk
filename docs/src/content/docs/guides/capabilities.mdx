@@ -5,6 +5,8 @@ sidebar:
   order: 12
 ---
 
+import CapabilityMatrix from '../../../components/CapabilityMatrix.astro';
+
 Providers differ. Rather than letting you discover unsupported behavior via cryptic vendor errors, every account carries a `CapabilityMap` and services check it up front — unsupported operations throw `CAPABILITY_UNSUPPORTED` with a remediation hint before any network call.
 
 ## Checking capabilities
@@ -32,21 +34,7 @@ interface CapabilityMap {
 
 ## What each provider supports
 
-| Capability | Google | Microsoft | CalDAV |
-| --- | :-: | :-: | :-: |
-| **Calendars** — create / update / delete | ✅ | ✅ | ✅ |
-| Calendars — share | ✅ | ✅ | ❌ |
-| Calendars — manage notifications | ✅ | ❌ | ❌ |
-| **Events** — list / create / update / delete | ✅ | ✅ | ✅ |
-| Events — move between calendars | ✅ | ✅ | ❌ |
-| Events — duplicate | ✅ | ❌ | ❌ |
-| Events — attachments | ✅ | ✅ | ❌ |
-| Events — conference data (Meet/Teams) | ✅ | ✅ | ❌ |
-| **Sync** — incremental (`syncToken`/delta) | ✅ | ✅ | ❌ |
-| Sync — webhooks | ✅ | ✅ | ❌ |
-| Sync — polling | ✅ | ✅ | ✅ |
-| **Availability** — free/busy | ✅ | ✅ | ✅ |
-| Availability — suggested meeting times | ❌ | ✅ | ❌ |
+<CapabilityMatrix />
 
 `sdk.calendars.share()` is wired to Google's Calendar ACL API and Microsoft Graph's `calendarPermissions` API — see [Calendars](/guides/calendars/). CalDAV has no standard sharing protocol, so it reports `share: false`.
 

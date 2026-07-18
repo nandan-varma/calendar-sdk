@@ -1,0 +1,119 @@
+---
+import { Badge } from '@astrojs/starlight/components';
+import { errorCodes } from '../data/error-codes';
+---
+
+<div class="err-table-scroll not-content">
+  <table class="err-table">
+    <thead>
+      <tr>
+        <th scope="col">Code</th>
+        <th scope="col">Meaning</th>
+        <th scope="col">Typical trigger</th>
+        <th scope="col">Retryable</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        errorCodes.map((entry) => (
+          <tr>
+            <td>
+              <button type="button" class="err-code" data-copy={entry.code} title="Copy code">
+                {entry.code}
+              </button>
+            </td>
+            <td>{entry.meaning}</td>
+            <td class="err-trigger">{entry.trigger}</td>
+            <td>
+              {entry.retryable ? (
+                <Badge text="Retryable" variant="success" size="small" />
+              ) : (
+                <span class="err-no-retry">—</span>
+              )}
+            </td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</div>
+
+<style>
+  .err-table-scroll {
+    overflow-x: auto;
+  }
+  .err-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--sl-text-sm);
+  }
+  .err-table th,
+  .err-table td {
+    padding: 0.55rem 0.8rem;
+    border-bottom: 1px solid var(--sl-color-gray-5);
+    text-align: left;
+    vertical-align: top;
+  }
+  .err-table thead th {
+    position: sticky;
+    top: 0;
+    background: var(--sl-color-bg);
+    border-bottom: 2px solid var(--sl-color-gray-5);
+    white-space: nowrap;
+  }
+  .err-table tbody tr:hover {
+    background: var(--sl-color-gray-6);
+  }
+  .err-table td:last-child {
+    white-space: nowrap;
+  }
+  .err-table :global(.sl-badge) {
+    white-space: nowrap;
+  }
+  .err-trigger {
+    color: var(--sl-color-gray-2);
+  }
+  .err-no-retry {
+    color: var(--sl-color-gray-3);
+  }
+  .err-code {
+    font: inherit;
+    font-family: var(--__sl-font-mono, var(--sl-font-system-mono));
+    font-size: var(--sl-text-xs);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: var(--sl-color-gray-6);
+    border: 1px solid var(--sl-color-gray-5);
+    border-radius: 0.3rem;
+    padding: 0.2rem 0.5rem;
+    color: var(--sl-color-white);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .err-code:hover {
+    border-color: var(--sl-color-accent);
+  }
+  .err-code:global(.copied)::after {
+    content: 'Copied';
+    margin-inline-start: 0.35rem;
+    color: var(--sl-color-green);
+    font-size: var(--sl-text-xs);
+  }
+</style>
+
+<script>
+  for (const button of document.querySelectorAll<HTMLButtonElement>('.err-code[data-copy]')) {
+    button.addEventListener('click', async () => {
+      const code = button.dataset.copy;
+      if (!code) return;
+      try {
+        await navigator.clipboard.writeText(code);
+        button.classList.add('copied');
+        setTimeout(() => button.classList.remove('copied'), 1200);
+      } catch {
+        // Clipboard API unavailable (e.g. insecure context) — ignore silently.
+      }
+    });
+  }
+</script>

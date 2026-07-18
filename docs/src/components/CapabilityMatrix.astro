@@ -1,0 +1,209 @@
+---
+import { Icon } from '@astrojs/starlight/components';
+import { type ProviderKey, capabilityRows, providerLabels } from '../data/capabilities';
+
+interface Props {
+  // Omit to render the full cross-provider matrix; pass one provider to
+  // render a compact single-column view for that provider's own page.
+  provider?: ProviderKey;
+}
+
+const { provider } = Astro.props;
+const providers = provider ? [provider] : (Object.keys(providerLabels) as ProviderKey[]);
+const groups = [...new Set(capabilityRows.map((row) => row.group))];
+---
+
+{
+  provider ? (
+    <div class="cap-compact not-content">
+      {groups.map((group) => (
+        <div class="cap-compact-group">
+          <h4>{group}</h4>
+          <ul>
+            {capabilityRows
+              .filter((row) => row.group === group)
+              .map((row) => (
+                <li class={row.support[provider] ? 'yes' : 'no'}>
+                  <Icon name={row.support[provider] ? 'approve-check' : 'close'} size="1.1em" />
+                  <span>{row.label}</span>
+                </li>
+              ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  ) : (
+    <div class="cap-matrix not-content">
+      <div class="cap-filters" role="group" aria-label="Filter capabilities by group">
+        <button type="button" class="cap-filter active" data-group="all">
+          All
+        </button>
+        {groups.map((group) => (
+          <button type="button" class="cap-filter" data-group={group}>
+            {group}
+          </button>
+        ))}
+      </div>
+      <div class="cap-table-scroll">
+        <table class="cap-table">
+          <thead>
+            <tr>
+              <th scope="col">Capability</th>
+              {providers.map((key) => (
+                <th scope="col">{providerLabels[key]}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {capabilityRows.map((row) => (
+              <tr data-group={row.group}>
+                <td>
+                  <span class="cap-group-tag">{row.group}</span>
+                  {row.label}
+                </td>
+                {providers.map((key) => (
+                  <td class="cap-cell">
+                    <Icon
+                      name={row.support[key] ? 'approve-check' : 'close'}
+                      size="1.1em"
+                      color={row.support[key] ? 'var(--sl-color-green)' : 'var(--sl-color-red)'}
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+<style>
+  .cap-compact-group {
+    margin-block-end: 1rem;
+  }
+  .cap-compact-group h4 {
+    font-size: var(--sl-text-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--sl-color-gray-2);
+    margin-block-end: 0.5rem;
+  }
+  .cap-compact-group ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.35rem;
+  }
+  .cap-compact-group li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .cap-compact-group li.yes {
+    color: var(--sl-color-white);
+  }
+  .cap-compact-group li.no {
+    color: var(--sl-color-gray-3);
+  }
+  .cap-compact-group li.yes :global(svg) {
+    color: var(--sl-color-green);
+  }
+  .cap-compact-group li.no :global(svg) {
+    color: var(--sl-color-red);
+  }
+
+  .cap-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-block-end: 0.75rem;
+  }
+  .cap-filter {
+    font: inherit;
+    font-size: var(--sl-text-sm);
+    padding: 0.3rem 0.7rem;
+    border-radius: 999px;
+    border: 1px solid var(--sl-color-gray-5);
+    background: var(--sl-color-black);
+    color: var(--sl-color-gray-2);
+    cursor: pointer;
+  }
+  .cap-filter:hover {
+    border-color: var(--sl-color-accent);
+    color: var(--sl-color-white);
+  }
+  .cap-filter.active {
+    border-color: var(--sl-color-accent);
+    background: var(--sl-color-accent-low);
+    color: var(--sl-color-white);
+  }
+
+  .cap-table-scroll {
+    overflow-x: auto;
+  }
+  .cap-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--sl-text-sm);
+  }
+  .cap-table th,
+  .cap-table td {
+    padding: 0.55rem 0.8rem;
+    border-bottom: 1px solid var(--sl-color-gray-5);
+    text-align: left;
+    white-space: nowrap;
+  }
+  .cap-table th:not(:first-child),
+  .cap-table td:not(:first-child) {
+    text-align: center;
+  }
+  .cap-table thead th {
+    position: sticky;
+    top: 0;
+    background: var(--sl-color-bg);
+    border-bottom: 2px solid var(--sl-color-gray-5);
+  }
+  .cap-table td:first-child {
+    white-space: normal;
+  }
+  .cap-table tbody tr:hover {
+    background: var(--sl-color-gray-6);
+  }
+  .cap-table tr.cap-row-hidden {
+    display: none;
+  }
+  .cap-group-tag {
+    display: block;
+    font-size: var(--sl-text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--sl-color-gray-3);
+  }
+</style>
+
+<script>
+  function initCapabilityFilters(root: HTMLElement) {
+    const buttons = root.querySelectorAll<HTMLButtonElement>('.cap-filter');
+    const rows = root.querySelectorAll<HTMLTableRowElement>('tbody tr');
+
+    for (const button of buttons) {
+      button.addEventListener('click', () => {
+        for (const other of buttons) other.classList.remove('active');
+        button.classList.add('active');
+
+        const group = button.dataset.group;
+        for (const row of rows) {
+          const show = group === 'all' || row.dataset.group === group;
+          row.classList.toggle('cap-row-hidden', !show);
+        }
+      });
+    }
+  }
+
+  for (const root of document.querySelectorAll<HTMLElement>('.cap-matrix')) {
+    initCapabilityFilters(root);
+  }
+</script>

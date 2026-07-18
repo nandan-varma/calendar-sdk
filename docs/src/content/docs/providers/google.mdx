@@ -5,6 +5,8 @@ sidebar:
   order: 1
 ---
 
+import CapabilityMatrix from '../../../components/CapabilityMatrix.astro';
+
 `@nandan-varma/calendar-sdk-google` adapts the [Google Calendar API v3](https://developers.google.com/calendar/api) to the canonical model. It is the most fully featured provider: incremental sync via `syncToken`, watch-channel webhooks, attachments, Meet conference data, and event move/duplicate.
 
 ## Credentials
@@ -49,12 +51,9 @@ Google only issues a refresh token when the authorization request includes `acce
 
 ## Capabilities
 
-Everything except meeting-time suggestions:
+Everything except meeting-time suggestions — see [Capabilities](/guides/capabilities/) for the full cross-provider matrix.
 
-- ✅ incremental sync (`syncToken`), webhooks (watch channels), polling
-- ✅ event move **and** duplicate, attachments, conference data (Google Meet)
-- ✅ free/busy
-- ❌ suggested meeting times (use Microsoft, or build on `freeBusy`)
+<CapabilityMatrix provider="google" />
 
 ## Google-specific notes
 

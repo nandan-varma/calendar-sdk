@@ -28,6 +28,8 @@ export interface AuthFlowOptions {
   clientSecret?: string;
   redirectUri: string;
   scopes: string[];
+  /** Bring your own fetch (proxying, instrumentation, test doubles, ...). Defaults to global fetch. */
+  fetch?: typeof fetch;
 }
 
 export interface AuthFlowResult {
@@ -39,6 +41,8 @@ export interface RefreshOptions {
   provider: 'google' | 'microsoft';
   clientId: string;
   clientSecret?: string;
+  /** Bring your own fetch (proxying, instrumentation, test doubles, ...). Defaults to global fetch. */
+  fetch?: typeof fetch;
 }
 
 export function createAuthFlow(options: AuthFlowOptions): AuthFlow {
@@ -53,16 +57,17 @@ export function createAuthFlow(options: AuthFlowOptions): AuthFlow {
         clientId: options.clientId,
         clientSecret: options.clientSecret,
         redirectUri: options.redirectUri,
+        fetch: options.fetch,
       });
     },
     async refreshToken(token: RefreshToken): Promise<TokenSet> {
       return refreshToken(
-        { provider: options.provider, clientId: options.clientId, clientSecret: options.clientSecret },
+        { provider: options.provider, clientId: options.clientId, clientSecret: options.clientSecret, fetch: options.fetch },
         token
       );
     },
     async revokeToken(accessToken: string): Promise<void> {
-      return revokeToken(options.provider, accessToken);
+      return revokeToken(options.provider, accessToken, options.fetch);
     },
   };
 }
@@ -73,9 +78,8 @@ export function createAuthorizationUrl(options: AuthFlowOptions): string {
     redirect_uri: options.redirectUri,
     response_type: 'code',
     scope: options.scopes.join(' '),
-    access_type: options.provider === 'google' ? 'offline' : undefined,
-    prompt: options.provider === 'google' ? 'consent' : undefined,
-  } as Record<string, string>);
+    ...(options.provider === 'google' && { access_type: 'offline', prompt: 'consent' }),
+  });
 
   const baseUrl = options.provider === 'google'
     ? 'https://accounts.google.com/o/oauth2/v2/auth'
@@ -98,6 +102,7 @@ export async function exchangeCodeForTokens(options: {
   clientId: string;
   clientSecret?: string;
   redirectUri: string;
+  fetch?: typeof fetch;
 }): Promise<TokenSet> {
   const params = new URLSearchParams({
     code: options.code,
@@ -111,7 +116,8 @@ export async function exchangeCodeForTokens(options: {
     ? 'https://oauth2.googleapis.com/token'
     : 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
 
-  const response = await fetch(tokenUrl, {
+  const fetchImpl = options.fetch ?? fetch;
+  const response = await fetchImpl(tokenUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: params,
@@ -145,7 +151,8 @@ export async function refreshToken(options: RefreshOptions, token: RefreshToken)
     ? 'https://oauth2.googleapis.com/token'
     : 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
 
-  const response = await fetch(tokenUrl, {
+  const fetchImpl = options.fetch ?? fetch;
+  const response = await fetchImpl(tokenUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: params,
@@ -166,9 +173,9 @@ export async function refreshToken(options: RefreshOptions, token: RefreshToken)
   };
 }
 
-export async function revokeToken(provider: 'google' | 'microsoft', accessToken: string): Promise<void> {
+export async function revokeToken(provider: 'google' | 'microsoft', accessToken: string, fetchImpl: typeof fetch = fetch): Promise<void> {
   if (provider === 'google') {
-    await fetch('https://oauth2.googleapis.com/revoke', {
+    await fetchImpl('https://oauth2.googleapis.com/revoke', {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: `token=${encodeURIComponent(accessToken)}`,

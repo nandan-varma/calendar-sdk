@@ -15,7 +15,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # standalone: pnpm 11 needs Node >= 22.13, which the Node 20 matrix job lacks
       - uses: pnpm/action-setup@v4
+        with:
+          standalone: true
 
       - uses: actions/setup-node@v4
         with:

@@ -1,4 +1,5 @@
-export type ProviderKey = 'google' | 'microsoft' | 'caldav';
+/** The three built-in providers, or any custom key a third-party/testing provider registers under. */
+export type ProviderKey = 'google' | 'microsoft' | 'caldav' | (string & {});
 
 export interface DateTime {
   dateTime: string;

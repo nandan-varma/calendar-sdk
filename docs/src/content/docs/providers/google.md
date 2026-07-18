@@ -21,15 +21,13 @@ import { createGoogleProvider } from "@nandan-varma/calendar-sdk-google";
 
 const sdk = createCalendarSdk({
   providers: [
-    {
-      key: "google",
-      adapter: createGoogleProvider({
-        clientId: process.env.GOOGLE_CLIENT_ID!,
-        clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-        redirectUri: "https://app.example.com/oauth/google/callback", // optional default
-        // logger: myLogger,                                          // optional
-      }),
-    },
+    createGoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID!,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      redirectUri: "https://app.example.com/oauth/google/callback", // optional default
+      // logger: myLogger,                                          // optional
+      // fetch: myFetch, retryOptions: { maxRetries: 5 },           // optional
+    }),
   ],
 });
 ```

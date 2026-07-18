@@ -1,0 +1,22 @@
+{
+  "name": "@nandan-varma/calendar-sdk-examples",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "quickstart": "tsx quickstart.ts",
+    "sync-worker": "tsx sync-worker.ts",
+    "google-oauth": "tsx google-oauth.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@nandan-varma/calendar-sdk": "workspace:*",
+    "@nandan-varma/calendar-sdk-mock": "workspace:*",
+    "@nandan-varma/calendar-sdk-google": "workspace:*",
+    "@nandan-varma/calendar-sdk-auth": "workspace:*"
+  },
+  "devDependencies": {
+    "tsx": "^4.19.2",
+    "typescript": "^5.3.3"
+  }
+}

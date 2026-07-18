@@ -48,7 +48,7 @@ Fetches from the provider, stamps each event with SDK ids, saves them to storage
 
 ### `get(eventId)`
 
-Reads from storage only; returns `null` for unknown ids.
+Reads from storage only; throws `NOT_FOUND` if this event hasn't been synced locally yet. Call `events.list(calendarId)` first.
 
 ### `create(calendarId, input, options?)`
 

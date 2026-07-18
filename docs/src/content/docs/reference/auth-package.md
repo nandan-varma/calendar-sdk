@@ -23,10 +23,12 @@ interface AuthFlowOptions {
 interface AuthFlow {
   getAuthorizationUrl(): string;
   exchangeCode(code: string): Promise<TokenSet>;
+  refreshToken(token: RefreshToken): Promise<TokenSet>;
+  revokeToken(accessToken: string): Promise<void>;
 }
 ```
 
-For Google, the authorization URL includes `access_type=offline` and `prompt=consent` so a refresh token is issued.
+For Google, the authorization URL includes `access_type=offline` and `prompt=consent` so a refresh token is issued. `flow.refreshToken`/`flow.revokeToken` are convenience wrappers around the standalone `refreshToken`/`revokeToken` functions below, bound to this flow's `provider`/`clientId`/`clientSecret` — use them once you have a stored token so you don't have to re-pass those options everywhere.
 
 ### `createAuthorizationUrl(options): string`
 

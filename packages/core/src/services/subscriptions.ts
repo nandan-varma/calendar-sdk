@@ -27,7 +27,7 @@ export class SubscriptionsService {
   async create(accountId: string, config: SubscriptionConfig): Promise<Subscription> {
     const account = await this.storage.accounts.get(accountId);
     if (!account) {
-      throw errors.notFound('google', 'Account not found');
+      throw errors.notFound(undefined, 'Account not found');
     }
 
     const caps = account.capabilities.sync;
@@ -66,12 +66,12 @@ export class SubscriptionsService {
   async renew(subscriptionId: string): Promise<Subscription> {
     const subscription = await this.storage.subscriptions.get(subscriptionId);
     if (!subscription) {
-      throw errors.notFound('google', 'Subscription not found');
+      throw errors.notFound(undefined, 'Subscription not found');
     }
 
     const account = await this.storage.accounts.get(subscription.accountId);
     if (!account) {
-      throw errors.notFound('google', 'Account not found');
+      throw errors.notFound(undefined, 'Account not found');
     }
 
     const provider = this.getProvider(account.provider);

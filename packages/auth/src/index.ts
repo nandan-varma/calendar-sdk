@@ -55,6 +55,15 @@ export function createAuthFlow(options: AuthFlowOptions): AuthFlow {
         redirectUri: options.redirectUri,
       });
     },
+    async refreshToken(token: RefreshToken): Promise<TokenSet> {
+      return refreshToken(
+        { provider: options.provider, clientId: options.clientId, clientSecret: options.clientSecret },
+        token
+      );
+    },
+    async revokeToken(accessToken: string): Promise<void> {
+      return revokeToken(options.provider, accessToken);
+    },
   };
 }
 
@@ -230,6 +239,8 @@ export interface TokenManagerHandle {
 export interface AuthFlow {
   getAuthorizationUrl(): string;
   exchangeCode(code: string): Promise<TokenSet>;
+  refreshToken(token: RefreshToken): Promise<TokenSet>;
+  revokeToken(accessToken: string): Promise<void>;
 }
 
 export function createState(): string {

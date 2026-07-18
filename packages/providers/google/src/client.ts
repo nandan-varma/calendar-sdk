@@ -1,6 +1,6 @@
-import type { 
-  ProviderAdapter, 
-  TokenSet, 
+import type {
+  ProviderAdapter,
+  TokenSet,
   RefreshToken,
   CreateAuthUrlOptions,
   CalendarsProviderMethods,
@@ -11,27 +11,40 @@ import type {
   SyncResult,
   ExpandedOccurrence,
   DateTimeValue,
+  ShareCalendarInput,
+  RetryOptions,
 } from '@nandan-varma/calendar-sdk';
 import type { Logger } from '@nandan-varma/calendar-sdk';
-import type { 
-  GoogleCalendarListResponse, 
-  GoogleEventsResponse, 
+import { CalendarSdkError, createTransport, defaultRetryOptions } from '@nandan-varma/calendar-sdk';
+import type {
+  GoogleCalendarListResponse,
+  GoogleEventsResponse,
   GoogleFreeBusy,
   GoogleWatchResponse,
   GoogleTokenResponse,
   GoogleUser,
 } from './types/index.js';
-import { mapCalendarListResponse, mapEventsResponse } from './mappers/index.js';
+import { mapEventsResponse } from './mappers/index.js';
+
+const BASE_URL = 'https://www.googleapis.com/calendar/v3';
 
 export interface GoogleProviderConfig {
   clientId: string;
   clientSecret?: string;
   redirectUri?: string;
   logger?: Logger;
+  /** Bring your own fetch (proxying, instrumentation, test doubles, ...). */
+  fetch?: typeof fetch;
+  /** Overrides for the SDK's default retry/backoff policy. */
+  retryOptions?: Partial<RetryOptions>;
 }
 
 export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdapter {
   const logger = config.logger;
+  const retryOptions: RetryOptions = { ...defaultRetryOptions, ...config.retryOptions };
+  const transport = createTransport('google', { fetch: config.fetch, retryOptions }, logger);
+
+  const authHeader = (token: TokenSet) => ({ Authorization: `Bearer ${token.accessToken}` });
 
   const auth: ProviderAdapter['auth'] = {
     createAuthorizationUrl: async (options: CreateAuthUrlOptions) => {
@@ -48,8 +61,9 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
     },
 
     exchangeCode: async (code: string, redirectUri: string) => {
-      const response = await fetch('https://oauth2.googleapis.com/token', {
+      const { data } = await transport.request<GoogleTokenResponse>({
         method: 'POST',
+        path: 'https://oauth2.googleapis.com/token',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
           code,
@@ -57,15 +71,9 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
           client_secret: config.clientSecret || '',
           redirect_uri: redirectUri,
           grant_type: 'authorization_code',
-        }),
+        }).toString(),
       });
 
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Token exchange failed: ${error}`);
-      }
-
-      const data: GoogleTokenResponse = await response.json();
       return {
         accessToken: data.access_token,
         refreshToken: data.refresh_token,
@@ -76,23 +84,18 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
     },
 
     refreshToken: async (token: RefreshToken) => {
-      const response = await fetch('https://oauth2.googleapis.com/token', {
+      const { data } = await transport.request<GoogleTokenResponse>({
         method: 'POST',
+        path: 'https://oauth2.googleapis.com/token',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams({
           refresh_token: token.refreshToken,
           client_id: config.clientId,
           client_secret: config.clientSecret || '',
           grant_type: 'refresh_token',
-        }),
+        }).toString(),
       });
 
-      if (!response.ok) {
-        const error = await response.text();
-        throw new Error(`Token refresh failed: ${error}`);
-      }
-
-      const data: GoogleTokenResponse = await response.json();
       return {
         accessToken: data.access_token,
         refreshToken: token.refreshToken,
@@ -103,25 +106,23 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
     },
 
     revokeToken: async (token: string) => {
-      await fetch('https://oauth2.googleapis.com/revoke', {
+      await transport.request({
         method: 'POST',
+        path: 'https://oauth2.googleapis.com/revoke',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: `token=${encodeURIComponent(token)}`,
+        responseType: 'text',
       });
     },
   };
 
   const accounts: ProviderAdapter['accounts'] = {
     getAccount: async (token: TokenSet) => {
-      const response = await fetch('https://www.googleapis.com/oauth2/v2/userinfo', {
-        headers: { Authorization: `Bearer ${token.accessToken}` },
+      const { data: user } = await transport.request<GoogleUser>({
+        path: 'https://www.googleapis.com/oauth2/v2/userinfo',
+        headers: authHeader(token),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to get account info');
-      }
-
-      const user: GoogleUser = await response.json();
       return {
         id: user.id,
         provider: 'google' as const,
@@ -144,23 +145,19 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
 
   const calendars: CalendarsProviderMethods = {
     list: async (token, query) => {
-      const params = new URLSearchParams();
-      if (query?.pageToken) params.set('pageToken', query.pageToken);
-      if (query?.limit) params.set('maxResults', String(query.limit));
-      if (query?.showHidden !== false) params.set('showDeleted', 'false');
+      const params: Record<string, string> = {};
+      if (query?.pageToken) params.pageToken = query.pageToken;
+      if (query?.limit) params.maxResults = String(query.limit);
+      if (query?.showHidden !== false) params.showDeleted = 'false';
 
-      const response = await fetch(
-        `https://www.googleapis.com/calendar/v3/users/me/calendarList?${params}`,
-        { headers: { Authorization: `Bearer ${token.accessToken}` } }
-      );
+      const { data } = await transport.request<GoogleCalendarListResponse>({
+        path: `${BASE_URL}/users/me/calendarList`,
+        query: params,
+        headers: authHeader(token),
+      });
 
-      if (!response.ok) {
-        throw new Error(`Failed to list calendars: ${response.statusText}`);
-      }
-
-      const data: GoogleCalendarListResponse = await response.json();
       return {
-        items: data.items.map((entry, _i) => ({
+        items: data.items.map(entry => ({
           id: entry.id,
           accountId: '',
           providerId: entry.id,
@@ -189,16 +186,11 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
     },
 
     get: async (token, id) => {
-      const response = await fetch(
-        `https://www.googleapis.com/calendar/v3/users/me/calendars/${encodeURIComponent(id)}`,
-        { headers: { Authorization: `Bearer ${token.accessToken}` } }
-      );
+      const { data: entry } = await transport.request<any>({
+        path: `${BASE_URL}/users/me/calendars/${encodeURIComponent(id)}`,
+        headers: authHeader(token),
+      });
 
-      if (!response.ok) {
-        throw new Error(`Failed to get calendar: ${response.statusText}`);
-      }
-
-      const entry = await response.json();
       return {
         id: entry.id,
         accountId: '',
@@ -220,28 +212,18 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
     },
 
     create: async (token, input) => {
-      const response = await fetch(
-        'https://www.googleapis.com/calendar/v3/users/me/calendars',
-        {
-          method: 'POST',
-          headers: { 
-            Authorization: `Bearer ${token.accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            summary: input.name,
-            description: input.description,
-            timeZone: input.timezone,
-            backgroundColor: input.color,
-          }),
-        }
-      );
+      const { data: entry } = await transport.request<any>({
+        method: 'POST',
+        path: `${BASE_URL}/users/me/calendars`,
+        headers: authHeader(token),
+        body: {
+          summary: input.name,
+          description: input.description,
+          timeZone: input.timezone,
+          backgroundColor: input.color,
+        },
+      });
 
-      if (!response.ok) {
-        throw new Error(`Failed to create calendar: ${response.statusText}`);
-      }
-
-      const entry = await response.json();
       return {
         id: entry.id,
         accountId: '',
@@ -263,29 +245,19 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
     },
 
     update: async (token, id, patch) => {
-      const response = await fetch(
-        `https://www.googleapis.com/calendar/v3/users/me/calendars/${encodeURIComponent(id)}`,
-        {
-          method: 'PATCH',
-          headers: { 
-            Authorization: `Bearer ${token.accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            summary: patch.name,
-            description: patch.description,
-            timeZone: patch.timezone,
-            backgroundColor: patch.color,
-            hidden: patch.hidden,
-          }),
-        }
-      );
+      const { data: entry } = await transport.request<any>({
+        method: 'PATCH',
+        path: `${BASE_URL}/users/me/calendars/${encodeURIComponent(id)}`,
+        headers: authHeader(token),
+        body: {
+          summary: patch.name,
+          description: patch.description,
+          timeZone: patch.timezone,
+          backgroundColor: patch.color,
+          hidden: patch.hidden,
+        },
+      });
 
-      if (!response.ok) {
-        throw new Error(`Failed to update calendar: ${response.statusText}`);
-      }
-
-      const entry = await response.json();
       return {
         id: entry.id,
         accountId: '',
@@ -307,57 +279,57 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
     },
 
     delete: async (token, id) => {
-      const response = await fetch(
-        `https://www.googleapis.com/calendar/v3/users/me/calendars/${encodeURIComponent(id)}`,
-        {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${token.accessToken}` },
-        }
-      );
+      await deleteIgnoring404(() => transport.request({
+        method: 'DELETE',
+        path: `${BASE_URL}/users/me/calendars/${encodeURIComponent(id)}`,
+        headers: authHeader(token),
+        responseType: 'text',
+      }));
+    },
 
-      if (!response.ok && response.status !== 404) {
-        throw new Error(`Failed to delete calendar: ${response.statusText}`);
-      }
+    // Google Calendar ACL: https://developers.google.com/workspace/calendar/api/v3/reference/acl/insert
+    share: async (token: TokenSet, calendarId: string, input: ShareCalendarInput) => {
+      await transport.request({
+        method: 'POST',
+        path: `${BASE_URL}/calendars/${encodeURIComponent(calendarId)}/acl`,
+        query: input.sendNotifications === false ? { sendNotifications: 'false' } : undefined,
+        headers: authHeader(token),
+        body: {
+          role: input.role,
+          scope: { type: 'user', value: input.email },
+        },
+      });
     },
   };
 
   const events: EventsProviderMethods = {
     list: async (token, calendarId, query) => {
-      const params = new URLSearchParams();
-      if (query?.pageToken) params.set('pageToken', query.pageToken);
-      if (query?.limit) params.set('maxResults', String(query.limit));
-      if (query?.timeMin) params.set('timeMin', query.timeMin.toISOString());
-      if (query?.timeMax) params.set('timeMax', query.timeMax.toISOString());
-      if (query?.showDeleted) params.set('showDeleted', 'true');
-      if (query?.singleEvents) params.set('singleEvents', 'true');
-      if (query?.orderBy) params.set('orderBy', query.orderBy);
-      if (query?.q) params.set('q', query.q);
+      const params: Record<string, string> = {};
+      if (query?.pageToken) params.pageToken = query.pageToken;
+      if (query?.limit) params.maxResults = String(query.limit);
+      if (query?.timeMin) params.timeMin = query.timeMin.toISOString();
+      if (query?.timeMax) params.timeMax = query.timeMax.toISOString();
+      if (query?.showDeleted) params.showDeleted = 'true';
+      if (query?.singleEvents) params.singleEvents = 'true';
+      if (query?.orderBy) params.orderBy = query.orderBy;
+      if (query?.q) params.q = query.q;
 
-      const response = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
-        { headers: { Authorization: `Bearer ${token.accessToken}` } }
-      );
+      const { data } = await transport.request<GoogleEventsResponse>({
+        path: `${BASE_URL}/calendars/${encodeURIComponent(calendarId)}/events`,
+        query: params,
+        headers: authHeader(token),
+      });
 
-      if (!response.ok) {
-        throw new Error(`Failed to list events: ${response.statusText}`);
-      }
-
-      const data: GoogleEventsResponse = await response.json();
       const mapped = mapEventsResponse(data, '', '', calendarId);
       return { items: mapped.items, nextPageToken: mapped.nextPageToken };
     },
 
     get: async (token, calendarId, id) => {
-      const response = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(id)}`,
-        { headers: { Authorization: `Bearer ${token.accessToken}` } }
-      );
+      const { data: event } = await transport.request<any>({
+        path: `${BASE_URL}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(id)}`,
+        headers: authHeader(token),
+      });
 
-      if (!response.ok) {
-        throw new Error(`Failed to get event: ${response.statusText}`);
-      }
-
-      const event = await response.json();
       return mapEventsResponse({ items: [event], kind: '', etag: '' }, '', '', calendarId).items[0];
     },
 
@@ -376,11 +348,9 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
       if (input.attendees) {
         body.attendees = input.attendees.map(a => ({ email: a.email, displayName: a.displayName }));
       }
-
       if (input.recurrence?.rrule) {
         body.recurrence = [input.recurrence.rrule];
       }
-
       if (input.reminders) {
         body.reminders = {
           useDefault: false,
@@ -388,29 +358,19 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
         };
       }
 
-      const response = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`,
-        {
-          method: 'POST',
-          headers: { 
-            Authorization: `Bearer ${token.accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(body),
-        }
-      );
+      const { data: event } = await transport.request<any>({
+        method: 'POST',
+        path: `${BASE_URL}/calendars/${encodeURIComponent(calendarId)}/events`,
+        headers: authHeader(token),
+        body,
+      });
 
-      if (!response.ok) {
-        throw new Error(`Failed to create event: ${response.statusText}`);
-      }
-
-      const event = await response.json();
       return mapEventsResponse({ items: [event], kind: '', etag: '' }, '', '', calendarId).items[0];
     },
 
     update: async (token, calendarId, id, patch, _options) => {
       const body: Record<string, unknown> = {};
-      
+
       if (patch.title !== undefined) body.summary = patch.title;
       if (patch.description !== undefined) body.description = patch.description;
       if (patch.location !== undefined) body.location = patch.location;
@@ -422,115 +382,70 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
       if (patch.recurrence !== undefined) body.recurrence = patch.recurrence?.rrule ? [patch.recurrence.rrule] : [];
       if (patch.reminders !== undefined) body.reminders = patch.reminders ? { useDefault: false, overrides: patch.reminders.map(r => ({ method: r.method, minutes: r.minutes })) } : { useDefault: false };
 
-      const response = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(id)}`,
-        {
-          method: 'PATCH',
-          headers: { 
-            Authorization: `Bearer ${token.accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(body),
-        }
-      );
+      const { data: event } = await transport.request<any>({
+        method: 'PATCH',
+        path: `${BASE_URL}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(id)}`,
+        headers: authHeader(token),
+        body,
+      });
 
-      if (!response.ok) {
-        throw new Error(`Failed to update event: ${response.statusText}`);
-      }
-
-      const event = await response.json();
       return mapEventsResponse({ items: [event], kind: '', etag: '' }, '', '', calendarId).items[0];
     },
 
     delete: async (token, calendarId, id, _options) => {
-      const response = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(id)}`,
-        {
-          method: 'DELETE',
-          headers: { Authorization: `Bearer ${token.accessToken}` },
-        }
-      );
-
-      if (!response.ok && response.status !== 404) {
-        throw new Error(`Failed to delete event: ${response.statusText}`);
-      }
+      await deleteIgnoring404(() => transport.request({
+        method: 'DELETE',
+        path: `${BASE_URL}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(id)}`,
+        headers: authHeader(token),
+        responseType: 'text',
+      }));
     },
 
     move: async (token, eventId, sourceCalendarId, targetCalendarId) => {
-      const response = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(sourceCalendarId)}/events/${encodeURIComponent(eventId)}/move`,
-        {
-          method: 'POST',
-          headers: { 
-            Authorization: `Bearer ${token.accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ destination: targetCalendarId }),
-        }
-      );
+      const { data: event } = await transport.request<any>({
+        method: 'POST',
+        path: `${BASE_URL}/calendars/${encodeURIComponent(sourceCalendarId)}/events/${encodeURIComponent(eventId)}/move`,
+        query: { destination: targetCalendarId },
+        headers: authHeader(token),
+      });
 
-      if (!response.ok) {
-        throw new Error(`Failed to move event: ${response.statusText}`);
-      }
-
-      const event = await response.json();
       return mapEventsResponse({ items: [event], kind: '', etag: '' }, '', '', targetCalendarId).items[0];
     },
 
     duplicate: async (token, eventId, targetCalendarId) => {
-      const getResponse = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(targetCalendarId)}/events/${encodeURIComponent(eventId)}`,
-        { headers: { Authorization: `Bearer ${token.accessToken}` } }
-      );
+      const { data: source } = await transport.request<any>({
+        path: `${BASE_URL}/calendars/${encodeURIComponent(targetCalendarId)}/events/${encodeURIComponent(eventId)}`,
+        headers: authHeader(token),
+      });
 
-      if (!getResponse.ok) {
-        throw new Error(`Failed to get event for duplication: ${getResponse.statusText}`);
-      }
+      const clone = { ...source };
+      delete clone.id;
+      delete clone.etag;
+      delete clone.htmlLink;
+      delete clone.created;
+      delete clone.updated;
 
-      const event = await getResponse.json();
-      delete event.id;
-      delete event.etag;
-      delete event.htmlLink;
-      delete event.created;
-      delete event.updated;
+      const { data: newEvent } = await transport.request<any>({
+        method: 'POST',
+        path: `${BASE_URL}/calendars/${encodeURIComponent(targetCalendarId)}/events`,
+        headers: authHeader(token),
+        body: clone,
+      });
 
-      const createResponse = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(targetCalendarId)}/events`,
-        {
-          method: 'POST',
-          headers: { 
-            Authorization: `Bearer ${token.accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(event),
-        }
-      );
-
-      if (!createResponse.ok) {
-        throw new Error(`Failed to duplicate event: ${createResponse.statusText}`);
-      }
-
-      const newEvent = await createResponse.json();
       return mapEventsResponse({ items: [newEvent], kind: '', etag: '' }, '', '', targetCalendarId).items[0];
     },
 
     expandRecurrence: async (token, calendarId, eventId, timeMin, timeMax) => {
-      const params = new URLSearchParams({
-        singleEvents: 'true',
-        timeMin: timeMin.toISOString(),
-        timeMax: timeMax.toISOString(),
+      const { data } = await transport.request<GoogleEventsResponse>({
+        path: `${BASE_URL}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}/instances`,
+        query: {
+          singleEvents: 'true',
+          timeMin: timeMin.toISOString(),
+          timeMax: timeMax.toISOString(),
+        },
+        headers: authHeader(token),
       });
 
-      const response = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}/instances?${params}`,
-        { headers: { Authorization: `Bearer ${token.accessToken}` } }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to expand recurrence: ${response.statusText}`);
-      }
-
-      const data: GoogleEventsResponse = await response.json();
       return data.items.map((e): ExpandedOccurrence => ({
         id: e.id,
         eventId,
@@ -551,28 +466,18 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
 
   const availability: AvailabilityProviderMethods = {
     freeBusy: async (token, query) => {
-      const response = await fetch(
-        'https://www.googleapis.com/calendar/v3/freeBusy',
-        {
-          method: 'POST',
-          headers: { 
-            Authorization: `Bearer ${token.accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            timeMin: query.timeMin.toISOString(),
-            timeMax: query.timeMax.toISOString(),
-            timeZone: query.timezone || 'UTC',
-            items: query.calendars.map(id => ({ id })),
-          }),
-        }
-      );
+      const { data } = await transport.request<GoogleFreeBusy>({
+        method: 'POST',
+        path: `${BASE_URL}/freeBusy`,
+        headers: authHeader(token),
+        body: {
+          timeMin: query.timeMin.toISOString(),
+          timeMax: query.timeMax.toISOString(),
+          timeZone: query.timezone || 'UTC',
+          items: query.calendars.map(id => ({ id })),
+        },
+      });
 
-      if (!response.ok) {
-        throw new Error(`Failed to get free/busy: ${response.statusText}`);
-      }
-
-      const data: GoogleFreeBusy = await response.json();
       const result: Record<string, Array<{ start: Date; end: Date; status: 'free' | 'busy' | 'tentative' | 'unknown' }>> = {};
 
       for (const [calId, calData] of Object.entries(data.calendars)) {
@@ -587,39 +492,33 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
     },
 
     suggestMeeting: async () => {
-      throw new Error('Meeting time suggestions not supported by Google Calendar');
+      throw new CalendarSdkError({
+        code: 'CAPABILITY_UNSUPPORTED',
+        message: 'Meeting time suggestions are not supported by Google Calendar',
+        provider: 'google',
+      });
     },
   };
 
   const sync: SyncProviderMethods = {
     fullSync: async (token, calendarId, options) => {
-      const params = new URLSearchParams({
-        singleEvents: 'true',
-        showDeleted: 'false',
+      const params: Record<string, string> = { singleEvents: 'true', showDeleted: 'false' };
+      if (options?.timeMin) params.timeMin = options.timeMin.toISOString();
+      if (options?.timeMax) params.timeMax = options.timeMax.toISOString();
+      if (options?.limit) params.maxResults = String(options.limit);
+
+      const { data } = await transport.request<GoogleEventsResponse>({
+        path: `${BASE_URL}/calendars/${encodeURIComponent(calendarId)}/events`,
+        query: params,
+        headers: authHeader(token),
       });
-      if (options?.timeMin) params.set('timeMin', options.timeMin.toISOString());
-      if (options?.timeMax) params.set('timeMax', options.timeMax.toISOString());
-      if (options?.limit) params.set('maxResults', String(options.limit));
 
-      const response = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
-        { headers: { Authorization: `Bearer ${token.accessToken}` } }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to full sync: ${response.statusText}`);
-      }
-
-      const data: GoogleEventsResponse = await response.json();
       const mapped = mapEventsResponse(data, '', '', calendarId);
 
       return {
         accountId: '',
         scope: 'events' as const,
-        events: mapped.items.map(e => ({
-          type: 'created' as const,
-          event: e,
-        })),
+        events: mapped.items.map(e => ({ type: 'created' as const, event: e })),
         deletions: [],
         nextCursor: mapped.nextSyncToken ? { token: mapped.nextSyncToken, expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) } : undefined,
         expiredToken: false,
@@ -628,83 +527,65 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
     },
 
     incrementalSync: async (token, calendarId, cursor) => {
-      const params = new URLSearchParams({
-        singleEvents: 'true',
-        showDeleted: 'true',
-        syncToken: cursor.token,
-      });
+      try {
+        const { data } = await transport.request<GoogleEventsResponse>({
+          path: `${BASE_URL}/calendars/${encodeURIComponent(calendarId)}/events`,
+          query: { singleEvents: 'true', showDeleted: 'true', syncToken: cursor.token },
+          headers: authHeader(token),
+        });
 
-      const response = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
-        { headers: { Authorization: `Bearer ${token.accessToken}` } }
-      );
+        const mapped = mapEventsResponse(data, '', '', calendarId);
 
-      if (response.status === 410) {
+        const events: Array<{ type: 'created' | 'updated' | 'deleted'; event?: any; eventId?: string }> = [];
+        for (const item of mapped.items) {
+          if (item.deletedAt) {
+            events.push({ type: 'deleted', eventId: item.id });
+          } else {
+            events.push({ type: 'created', event: item });
+          }
+        }
+
         return {
           accountId: '',
           scope: 'events' as const,
-          events: [],
+          events,
           deletions: [],
-          expiredToken: true,
-          hasMore: false,
+          nextCursor: mapped.nextSyncToken ? { token: mapped.nextSyncToken, expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) } : undefined,
+          expiredToken: false,
+          hasMore: !!mapped.nextPageToken,
         } as SyncResult;
-      }
-
-      if (!response.ok) {
-        throw new Error(`Failed to incremental sync: ${response.statusText}`);
-      }
-
-      const data: GoogleEventsResponse = await response.json();
-      const mapped = mapEventsResponse(data, '', '', calendarId);
-
-      const events: Array<{ type: 'created' | 'updated' | 'deleted'; event?: any; eventId?: string }> = [];
-
-      for (const item of mapped.items) {
-        if (item.deletedAt) {
-          events.push({ type: 'deleted', eventId: item.id });
-        } else {
-          events.push({ type: 'created', event: item });
+      } catch (error) {
+        if (error instanceof CalendarSdkError && error.status === 410) {
+          return {
+            accountId: '',
+            scope: 'events' as const,
+            events: [],
+            deletions: [],
+            expiredToken: true,
+            hasMore: false,
+          } as SyncResult;
         }
+        throw error;
       }
-
-      return {
-        accountId: '',
-        scope: 'events' as const,
-        events,
-        deletions: [],
-        nextCursor: mapped.nextSyncToken ? { token: mapped.nextSyncToken, expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) } : undefined,
-        expiredToken: false,
-        hasMore: !!mapped.nextPageToken,
-      } as SyncResult;
     },
   };
 
   const subscriptions: SubscriptionsProviderMethods = {
     create: async (token, config) => {
-      const response = await fetch(
-        `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(config.resource)}/watch`,
-        {
-          method: 'POST',
-          headers: { 
-            Authorization: `Bearer ${token.accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            id: crypto.randomUUID(),
-            type: 'web_hook',
-            address: config.webhookUrl,
-            expiration: config.leaseDurationSeconds 
-              ? String(Date.now() + config.leaseDurationSeconds * 1000) 
-              : String(Date.now() + 7 * 24 * 60 * 60 * 1000),
-          }),
-        }
-      );
+      const { data } = await transport.request<GoogleWatchResponse>({
+        method: 'POST',
+        path: `${BASE_URL}/calendars/${encodeURIComponent(config.resource)}/watch`,
+        headers: authHeader(token),
+        body: {
+          id: crypto.randomUUID(),
+          type: 'web_hook',
+          address: config.webhookUrl,
+          expiration: config.leaseDurationSeconds
+            ? String(Date.now() + config.leaseDurationSeconds * 1000)
+            : String(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+      });
 
-      if (!response.ok) {
-        throw new Error(`Failed to create subscription: ${response.statusText}`);
-      }
-
-      const data: GoogleWatchResponse = await response.json();
       return {
         id: data.channelId,
         accountId: '',
@@ -720,27 +601,33 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
       };
     },
 
-    renew: async (token, subscriptionId) => {
-      throw new Error('Google watch renewal requires recreating the channel');
-    },
-
-    delete: async (token, subscriptionId) => {
-      await fetch('https://www.googleapis.com/calendar/v3/channels/stop', {
-        method: 'POST',
-        headers: { 
-          Authorization: `Bearer ${token.accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ id: subscriptionId }),
+    renew: async () => {
+      throw new CalendarSdkError({
+        code: 'CAPABILITY_UNSUPPORTED',
+        message: 'Google watch channels cannot be renewed in place',
+        provider: 'google',
+        remediation: 'Call subscriptions.create() again to open a new channel before the old one expires.',
       });
     },
 
-    list: async (token, _accountId) => {
-      return [];
+    delete: async (token, subscriptionId) => {
+      await transport.request({
+        method: 'POST',
+        path: `${BASE_URL}/channels/stop`,
+        headers: authHeader(token),
+        body: { id: subscriptionId },
+        responseType: 'text',
+      });
     },
 
-    get: async (_token, _subscriptionId) => {
-      throw new Error('Get subscription not supported');
+    list: async () => [],
+
+    get: async () => {
+      throw new CalendarSdkError({
+        code: 'CAPABILITY_UNSUPPORTED',
+        message: 'Google does not support fetching a single watch channel by id',
+        provider: 'google',
+      });
     },
   };
 
@@ -760,22 +647,18 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
       sync: { incremental: true, webhook: true, polling: true },
       availability: { freeBusy: true, suggestedTimes: false },
     }),
-    createTransport: () => {
-      const baseUrl = 'https://www.googleapis.com/calendar/v3';
-      return {
-        request: async <T>(options: { method?: string; path: string; query?: Record<string, string>; headers?: Record<string, string>; body?: unknown }) => {
-          const params = new URLSearchParams(options.query || {});
-          const url = `${baseUrl}${options.path}?${params}`;
-          const response = await fetch(url, {
-            method: options.method || 'GET',
-            headers: options.headers,
-            body: options.body ? JSON.stringify(options.body) : undefined,
-          });
-          return { data: await response.json() as T, status: response.status, headers: {} };
-        },
-      };
-    },
+    createTransport: () => transport,
   };
+}
+
+// DELETE is idempotent: a 404 means the resource is already gone, which is a success from the caller's perspective.
+async function deleteIgnoring404(fn: () => Promise<unknown>): Promise<void> {
+  try {
+    await fn();
+  } catch (error) {
+    if (error instanceof CalendarSdkError && error.status === 404) return;
+    throw error;
+  }
 }
 
 function mapAccessRole(role: string): 'owner' | 'writer' | 'reader' | 'freeBusyReader' | 'none' {

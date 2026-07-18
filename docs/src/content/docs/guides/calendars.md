@@ -48,10 +48,10 @@ Fetches the account's calendars from the provider, saves each one to storage, an
 ### `get(calendarId)`
 
 ```typescript
-const calendar = await sdk.calendars.get(calendarId); // null if unknown
+const calendar = await sdk.calendars.get(calendarId);
 ```
 
-Reads from storage only.
+Reads from storage only — throws `NOT_FOUND` if this calendar hasn't been synced locally yet. Call `calendars.list(accountId)` first.
 
 ### `create(accountId, input)`
 
@@ -85,11 +85,13 @@ await sdk.calendars.delete(calendarId);
 
 Deletes the calendar at the provider, then removes it **and all of its locally stored events**. Requires the `delete` capability (owner access). A no-op if the calendar isn't in storage.
 
-### `share(calendarId, email, role)`
+### `share(calendarId, input)`
 
-:::caution[Not yet implemented]
-`share()` currently validates capabilities and logs, but does not call any provider ACL API yet. Track provider support via `account.capabilities.calendars.share` (Google and Microsoft report `true`, CalDAV `false`).
-:::
+```typescript
+await sdk.calendars.share(calendarId, { email: "teammate@example.com", role: "reader" });
+```
+
+Grants access to another user: Google via the Calendar ACL API, Microsoft via Graph `calendarPermissions`. Throws `CAPABILITY_UNSUPPORTED` where the provider doesn't support it — check `account.capabilities.calendars.share` first (Google and Microsoft report `true`, CalDAV `false`).
 
 ## Errors you may encounter
 

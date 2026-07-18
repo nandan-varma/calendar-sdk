@@ -59,8 +59,8 @@ const { data, status, headers, requestId } = await transport.request<GoogleEvent
 });
 ```
 
-`request` options: `method` (`GET`/`POST`/`PUT`/`PATCH`/`DELETE`), `path`, `query`, `headers`, `body` (JSON-serialized), `timeout`, `signal`. Responses parse JSON (204 → `null`) and expose lower-cased headers plus the provider `requestId` when present.
+`request` options: `method` (`GET`/`POST`/`PUT`/`PATCH`/`DELETE`, or any custom verb like CalDAV's `PROPFIND`/`REPORT`), `path`, `query`, `headers`, `body`, `responseType` (`"json"` default, or `"text"` for XML/plain-text APIs), `timeout`, `signal`. Object bodies are JSON-serialized automatically (with a `Content-Type: application/json` default, unless you already set one); string bodies are sent as-is. Successful responses parse per `responseType` (204 always → `null`) and expose lower-cased headers plus the provider `requestId` when present.
 
 ## Custom fetch
 
-Supply `fetch` in the transport config (or `SdkConfig.fetch`) to route traffic through a proxy, add instrumentation, or stub responses in tests. It must be `fetch`-compatible (`(url, init) => Promise<Response>`).
+Pass `fetch`/`retryOptions` to a provider factory (e.g. `createGoogleProvider({ ..., fetch: customFetch, retryOptions: { maxRetries: 5 } })`) to route that provider's traffic through a proxy, add instrumentation, or stub responses in tests — each provider builds its own transport from its own config, there's no SDK-wide override. `fetch` must be `fetch`-compatible (`(url, init) => Promise<Response>`).

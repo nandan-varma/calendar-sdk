@@ -32,6 +32,14 @@ export interface AuthInput {
   refreshToken?: string;
   redirectUri?: string;
   scope?: string[];
+  /**
+   * When connecting with a pre-existing `accessToken` (no `authorizationCode`), pass the
+   * token's real expiry if you know it. Without this the SDK cannot know the actual
+   * lifetime of a token you obtained yourself, and falls back to a guessed 1-hour expiry
+   * (or, with no refresh token, treats the token as never expiring) - either of which can
+   * be wrong for a specific token.
+   */
+  expiresAt?: Date;
 }
 
 export interface ConnectOptions {

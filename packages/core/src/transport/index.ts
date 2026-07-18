@@ -1,5 +1,7 @@
 import type { ProviderKey } from '../types/common.js';
+import type { Logger } from '../logger/index.js';
 import { CalendarSdkError, mapHttpError } from '../errors/index.js';
+import { redactSensitive } from '../utils/redact.js';
 
 export interface TransportConfig {
   baseUrl?: string;
@@ -80,16 +82,6 @@ export function createTransport(
         signal: requestSignal,
       } = options;
 
-      const controller = new AbortController();
-      const timeoutId = setTimeout(
-        () => controller.abort(new Error(`Request timeout after ${requestTimeout ?? timeout}ms`)),
-        requestTimeout ?? timeout
-      );
-
-      const combinedSignal = requestSignal 
-        ? combineSignals(requestSignal, controller.signal) 
-        : controller.signal;
-
       const url = buildUrl(config.baseUrl, path, query);
       
       const mergedHeaders: Record<string, string> = {
@@ -105,23 +97,37 @@ export function createTransport(
 
       const serializedBody = body === undefined ? undefined : isStringBody ? (body as string) : JSON.stringify(body);
 
-      logger?.debug(`[${provider}] ${method} ${url}`, { 
-        body: redactSensitive(body),
-        headers: redactSensitive(mergedHeaders),
-      });
+      // Redaction recursively walks the whole body/headers - skip building it when debug
+      // logging won't actually be emitted (the default logger's minLevel is 'info').
+      if (logger && (logger.isLevelEnabled?.('debug') ?? true)) {
+        logger.debug(`[${provider}] ${method} ${url}`, {
+          body: redactSensitive(body),
+          headers: redactSensitive(mergedHeaders),
+        });
+      }
 
       let lastError: CalendarSdkError | Error | undefined;
+      const maxRetries = retryOptions.maxRetries ?? defaultRetryOptions.maxRetries;
 
-      for (let attempt = 0; attempt <= (retryOptions.maxRetries ?? defaultRetryOptions.maxRetries); attempt++) {
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        const attemptStart = Date.now();
+
+        // Fresh controller/timeout per attempt: a stale timer from an earlier attempt must
+        // never be able to abort a later retry, and every retry needs its own timeout budget.
+        const controller = new AbortController();
+        const timeoutId = setTimeout(
+          () => controller.abort(new Error(`Request timeout after ${requestTimeout ?? timeout}ms`)),
+          requestTimeout ?? timeout
+        );
+        const detachExternalSignal = requestSignal ? attachSignal(requestSignal, controller) : undefined;
+
         try {
           const response = await fetchImpl(url, {
             method,
             headers: mergedHeaders,
             body: serializedBody,
-            signal: combinedSignal,
+            signal: controller.signal,
           });
-
-          clearTimeout(timeoutId);
 
           const responseHeaders = parseResponseHeaders(response.headers);
           const requestId = responseHeaders['x-request-id'] || responseHeaders['request-id'];
@@ -129,7 +135,7 @@ export function createTransport(
           if (!response.ok) {
             let rawBody: unknown;
             const contentType = response.headers.get('content-type');
-            
+
             if (contentType?.includes('application/json')) {
               rawBody = await response.json().catch((): null => null);
             } else if (contentType?.includes('text/')) {
@@ -140,13 +146,13 @@ export function createTransport(
             const retryAfter = retryAfterHeader ? Number.parseInt(retryAfterHeader, 10) : undefined;
 
             const error = mapHttpError(response.status, provider, rawBody, requestId);
-            
-            if (error.retryable && attempt < (retryOptions.maxRetries ?? defaultRetryOptions.maxRetries)) {
+
+            if (error.retryable && attempt < maxRetries) {
               const delay = calculateBackoff(attempt, retryOptions, retryAfter);
-              logger?.warn(`[${provider}] Retryable error, retrying in ${delay}ms`, { 
+              logger?.warn(`[${provider}] Retryable error, retrying in ${delay}ms`, {
                 status: response.status,
                 attempt,
-                maxRetries: retryOptions.maxRetries ?? defaultRetryOptions.maxRetries,
+                maxRetries,
               });
               await sleep(delay);
               continue;
@@ -161,9 +167,9 @@ export function createTransport(
               ? (await response.text() as unknown as T)
               : (await response.json() as T);
 
-          logger?.debug(`[${provider}] Response ${response.status}`, { 
+          logger?.debug(`[${provider}] Response ${response.status}`, {
             requestId,
-            duration: response.headers.get('x-response-time'),
+            duration: Date.now() - attemptStart,
           });
 
           return { data, status: response.status, headers: responseHeaders, requestId };
@@ -172,9 +178,9 @@ export function createTransport(
           lastError = error as Error;
 
           if (error instanceof CalendarSdkError) {
-            if (error.retryable && attempt < (retryOptions.maxRetries ?? defaultRetryOptions.maxRetries)) {
+            if (error.retryable && attempt < maxRetries) {
               const delay = calculateBackoff(attempt, retryOptions);
-              logger?.warn(`[${provider}] Retryable SDK error, retrying in ${delay}ms`, { 
+              logger?.warn(`[${provider}] Retryable SDK error, retrying in ${delay}ms`, {
                 code: error.code,
                 attempt,
               });
@@ -200,9 +206,9 @@ export function createTransport(
               e => error.message.includes(e) || error.name === e
             ) ?? false;
 
-            if (isRetryableError && attempt < (retryOptions.maxRetries ?? defaultRetryOptions.maxRetries)) {
+            if (isRetryableError && attempt < maxRetries) {
               const delay = calculateBackoff(attempt, retryOptions);
-              logger?.warn(`[${provider}] Network error, retrying in ${delay}ms`, { 
+              logger?.warn(`[${provider}] Network error, retrying in ${delay}ms`, {
                 error: error.message,
                 attempt,
               });
@@ -219,6 +225,9 @@ export function createTransport(
           }
 
           throw error;
+        } finally {
+          clearTimeout(timeoutId);
+          detachExternalSignal?.();
         }
       }
 
@@ -279,51 +288,22 @@ function calculateBackoff(
   return Math.floor(delay + jitter);
 }
 
-function combineSignals(s1: AbortSignal, s2: AbortSignal): AbortSignal {
-  const controller = new AbortController();
-  
-  const abort = () => controller.abort();
-  
-  s1.addEventListener('abort', abort);
-  s2.addEventListener('abort', abort);
-  
-  if (s1.aborted || s2.aborted) {
-    controller.abort();
+// Forwards abort from a caller-supplied signal onto a per-attempt controller, and returns a
+// cleanup function to detach the listener once that attempt is done - without this, every
+// attempt would add another listener to the caller's (potentially long-lived) signal.
+function attachSignal(external: AbortSignal, controller: AbortController): () => void {
+  if (external.aborted) {
+    controller.abort(external.reason);
+    return () => {};
   }
 
-  return controller.signal;
+  const onAbort = () => controller.abort(external.reason);
+  external.addEventListener('abort', onAbort, { once: true });
+  return () => external.removeEventListener('abort', onAbort);
 }
 
 function sleep(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-interface Logger {
-  debug(message: string, meta?: object): void;
-  warn(message: string, meta?: object): void;
-  error(message: string, meta?: object): void;
-  info(message: string, meta?: object): void;
-}
-
-function redactSensitive(body: unknown): unknown {
-  if (!body || typeof body !== 'object') return body;
-  
-  const obj = body as Record<string, unknown>;
-  const sensitiveKeys = ['access_token', 'refresh_token', 'authorization', 'cookie', 'x-api-key'];
-  
-  const redacted: Record<string, unknown> = {};
-  
-  for (const [key, value] of Object.entries(obj)) {
-    if (sensitiveKeys.some(sk => key.toLowerCase().includes(sk))) {
-      redacted[key] = '[REDACTED]';
-    } else if (typeof value === 'object') {
-      redacted[key] = redactSensitive(value);
-    } else {
-      redacted[key] = value;
-    }
-  }
-  
-  return redacted;
 }
 
 export { createTransport as default };

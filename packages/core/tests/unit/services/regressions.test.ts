@@ -6,6 +6,7 @@ import type { ProviderAdapter, TokenSet } from '../../../src/adapters/provider.j
 
 function fakeMicrosoftProvider(overrides: {
   shareImpl?: ProviderAdapter['calendars']['share'];
+  accessRole?: 'owner' | 'writer' | 'reader';
 } = {}): ProviderAdapter {
   const calendar = {
     id: 'provider-cal-1',
@@ -16,7 +17,8 @@ function fakeMicrosoftProvider(overrides: {
     primary: true,
     readOnly: false,
     hidden: false,
-    accessRole: 'owner' as const,
+    accessRole: overrides.accessRole ?? ('owner' as const),
+    // Overwritten by CalendarsService.list() based on accessRole - the value here is unused.
     capabilities: { create: true, update: true, delete: true, share: true, manageNotifications: false },
     raw: {},
     extensions: {},
@@ -208,5 +210,73 @@ describe('regression: events.duplicate forwards to the provider without needing 
     expect(duplicated.calendarId).toBe(calendar.id);
     const stored = await sdk.storage.events.get(duplicated.id);
     expect(stored).not.toBeNull();
+  });
+});
+
+describe('regression: per-calendar capabilities (accessRole) are enforced, not just the account-wide map', () => {
+  it('rejects event creation/update/deletion on a calendar the account can only read', async () => {
+    const { sdk, account } = await connectedSdk({ accessRole: 'reader' });
+    const [calendar] = await sdk.calendars.list(account.id);
+    expect(calendar.capabilities.create).toBe(false);
+
+    await expect(
+      sdk.events.create(calendar.id, {
+        title: 'Nope',
+        start: { dateTime: '2026-08-01T10:00:00Z', timezone: 'UTC' },
+        end: { dateTime: '2026-08-01T10:30:00Z', timezone: 'UTC' },
+      })
+    ).rejects.toMatchObject({ code: 'CAPABILITY_UNSUPPORTED' });
+
+    await sdk.storage.events.save({
+      id: 'existing-event',
+      accountId: account.id,
+      calendarId: calendar.id,
+      providerId: 'existing-provider-event',
+      title: 'Existing',
+      start: { dateTime: '2026-08-01T10:00:00Z', timezone: 'UTC' },
+      end: { dateTime: '2026-08-01T10:30:00Z', timezone: 'UTC' },
+      allDay: false,
+      timezone: 'UTC',
+      status: 'confirmed',
+      transparency: 'opaque',
+      visibility: 'default',
+      attendees: [],
+      recurrenceMaster: true,
+      exceptions: [],
+      attachments: [],
+      raw: {},
+      extensions: {},
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+
+    await expect(sdk.events.update('existing-event', { title: 'Changed' })).rejects.toMatchObject({
+      code: 'CAPABILITY_UNSUPPORTED',
+    });
+    await expect(sdk.events.delete('existing-event')).rejects.toMatchObject({
+      code: 'CAPABILITY_UNSUPPORTED',
+    });
+  });
+
+  it('rejects calendar update/delete/share on a calendar the account only has writer access to (not owner)', async () => {
+    const shareImpl = vi.fn();
+    const { sdk, account } = await connectedSdk({ accessRole: 'writer', shareImpl });
+    const [calendar] = await sdk.calendars.list(account.id);
+    expect(calendar.capabilities.update).toBe(true);
+    expect(calendar.capabilities.delete).toBe(false);
+    expect(calendar.capabilities.share).toBe(false);
+
+    // Writer can update the calendar itself...
+    await expect(sdk.calendars.update(calendar.id, { name: 'Renamed' })).resolves.toMatchObject({
+      id: calendar.id,
+    });
+
+    // ...but only an owner can delete or share it, even though the account-wide capability map
+    // (a provider-level flag) says the provider supports both operations.
+    await expect(sdk.calendars.delete(calendar.id)).rejects.toMatchObject({ code: 'CAPABILITY_UNSUPPORTED' });
+    await expect(
+      sdk.calendars.share(calendar.id, { email: 'teammate@example.com', role: 'reader' })
+    ).rejects.toMatchObject({ code: 'CAPABILITY_UNSUPPORTED' });
+    expect(shareImpl).not.toHaveBeenCalled();
   });
 });

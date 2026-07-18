@@ -40,6 +40,7 @@ export class CalendarsService {
     const provider = this.getProvider(account.provider);
     const result = await provider.calendars.list(token, query);
 
+    const calendars: Calendar[] = [];
     for (const cal of result.items) {
       const calendar: Calendar = {
         ...cal,
@@ -47,9 +48,10 @@ export class CalendarsService {
         capabilities: this.getCalendarCapabilities(cal.accessRole),
       };
       await this.storage.calendars.save(calendar);
+      calendars.push(calendar);
     }
 
-    return result.items;
+    return calendars;
   }
 
   // Reads from local storage only; call calendars.list(accountId) first to sync an account's calendars.
@@ -113,6 +115,12 @@ export class CalendarsService {
     if (!caps.update) {
       throw errors.capabilityUnsupported('Calendar update', account.provider);
     }
+    // Per-calendar gate, derived from the caller's accessRole on this specific calendar -
+    // a provider-wide "calendars.update: true" doesn't mean every calendar is writable,
+    // e.g. one shared with this account as a reader.
+    if (!calendar.capabilities.update) {
+      throw errors.capabilityUnsupported('Calendar update (insufficient access role)', account.provider);
+    }
 
     const token = await this.getToken(calendar.accountId);
     if (!token) {
@@ -151,6 +159,9 @@ export class CalendarsService {
     if (!caps.delete) {
       throw errors.capabilityUnsupported('Calendar deletion', account.provider);
     }
+    if (!calendar.capabilities.delete) {
+      throw errors.capabilityUnsupported('Calendar deletion (insufficient access role - owner required)', account.provider);
+    }
 
     const token = await this.getToken(calendar.accountId);
     if (!token) {
@@ -179,6 +190,9 @@ export class CalendarsService {
     const caps = account.capabilities.calendars;
     if (!caps.share) {
       throw errors.capabilityUnsupported('Calendar sharing', account.provider);
+    }
+    if (!calendar.capabilities.share) {
+      throw errors.capabilityUnsupported('Calendar sharing (insufficient access role - owner required)', account.provider);
     }
 
     const provider = this.getProvider(account.provider);

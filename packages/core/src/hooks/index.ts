@@ -93,64 +93,11 @@ export interface Hooks {
   once(event: '*' | HookEvent['type'], callback: HookCallback): void;
 }
 
+// Delegates to EventEmitter (defined below) rather than duplicating the dispatch logic -
+// a prior standalone implementation here returned early after the first Promise-returning
+// callback, silently skipping every listener registered after it for the same event.
 export function createHooks(): Hooks {
-  const handlers = new Map<string, Set<HookCallback>>();
-
-  return {
-    on(event: '*' | HookEvent['type'], callback: HookCallback) {
-      const key = event === '*' ? '*' : event;
-      if (!handlers.has(key)) {
-        handlers.set(key, new Set());
-      }
-      handlers.get(key)?.add(callback);
-    },
-
-    off(event: '*' | HookEvent['type'], callback: HookCallback) {
-      const key = event === '*' ? '*' : event;
-      handlers.get(key)?.delete(callback);
-    },
-
-    emit(event: HookEvent): void | Promise<void> {
-      const callbacks: HookCallback[] = [];
-      
-      if (handlers.has('*')) {
-        const wildcardHandlers = handlers.get('*');
-        if (wildcardHandlers) {
-          for (const cb of wildcardHandlers) {
-            callbacks.push(cb);
-          }
-        }
-      }
-      
-      if (handlers.has(event.type)) {
-        const specificHandlers = handlers.get(event.type);
-        if (specificHandlers) {
-          for (const cb of specificHandlers) {
-            callbacks.push(cb);
-          }
-        }
-      }
-
-      for (const callback of callbacks) {
-        try {
-          const result = callback(event);
-          if (result instanceof Promise) {
-            return result;
-          }
-        } catch (error) {
-          console.error('Hook callback error:', error);
-        }
-      }
-    },
-
-    once(event: '*' | HookEvent['type'], callback: HookCallback) {
-      const wrappedCallback: HookCallback = (e) => {
-        this.off(event, wrappedCallback);
-        return callback(e);
-      };
-      this.on(event, wrappedCallback);
-    },
-  };
+  return new EventEmitter({ async: true, errorHandler: (error) => console.error('Hook callback error:', error) });
 }
 
 export interface EventEmitterOptions {

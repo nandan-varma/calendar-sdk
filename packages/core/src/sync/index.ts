@@ -51,6 +51,14 @@ export class SyncService {
     return this.storage.calendars.listByAccount(accountId);
   }
 
+  // Sync results only carry the provider's own event id (see SyncEvent's 'deleted' variant),
+  // but storage is keyed by the SDK-local id - this is the only correct way to translate one
+  // to the other. Returns null (and does nothing) if the event was never synced locally.
+  private async resolveLocalDeletionId(calendar: Calendar, providerEventId: string): Promise<string | null> {
+    const existing = await this.storage.events.getByProviderId(calendar.id, providerEventId);
+    return existing?.id ?? null;
+  }
+
   async fullSync(accountId: string, options?: FullSyncOptions): Promise<SyncResult> {
     const { calendarId, timeMin, timeMax, limit } = options || {};
     this.logger.info('Starting full sync', { accountId, calendarId, timeMin, timeMax });
@@ -79,8 +87,11 @@ export class SyncService {
             results.events.push(event);
             await this.storage.events.save(event.event);
           } else if (event.type === 'deleted') {
-            results.deletions.push(event.eventId);
-            await this.storage.events.delete(event.eventId);
+            const localId = await this.resolveLocalDeletionId(calendar, event.eventId);
+            if (localId) {
+              results.deletions.push(localId);
+              await this.storage.events.delete(localId);
+            }
           }
         }
       }
@@ -151,12 +162,18 @@ export class SyncService {
         if (event.type === 'created' || event.type === 'updated') {
           await this.storage.events.save(event.event);
         } else if (event.type === 'deleted') {
-          await this.storage.events.delete(event.eventId);
+          const localId = await this.resolveLocalDeletionId(calendar, event.eventId);
+          if (localId) {
+            await this.storage.events.delete(localId);
+          }
         }
       }
 
-      for (const eventId of result.deletions) {
-        await this.storage.events.delete(eventId);
+      for (const providerEventId of result.deletions) {
+        const localId = await this.resolveLocalDeletionId(calendar, providerEventId);
+        if (localId) {
+          await this.storage.events.delete(localId);
+        }
       }
 
       if (result.nextCursor) {
@@ -199,46 +216,50 @@ export class SyncService {
     const { provider, token } = await this.resolveAccountAndToken(accountId);
     const calendars = await this.resolveCalendars(accountId, options?.calendarId);
 
-    const localEvents = await this.storage.events.listByAccount(accountId, {
-      timeMin: options?.timeMin,
-      timeMax: options?.timeMax,
-    });
-
-    const localIds = new Set(localEvents.map(e => e.id));
-
-    const remoteIds = new Set<string>();
     const toCreate: CalendarEvent[] = [];
     const toUpdate: CalendarEvent[] = [];
     const toDelete: string[] = [];
 
+    // Reconciliation compares by providerId, not the SDK-local id: the two are only guaranteed
+    // to be equal by coincidence (see EventsService.move()), so comparing local ids against
+    // provider ids would misclassify every live, still-existing event as "missing locally" and
+    // delete it. providerId is only unique within a calendar, so the comparison is scoped per
+    // calendar too.
     for (const calendar of calendars) {
+      const localEvents = await this.storage.events.list(calendar.id, {
+        timeMin: options?.timeMin,
+        timeMax: options?.timeMax,
+      });
+      const localByProviderId = new Map(localEvents.map(e => [e.providerId, e] as const));
+
       const remoteResult = await provider.sync.fullSync(token, calendar.providerId, {
         timeMin: options?.timeMin,
         timeMax: options?.timeMax,
       });
 
+      const remoteProviderIds = new Set<string>();
+
       for (const event of remoteResult.events) {
         if (event.type === 'created' || event.type === 'updated') {
-          remoteIds.add(event.event.providerId);
-          if (event.type === 'created') {
-            toCreate.push(event.event);
-          } else {
+          remoteProviderIds.add(event.event.providerId);
+          if (localByProviderId.has(event.event.providerId)) {
             toUpdate.push(event.event);
+          } else {
+            toCreate.push(event.event);
           }
         } else if (event.type === 'deleted') {
-          remoteIds.add(event.eventId);
-          if (localIds.has(event.eventId)) {
-            toDelete.push(event.eventId);
+          remoteProviderIds.add(event.eventId);
+          const existing = localByProviderId.get(event.eventId);
+          if (existing) {
+            toDelete.push(existing.id);
           }
         }
       }
-    }
 
-    const missingLocally = [...localIds].filter(id => !remoteIds.has(id));
-    for (const id of missingLocally) {
-      const local = await this.storage.events.get(id);
-      if (local && !local.deletedAt) {
-        toDelete.push(id);
+      for (const [providerId, local] of localByProviderId) {
+        if (!remoteProviderIds.has(providerId) && !local.deletedAt) {
+          toDelete.push(local.id);
+        }
       }
     }
 

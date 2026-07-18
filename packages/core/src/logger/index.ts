@@ -1,3 +1,5 @@
+import { redactSensitive } from '../utils/redact.js';
+
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 
 export interface LogEntry {
@@ -19,6 +21,12 @@ export interface Logger {
   info(message: string, meta?: LoggerMeta): void;
   warn(message: string, meta?: LoggerMeta): void;
   error(message: string, meta?: LoggerMeta): void;
+  /**
+   * Optional: lets callers skip building expensive log metadata (e.g. redacting a request
+   * body) when the level wouldn't be logged anyway. Callers should treat a missing
+   * implementation as "assume enabled" so custom/bridged loggers keep working unchanged.
+   */
+  isLevelEnabled?(level: LogLevel): boolean;
 }
 
 export interface LoggerMeta {
@@ -70,7 +78,7 @@ export function createLogger(options: LoggerOptions = {}): Logger {
     parts.push(message);
 
     if (opts.includeContext && meta) {
-      const context = formatMeta(meta);
+      const context = formatMeta(meta, opts.redactSensitive ?? true);
       if (context) {
         parts.push(context);
       }
@@ -96,22 +104,17 @@ export function createLogger(options: LoggerOptions = {}): Logger {
       if (!shouldLog('error')) return;
       console.error(formatMessage('error', message, meta));
     },
+    isLevelEnabled: shouldLog,
   };
 }
 
-function formatMeta(meta: LoggerMeta): string {
+function formatMeta(meta: LoggerMeta, shouldRedact: boolean): string {
   const parts: string[] = [];
-  const sensitiveKeys = ['accessToken', 'refreshToken', 'authorization', 'secret'];
+  const { error: _error, ...rest } = meta;
+  const safeMeta = shouldRedact ? (redactSensitive(rest) as Record<string, unknown>) : rest;
 
-  for (const [key, value] of Object.entries(meta)) {
-    if (key === 'error') continue;
-    
-    let displayValue = value;
-    if (typeof value === 'string' && sensitiveKeys.some(sk => key.toLowerCase().includes(sk))) {
-      displayValue = '[REDACTED]';
-    }
-    
-    parts.push(`${key}=${displayValue}`);
+  for (const [key, value] of Object.entries(safeMeta)) {
+    parts.push(`${key}=${value}`);
   }
 
   return parts.length > 0 ? `{ ${parts.join(' ')} }` : '';
@@ -124,4 +127,5 @@ export const noopLogger: Logger = {
   info() {},
   warn() {},
   error() {},
+  isLevelEnabled: () => false,
 };

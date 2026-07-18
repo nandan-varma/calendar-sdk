@@ -221,14 +221,57 @@ describe('MemoryStorage', () => {
     it('should delete events by calendar', async () => {
       const event1 = createTestEvent('cal-1');
       const event2 = { ...createTestEvent('cal-1'), id: 'event-2' };
-      
+
       await storage.events.save(event1);
       await storage.events.save(event2);
-      
+
       await storage.events.deleteByCalendar('cal-1');
-      
+
       const remaining = await storage.events.list('cal-1');
       expect(remaining).toHaveLength(0);
+    });
+
+    it('regression: listByAccount respects the time-range query, not just listByAccount(accountId) with no filter', async () => {
+      const inRange = createTestEvent('cal-1');
+      const outOfRange = {
+        ...createTestEvent('cal-1'),
+        id: 'event-2',
+        start: { dateTime: '2025-06-01T10:00:00Z', timezone: 'UTC' },
+        end: { dateTime: '2025-06-01T11:00:00Z', timezone: 'UTC' },
+      };
+      await storage.events.save(inRange);
+      await storage.events.save(outOfRange);
+
+      const results = await storage.events.listByAccount('account-1', {
+        timeMin: new Date('2024-01-01'),
+        timeMax: new Date('2024-01-31'),
+      });
+
+      expect(results.map(e => e.id)).toEqual(['event-1']);
+    });
+
+    it('finds an event by its provider id, scoped to the calendar', async () => {
+      const event = createTestEvent('cal-1');
+      await storage.events.save(event);
+
+      const found = await storage.events.getByProviderId('cal-1', 'provider-event-1');
+      expect(found?.id).toBe('event-1');
+
+      const wrongCalendar = await storage.events.getByProviderId('cal-2', 'provider-event-1');
+      expect(wrongCalendar).toBeNull();
+
+      const unknownProviderId = await storage.events.getByProviderId('cal-1', 'no-such-provider-id');
+      expect(unknownProviderId).toBeNull();
+    });
+
+    it('keeps indexes correct when an event moves to a different calendar via update()', async () => {
+      const event = createTestEvent('cal-1');
+      await storage.events.save(event);
+
+      await storage.events.update('event-1', { calendarId: 'cal-2' });
+
+      expect(await storage.events.list('cal-1')).toHaveLength(0);
+      expect(await storage.events.list('cal-2')).toHaveLength(1);
     });
   });
 

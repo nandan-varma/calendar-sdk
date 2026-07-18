@@ -1,6 +1,8 @@
 packages:
   - "packages/*"
   - "packages/providers/*"
+  - "docs"
 allowBuilds:
   "@biomejs/biome": true
   esbuild: true
+  sharp: true

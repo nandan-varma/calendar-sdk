@@ -1,0 +1,60 @@
+---
+title: calendar-sdk
+description: One TypeScript API for Google Calendar, Microsoft Graph, and CalDAV — events, calendars, availability, incremental sync, and webhook subscriptions.
+template: splash
+hero:
+  tagline: One TypeScript API for Google Calendar, Microsoft Graph (Outlook), and CalDAV/iCloud — without vendoring three different SDKs into your app.
+  actions:
+    - text: Get started
+      # relative so it resolves under the deploy base (/calendar-sdk/)
+      link: getting-started/installation/
+      icon: right-arrow
+    - text: View on GitHub
+      link: https://github.com/nandan-varma/calendar-sdk
+      icon: external
+      variant: minimal
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+## Why calendar-sdk?
+
+An open alternative to paid unified-calendar APIs: bring your own OAuth credentials and keep your users' tokens in your own storage.
+
+<CardGrid stagger>
+  <Card title="One canonical model" icon="puzzle">
+    Calendars, events, availability, sync cursors, and subscriptions share a single typed model
+    across every provider. Swap `createGoogleProvider` for `createMicrosoftProvider` and the rest
+    of your code stays identical.
+  </Card>
+  <Card title="Providers are adapters" icon="setting">
+    The core knows nothing about any vendor API. Each provider implements one `ProviderAdapter`
+    interface — adding a provider never touches the core.
+  </Card>
+  <Card title="Bring your own storage" icon="seti:db">
+    Accounts, tokens, calendars, events, and cursors live behind a `StorageAdapter`. The default
+    is in-memory; production apps plug in Postgres, Redis, or anything else.
+  </Card>
+  <Card title="Explicit capabilities" icon="approve-check">
+    Never discover unsupported behavior by trial and error. Every account carries a capability
+    map, and unsupported operations fail fast with `CAPABILITY_UNSUPPORTED`.
+  </Card>
+  <Card title="Resilient by default" icon="rocket">
+    Built-in retry with exponential backoff and jitter for rate limits and transient failures,
+    automatic token refresh, and sensitive-value redaction in logs.
+  </Card>
+  <Card title="Provider-native escape hatches" icon="open-book">
+    Raw provider payloads are preserved on every resource (`raw`, `extensions`), so
+    provider-only fields are never discarded.
+  </Card>
+</CardGrid>
+
+## Packages
+
+| Package | What it is |
+| --- | --- |
+| `@nandan-varma/calendar-sdk` | Core: unified services (accounts, calendars, events, availability, subscriptions, sync), storage + hooks + retrying transport |
+| `@nandan-varma/calendar-sdk-google` | Google Calendar provider adapter |
+| `@nandan-varma/calendar-sdk-microsoft` | Microsoft Graph calendar provider adapter |
+| `@nandan-varma/calendar-sdk-caldav` | CalDAV provider adapter (iCloud, Fastmail, Nextcloud, …) |
+| `@nandan-varma/calendar-sdk-auth` | OAuth flow, token refresh, and token-set helpers |

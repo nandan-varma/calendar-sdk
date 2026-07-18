@@ -1,0 +1,100 @@
+---
+title: Error handling
+description: The CalendarSdkError model, stable error codes, retryability, and remediation hints.
+sidebar:
+  order: 11
+---
+
+Every failure the SDK raises is a `CalendarSdkError` — one class, a stable `code` you can switch on, and enough context to log, retry, or show a useful message.
+
+## The error shape
+
+```typescript
+class CalendarSdkError extends Error {
+  code: ErrorCode;              // stable, machine-readable
+  provider?: "google" | "microsoft" | "caldav";
+  status?: number;              // HTTP status, when applicable
+  providerErrorCode?: string;   // vendor's own error code
+  requestId?: string;           // provider request id for support tickets
+  retryable: boolean;           // safe to retry?
+  remediation?: string;         // human hint ("Reconnect your google account…")
+  raw?: unknown;                // raw provider error body
+  cause?: Error;
+  toJSON(): object;             // structured-log friendly
+}
+```
+
+```typescript
+import { isCalendarSdkError } from "@nandan-varma/calendar-sdk";
+
+try {
+  await sdk.events.create(calendarId, input);
+} catch (err) {
+  if (isCalendarSdkError(err)) {
+    switch (err.code) {
+      case "AUTH_REQUIRED":
+      case "AUTH_EXPIRED":
+        return promptReconnect(err.provider);
+      case "RATE_LIMITED":
+        return queueForLater(err);
+      case "CAPABILITY_UNSUPPORTED":
+        return showUnsupported(err.remediation);
+      default:
+        log.error("calendar error", err.toJSON());
+        throw err;
+    }
+  }
+  throw err;
+}
+```
+
+## Error codes
+
+| Code | Meaning | Typical trigger |
+| --- | --- | --- |
+| `AUTH_REQUIRED` | No usable token | HTTP 401, missing/unrefreshable tokens |
+| `AUTH_EXPIRED` | Token expired and refresh failed | Refresh rejection |
+| `PERMISSION_DENIED` | Authenticated but not allowed | HTTP 403 |
+| `NOT_FOUND` | Resource missing | HTTP 404; unknown SDK ids |
+| `CONFLICT` | Concurrent modification | HTTP 409 / etag mismatch |
+| `RATE_LIMITED` | Provider throttling | HTTP 429 |
+| `CAPABILITY_UNSUPPORTED` | Feature not supported by this provider | Capability check before the network call |
+| `VALIDATION_FAILED` | Bad input | e.g. connect without code or token |
+| `SYNC_CURSOR_EXPIRED` | Sync token invalidated | HTTP 410 — run a full sync |
+| `SUBSCRIPTION_EXPIRED` | Webhook lease lapsed | Renewal missed |
+| `NETWORK_ERROR` | Transport-level failure | DNS/reset/timeout/abort |
+| `PROVIDER_ERROR` | Vendor 5xx or unclassified failure | HTTP ≥ 500 |
+| `INTERNAL_ERROR` | SDK-internal invariant broke | — |
+
+## Retryability
+
+`error.retryable` is computed automatically: HTTP `5xx`, `429`, and `408` are retryable, as are `NETWORK_ERROR`, `RATE_LIMITED`, and `AUTH_EXPIRED`. The built-in [transport](/reference/transport/) already retries these with exponential backoff and honors `Retry-After` — an error that reaches your code has *already exhausted its retries*, so treat `retryable` as a hint for scheduling a later attempt, not an immediate loop.
+
+## Mapping raw HTTP errors
+
+If you call provider APIs directly (e.g. with `sdk.accounts.getToken`), you can reuse the SDK's mapping:
+
+```typescript
+import { mapHttpError } from "@nandan-varma/calendar-sdk";
+
+const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+if (!res.ok) {
+  throw mapHttpError(res.status, "google", await res.json().catch(() => null));
+}
+```
+
+It extracts vendor error codes/messages from Google- and Graph-style bodies and attaches a remediation string.
+
+## Constructing errors
+
+The `errors` factory is exported for adapters and custom code:
+
+```typescript
+import { errors, CalendarSdkError } from "@nandan-varma/calendar-sdk";
+
+errors.authRequired("google");
+errors.rateLimited("microsoft", 30);
+errors.capabilityUnsupported("Event attachments", "caldav");
+errors.syncCursorExpired("google");
+new CalendarSdkError({ code: "VALIDATION_FAILED", message: "end before start" });
+```

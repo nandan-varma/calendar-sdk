@@ -1,0 +1,16 @@
+{
+  "name": "@nandan-varma/calendar-sdk-docs",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview"
+  },
+  "dependencies": {
+    "@astrojs/starlight": "^0.36.0",
+    "astro": "^5.6.0",
+    "sharp": "^0.33.4"
+  }
+}

@@ -30,12 +30,9 @@ export const testEnv: TestEnvConfig = {
     clientId: process.env.MICROSOFT_CLIENT_ID || '',
     clientSecret: process.env.MICROSOFT_CLIENT_SECRET || '',
     tenantId: process.env.MICROSOFT_TENANT_ID || 'common',
-    redirectUri: process.env.MICROSOFT_REDIRECT_URI || 'http://localhost:3000/auth/microsoft/callback',
-    scopes: [
-      'Calendars.ReadWrite',
-      'Calendars.Read',
-      'User.Read',
-    ],
+    redirectUri:
+      process.env.MICROSOFT_REDIRECT_URI || 'http://localhost:3000/auth/microsoft/callback',
+    scopes: ['Calendars.ReadWrite', 'Calendars.Read', 'User.Read'],
   },
   webhookUrl: process.env.TEST_WEBHOOK_URL,
 };
@@ -54,14 +51,14 @@ export function hasWebhookUrl(): boolean {
 
 export function validateEnv(): string[] {
   const missing: string[] = [];
-  
+
   if (!hasGoogleCredentials()) {
     missing.push('GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET');
   }
-  
+
   if (!hasMicrosoftCredentials()) {
     missing.push('MICROSOFT_CLIENT_ID or MICROSOFT_CLIENT_SECRET');
   }
-  
+
   return missing;
 }

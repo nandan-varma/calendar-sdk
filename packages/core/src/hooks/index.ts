@@ -3,7 +3,7 @@ import type { CalendarEvent } from '../types/event.js';
 import type { Subscription } from '../types/subscription.js';
 import type { CalendarSdkError } from '../errors/index.js';
 
-export type HookEvent = 
+export type HookEvent =
   | RequestHookEvent
   | SyncHookEvent
   | SubscriptionHookEvent
@@ -97,7 +97,10 @@ export interface Hooks {
 // a prior standalone implementation here returned early after the first Promise-returning
 // callback, silently skipping every listener registered after it for the same event.
 export function createHooks(): Hooks {
-  return new EventEmitter({ async: true, errorHandler: (error) => console.error('Hook callback error:', error) });
+  return new EventEmitter({
+    async: true,
+    errorHandler: (error) => console.error('Hook callback error:', error),
+  });
 }
 
 export interface EventEmitterOptions {

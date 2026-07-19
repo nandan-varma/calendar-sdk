@@ -5,7 +5,7 @@ import type { StorageAdapter } from '../storage/index.js';
 import type { Logger } from '../logger/index.js';
 import type { TokenManager } from '../token-manager.js';
 import type { Hooks } from '../hooks/index.js';
-import { CalendarSdkError, errors } from '../errors/index.js';
+import { CalendarSdkError, errors, isTransientError } from '../errors/index.js';
 import { randomUUID } from 'node:crypto';
 
 export class AccountsService {
@@ -81,7 +81,10 @@ export class AccountsService {
 
       await this.storage.accounts.save(account);
 
-      if (options.persistTokens !== false && tokenSet.refreshToken) {
+      // Persist whenever the caller allows it, even without a refreshToken: providers like
+      // CalDAV (Basic auth) never issue one, but the access token still has to be retrievable
+      // by getToken() on every later call, or the account is unusable right after connect().
+      if (options.persistTokens !== false) {
         await this.storage.tokens.save(account.id, {
           accessToken: tokenSet.accessToken,
           refreshToken: tokenSet.refreshToken,
@@ -91,11 +94,18 @@ export class AccountsService {
         });
       }
 
-      this.logger.info('Account connected successfully', { accountId: account.id, provider: providerKey });
-      this.hooks.emit({ type: 'auth', event: 'connected', provider: providerKey, accountId: account.id });
+      this.logger.info('Account connected successfully', {
+        accountId: account.id,
+        provider: providerKey,
+      });
+      this.hooks.emit({
+        type: 'auth',
+        event: 'connected',
+        provider: providerKey,
+        accountId: account.id,
+      });
 
       return account;
-
     } catch (error) {
       this.logger.error('Account connection failed', { provider: providerKey, error });
       this.hooks.emit({
@@ -142,9 +152,30 @@ export class AccountsService {
 
       return updatedAccount;
     } catch (error) {
+      // A transient failure (network blip, 5xx from the provider's refresh endpoint) doesn't
+      // mean the credential is actually invalid - only a genuine auth rejection should force
+      // the account into 'expired' and make the user reconnect.
+      if (isTransientError(error)) {
+        const sdkError = error as CalendarSdkError;
+        this.hooks.emit({
+          type: 'auth',
+          event: 'error',
+          provider: account.provider,
+          accountId,
+          error: sdkError,
+        });
+        throw sdkError;
+      }
+
       await this.storage.accounts.update(accountId, { status: 'expired' });
       const sdkError = errors.authExpired(account.provider, 'Failed to refresh authentication');
-      this.hooks.emit({ type: 'auth', event: 'expired', provider: account.provider, accountId, error: sdkError });
+      this.hooks.emit({
+        type: 'auth',
+        event: 'expired',
+        provider: account.provider,
+        accountId,
+        error: sdkError,
+      });
       throw sdkError;
     }
   }
@@ -161,7 +192,12 @@ export class AccountsService {
       if (tokens?.accessToken) {
         try {
           await provider.auth.revokeToken(tokens.accessToken);
-          this.hooks.emit({ type: 'auth', event: 'revoked', provider: account.provider, accountId });
+          this.hooks.emit({
+            type: 'auth',
+            event: 'revoked',
+            provider: account.provider,
+            accountId,
+          });
         } catch (error) {
           this.logger.warn('Failed to revoke token', { accountId, error });
           this.hooks.emit({
@@ -177,9 +213,9 @@ export class AccountsService {
 
     await this.storage.tokens.delete(accountId);
     await this.storage.syncCursors.deleteByAccount(accountId);
-    await this.storage.subscriptions.list(accountId).then(subs =>
-      Promise.all(subs.map(s => this.storage.subscriptions.delete(s.id)))
-    );
+    await this.storage.subscriptions
+      .list(accountId)
+      .then((subs) => Promise.all(subs.map((s) => this.storage.subscriptions.delete(s.id))));
     await this.storage.accounts.delete(accountId);
     this.tokenManager.invalidate(accountId);
 

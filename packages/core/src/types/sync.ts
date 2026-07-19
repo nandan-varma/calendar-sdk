@@ -31,7 +31,7 @@ export interface SyncResult {
   hasMore: boolean;
 }
 
-export type SyncEvent = 
+export type SyncEvent =
   | { type: 'created'; event: import('./event.js').CalendarEvent }
   | { type: 'updated'; event: import('./event.js').CalendarEvent; previousEtag?: string }
   | { type: 'deleted'; eventId: string };

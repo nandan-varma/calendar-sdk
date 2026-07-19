@@ -1,6 +1,6 @@
-import type { 
-  CalendarEvent, 
-  DateTimeValue, 
+import type {
+  CalendarEvent,
+  DateTimeValue,
   DateOnly,
   DateTime,
   Attendee,
@@ -22,7 +22,7 @@ export function mapEventsResponse(
   providerCalendarId: string
 ): { items: CalendarEvent[]; nextPageToken?: string; nextSyncToken?: string } {
   return {
-    items: response.items.map(e => mapEvent(e, accountId, calendarId, providerCalendarId)),
+    items: response.items.map((e) => mapEvent(e, accountId, calendarId, providerCalendarId)),
     nextPageToken: response.nextPageToken,
     nextSyncToken: response.nextSyncToken,
   };
@@ -37,7 +37,7 @@ export function mapEvent(
   const start = mapDateTime(event.start);
   const end = mapDateTime(event.end);
   const allDay = !!event.start?.date;
-  const organizerAttendee = event.attendees?.find(a => a.organizer);
+  const organizerAttendee = event.attendees?.find((a) => a.organizer);
 
   return {
     id: event.id,
@@ -57,7 +57,11 @@ export function mapEvent(
     visibility: mapVisibility(event.visibility),
     attendees: mapAttendees(event.attendees),
     organizer: organizerAttendee?.email
-      ? { email: organizerAttendee.email, displayName: organizerAttendee.displayName, self: organizerAttendee.self }
+      ? {
+          email: organizerAttendee.email,
+          displayName: organizerAttendee.displayName,
+          self: organizerAttendee.self,
+        }
       : undefined,
     reminders: mapReminders(event.reminders),
     recurrence: mapRecurrence(event.recurrence),
@@ -89,10 +93,14 @@ function mapDateTime(dt: GoogleEvent['start']): DateTimeValue {
 
 function mapStatus(status: string | undefined): EventStatus {
   switch (status) {
-    case 'confirmed': return 'confirmed';
-    case 'tentative': return 'tentative';
-    case 'cancelled': return 'cancelled';
-    default: return 'confirmed';
+    case 'confirmed':
+      return 'confirmed';
+    case 'tentative':
+      return 'tentative';
+    case 'cancelled':
+      return 'cancelled';
+    default:
+      return 'confirmed';
   }
 }
 
@@ -102,15 +110,18 @@ function mapTransparency(transparency: string | undefined): EventTransparency {
 
 function mapVisibility(visibility: string | undefined): EventVisibility {
   switch (visibility) {
-    case 'public': return 'public';
-    case 'private': return 'private';
-    default: return 'default';
+    case 'public':
+      return 'public';
+    case 'private':
+      return 'private';
+    default:
+      return 'default';
   }
 }
 
 function mapAttendees(attendees?: GoogleEvent['attendees']): Attendee[] {
   if (!attendees) return [];
-  return attendees.map(a => ({
+  return attendees.map((a) => ({
     email: a.email,
     displayName: a.displayName,
     responseStatus: mapResponseStatus(a.responseStatus),
@@ -124,10 +135,14 @@ function mapAttendees(attendees?: GoogleEvent['attendees']): Attendee[] {
 
 function mapResponseStatus(status?: string): Attendee['responseStatus'] {
   switch (status) {
-    case 'accepted': return 'accepted';
-    case 'tentative': return 'tentative';
-    case 'declined': return 'declined';
-    default: return 'needsAction';
+    case 'accepted':
+      return 'accepted';
+    case 'tentative':
+      return 'tentative';
+    case 'declined':
+      return 'declined';
+    default:
+      return 'needsAction';
   }
 }
 
@@ -135,7 +150,7 @@ function mapReminders(reminders?: GoogleEvent['reminders']): Reminder[] {
   if (!reminders || reminders.useDefault) {
     return [{ method: 'popup', minutes: 30 }];
   }
-  return (reminders.overrides || []).map(r => ({
+  return (reminders.overrides || []).map((r) => ({
     method: mapReminderMethod(r.method),
     minutes: r.minutes,
   }));
@@ -143,10 +158,14 @@ function mapReminders(reminders?: GoogleEvent['reminders']): Reminder[] {
 
 function mapReminderMethod(method: string): Reminder['method'] {
   switch (method) {
-    case 'email': return 'email';
-    case 'popup': return 'popup';
-    case 'sms': return 'sms';
-    default: return 'popup';
+    case 'email':
+      return 'email';
+    case 'popup':
+      return 'popup';
+    case 'sms':
+      return 'sms';
+    default:
+      return 'popup';
   }
 }
 
@@ -162,7 +181,9 @@ function mapConferenceData(data?: GoogleEvent['conferenceData']): ConferenceData
     conferenceId: data.conferenceId,
     conferenceSolutionId: data.conferenceSolution?.key?.type,
     entryPoints: data.entryPoints?.map((ep) => ({
-      entryPointType: ep.entryPointType as NonNullable<ConferenceData['entryPoints']>[number]['entryPointType'],
+      entryPointType: ep.entryPointType as NonNullable<
+        ConferenceData['entryPoints']
+      >[number]['entryPointType'],
       uri: ep.uri,
       label: ep.label,
       password: ep.password,
@@ -174,9 +195,12 @@ function mapConferenceData(data?: GoogleEvent['conferenceData']): ConferenceData
 
 function mapConferenceProvider(type?: string): ConferenceData['provider'] {
   switch (type) {
-    case 'hangoutsMeet': return 'google';
-    case 'addOn': return 'custom';
-    default: return 'custom';
+    case 'hangoutsMeet':
+      return 'google';
+    case 'addOn':
+      return 'custom';
+    default:
+      return 'custom';
   }
 }
 
@@ -198,56 +222,5 @@ function mapExtendedProperties(props?: GoogleEvent['extendedProperties']): Recor
   return {
     private: props.private || {},
     shared: props.shared || {},
-  };
-}
-
-export function toGoogleEventInput(input: {
-  title: string;
-  description?: string;
-  location?: string;
-  start: DateTimeValue;
-  end: DateTimeValue;
-  allDay?: boolean;
-  status?: EventStatus;
-  transparency?: EventTransparency;
-  visibility?: EventVisibility;
-  attendees?: Array<{ email: string; displayName?: string }>;
-  reminders?: Reminder[];
-  recurrence?: Recurrence;
-}): Partial<GoogleEvent> {
-  const start = toGoogleDateTime(input.start);
-  const end = toGoogleDateTime(input.end);
-
-  return {
-    summary: input.title,
-    description: input.description,
-    location: input.location,
-    start,
-    end,
-    transparency: input.transparency === 'transparent' ? 'transparent' : 'opaque',
-    visibility: input.visibility === 'public' ? 'public' : input.visibility === 'private' ? 'private' : 'default',
-    status: input.status === 'cancelled' ? 'cancelled' : 'confirmed',
-    attendees: input.attendees?.map(a => ({
-      email: a.email,
-      displayName: a.displayName,
-    })),
-    recurrence: input.recurrence?.rrule ? [input.recurrence.rrule] : undefined,
-    reminders: input.reminders ? {
-      useDefault: false,
-      overrides: input.reminders.map(r => ({
-        method: r.method,
-        minutes: r.minutes,
-      })),
-    } : undefined,
-  };
-}
-
-function toGoogleDateTime(dt: DateTimeValue): GoogleEvent['start'] {
-  if ('date' in dt) {
-    return { date: dt.date };
-  }
-  return {
-    dateTime: dt.dateTime,
-    timeZone: dt.timezone,
   };
 }

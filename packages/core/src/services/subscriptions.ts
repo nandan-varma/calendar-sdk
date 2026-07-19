@@ -1,4 +1,9 @@
-import type { Subscription, SubscriptionConfig, SubscriptionInput, SubscriptionNotification } from '../types/subscription.js';
+import type {
+  Subscription,
+  SubscriptionConfig,
+  SubscriptionInput,
+  SubscriptionNotification,
+} from '../types/subscription.js';
 import type { ProviderAdapter, TokenSet } from '../adapters/provider.js';
 import type { ProviderKey } from '../types/common.js';
 import type { StorageAdapter } from '../storage/index.js';
@@ -63,7 +68,13 @@ export class SubscriptionsService {
     await this.storage.subscriptions.save(subscription);
 
     this.logger.info('Subscription created', { subscriptionId: subscription.id });
-    this.hooks.emit({ type: 'subscription', event: 'created', provider: account.provider, accountId, subscription });
+    this.hooks.emit({
+      type: 'subscription',
+      event: 'created',
+      provider: account.provider,
+      accountId,
+      subscription,
+    });
 
     return subscription;
   }
@@ -99,7 +110,13 @@ export class SubscriptionsService {
     await this.storage.subscriptions.save(updated);
 
     this.logger.info('Subscription renewed', { subscriptionId, newExpiry: renewed.leaseExpiry });
-    this.hooks.emit({ type: 'subscription', event: 'renewed', provider: account.provider, accountId: subscription.accountId, subscription: updated });
+    this.hooks.emit({
+      type: 'subscription',
+      event: 'renewed',
+      provider: account.provider,
+      accountId: subscription.accountId,
+      subscription: updated,
+    });
 
     return updated;
   }
@@ -113,7 +130,13 @@ export class SubscriptionsService {
     const account = await this.storage.accounts.get(subscription.accountId);
     if (!account) {
       await this.storage.subscriptions.delete(subscriptionId);
-      this.hooks.emit({ type: 'subscription', event: 'deleted', provider: subscription.provider, accountId: subscription.accountId, subscription });
+      this.hooks.emit({
+        type: 'subscription',
+        event: 'deleted',
+        provider: subscription.provider,
+        accountId: subscription.accountId,
+        subscription,
+      });
       return;
     }
 
@@ -130,7 +153,13 @@ export class SubscriptionsService {
     await this.storage.subscriptions.delete(subscriptionId);
 
     this.logger.info('Subscription deleted', { subscriptionId });
-    this.hooks.emit({ type: 'subscription', event: 'deleted', provider: account.provider, accountId: subscription.accountId, subscription });
+    this.hooks.emit({
+      type: 'subscription',
+      event: 'deleted',
+      provider: account.provider,
+      accountId: subscription.accountId,
+      subscription,
+    });
   }
 
   async list(accountId: string): Promise<Subscription[]> {
@@ -144,10 +173,24 @@ export class SubscriptionsService {
   async handleNotification(notification: SubscriptionNotification): Promise<void> {
     const subscription = await this.storage.subscriptions.get(notification.subscriptionId);
     if (!subscription) {
-      this.logger.warn('Received notification for unknown subscription', { 
-        subscriptionId: notification.subscriptionId 
+      this.logger.warn('Received notification for unknown subscription', {
+        subscriptionId: notification.subscriptionId,
       });
       return;
+    }
+
+    // Only enforced when the subscription actually has a secret (create() forwards it to the
+    // provider as Google's channel `token` / Microsoft's `clientState`) - without this check,
+    // any POST to the webhook URL with a known subscriptionId would be processed as if it came
+    // from the real provider.
+    if (subscription.secret && !timingSafeEqual(notification.token ?? '', subscription.secret)) {
+      this.logger.warn('Rejected webhook notification that failed verification token check', {
+        subscriptionId: subscription.id,
+      });
+      throw errors.permissionDenied(
+        subscription.provider,
+        'Webhook notification failed verification token check'
+      );
     }
 
     this.logger.info('Processing webhook notification', {
@@ -174,10 +217,10 @@ export class SubscriptionsService {
     const expired: ExpiredSubscription[] = [];
 
     const accounts = await this.storage.accounts.list();
-    
+
     for (const account of accounts) {
       const subscriptions = await this.storage.subscriptions.list(account.id);
-      
+
       for (const sub of subscriptions) {
         if (sub.status === 'active' && sub.leaseExpiry < now) {
           expired.push({
@@ -200,7 +243,7 @@ export class SubscriptionsService {
 
         const warnWindow = new Date(sub.leaseExpiry.getTime() - 24 * 60 * 60 * 1000);
         if (sub.status === 'active' && now >= warnWindow && sub.leaseExpiry > now) {
-          this.logger.warn('Subscription expiring soon', { 
+          this.logger.warn('Subscription expiring soon', {
             subscriptionId: sub.id,
             expiresAt: sub.leaseExpiry,
           });
@@ -215,4 +258,15 @@ export class SubscriptionsService {
 export interface ExpiredSubscription {
   subscription: Subscription;
   expiredAt: Date;
+}
+
+// Constant-time comparison so verifying a webhook token doesn't leak timing information an
+// attacker could use to guess it one character at a time.
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let result = 0;
+  for (let i = 0; i < a.length; i++) {
+    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return result === 0;
 }

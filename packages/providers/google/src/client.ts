@@ -77,7 +77,7 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
       return {
         accessToken: data.access_token,
         refreshToken: data.refresh_token,
-        expiresAt: new Date(data.expiry_date),
+        expiresAt: new Date(Date.now() + data.expires_in * 1000),
         tokenType: data.token_type,
         scope: data.scope.split(' '),
       };
@@ -99,7 +99,7 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
       return {
         accessToken: data.access_token,
         refreshToken: token.refreshToken,
-        expiresAt: new Date(data.expiry_date),
+        expiresAt: new Date(Date.now() + data.expires_in * 1000),
         tokenType: data.token_type,
         scope: data.scope.split(' '),
       };
@@ -130,8 +130,23 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
         email: user.email,
         status: 'connected' as const,
         capabilities: {
-          calendars: { create: true, update: true, delete: true, share: true, manageNotifications: true },
-          events: { list: true, create: true, update: true, delete: true, move: true, duplicate: true, attachments: true, conferenceData: true },
+          calendars: {
+            create: true,
+            update: true,
+            delete: true,
+            share: true,
+            manageNotifications: true,
+          },
+          events: {
+            list: true,
+            create: true,
+            update: true,
+            delete: true,
+            move: true,
+            duplicate: true,
+            attachments: true,
+            conferenceData: true,
+          },
           sync: { incremental: true, webhook: true, polling: true },
           availability: { freeBusy: true, suggestedTimes: false },
         },
@@ -157,7 +172,7 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
       });
 
       return {
-        items: data.items.map(entry => ({
+        items: data.items.map((entry) => ({
           id: entry.id,
           accountId: '',
           providerId: entry.id,
@@ -203,7 +218,13 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
         readOnly: false,
         hidden: false,
         accessRole: 'owner' as const,
-        capabilities: { create: true, update: true, delete: true, share: true, manageNotifications: true },
+        capabilities: {
+          create: true,
+          update: true,
+          delete: true,
+          share: true,
+          manageNotifications: true,
+        },
         raw: entry,
         extensions: {},
         createdAt: new Date(),
@@ -236,7 +257,13 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
         readOnly: false,
         hidden: false,
         accessRole: 'owner' as const,
-        capabilities: { create: true, update: true, delete: true, share: true, manageNotifications: true },
+        capabilities: {
+          create: true,
+          update: true,
+          delete: true,
+          share: true,
+          manageNotifications: true,
+        },
         raw: entry,
         extensions: {},
         createdAt: new Date(),
@@ -270,7 +297,13 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
         readOnly: false,
         hidden: entry.hidden ?? false,
         accessRole: 'owner' as const,
-        capabilities: { create: true, update: true, delete: true, share: true, manageNotifications: true },
+        capabilities: {
+          create: true,
+          update: true,
+          delete: true,
+          share: true,
+          manageNotifications: true,
+        },
         raw: entry,
         extensions: {},
         createdAt: new Date(),
@@ -279,12 +312,14 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
     },
 
     delete: async (token, id) => {
-      await deleteIgnoring404(() => transport.request({
-        method: 'DELETE',
-        path: `${BASE_URL}/users/me/calendars/${encodeURIComponent(id)}`,
-        headers: authHeader(token),
-        responseType: 'text',
-      }));
+      await deleteIgnoring404(() =>
+        transport.request({
+          method: 'DELETE',
+          path: `${BASE_URL}/users/me/calendars/${encodeURIComponent(id)}`,
+          headers: authHeader(token),
+          responseType: 'text',
+        })
+      );
     },
 
     // Google Calendar ACL: https://developers.google.com/workspace/calendar/api/v3/reference/acl/insert
@@ -338,15 +373,27 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
         summary: input.title,
         description: input.description,
         location: input.location,
-        start: input.allDay ? { date: (input.start as any).date } : { dateTime: (input.start as any).dateTime, timeZone: (input.start as any).timezone },
-        end: input.allDay ? { date: (input.end as any).date } : { dateTime: (input.end as any).dateTime, timeZone: (input.end as any).timezone },
+        start: input.allDay
+          ? { date: (input.start as any).date }
+          : { dateTime: (input.start as any).dateTime, timeZone: (input.start as any).timezone },
+        end: input.allDay
+          ? { date: (input.end as any).date }
+          : { dateTime: (input.end as any).dateTime, timeZone: (input.end as any).timezone },
         transparency: input.transparency === 'transparent' ? 'transparent' : 'opaque',
-        visibility: input.visibility === 'public' ? 'public' : input.visibility === 'private' ? 'private' : 'default',
+        visibility:
+          input.visibility === 'public'
+            ? 'public'
+            : input.visibility === 'private'
+              ? 'private'
+              : 'default',
         status: input.status === 'tentative' ? 'tentative' : 'confirmed',
       };
 
       if (input.attendees) {
-        body.attendees = input.attendees.map(a => ({ email: a.email, displayName: a.displayName }));
+        body.attendees = input.attendees.map((a) => ({
+          email: a.email,
+          displayName: a.displayName,
+        }));
       }
       if (input.recurrence?.rrule) {
         body.recurrence = [input.recurrence.rrule];
@@ -354,7 +401,7 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
       if (input.reminders) {
         body.reminders = {
           useDefault: false,
-          overrides: input.reminders.map(r => ({ method: r.method, minutes: r.minutes })),
+          overrides: input.reminders.map((r) => ({ method: r.method, minutes: r.minutes })),
         };
       }
 
@@ -374,13 +421,37 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
       if (patch.title !== undefined) body.summary = patch.title;
       if (patch.description !== undefined) body.description = patch.description;
       if (patch.location !== undefined) body.location = patch.location;
-      if (patch.start !== undefined) body.start = patch.allDay ? { date: (patch.start as any).date } : { dateTime: (patch.start as any).dateTime, timeZone: (patch.start as any).timezone };
-      if (patch.end !== undefined) body.end = patch.allDay ? { date: (patch.end as any).date } : { dateTime: (patch.end as any).dateTime, timeZone: (patch.end as any).timezone };
-      if (patch.transparency !== undefined) body.transparency = patch.transparency === 'transparent' ? 'transparent' : 'opaque';
-      if (patch.visibility !== undefined) body.visibility = patch.visibility === 'public' ? 'public' : patch.visibility === 'private' ? 'private' : 'default';
-      if (patch.attendees !== undefined) body.attendees = patch.attendees.map(a => ({ email: a.email, displayName: a.displayName }));
-      if (patch.recurrence !== undefined) body.recurrence = patch.recurrence?.rrule ? [patch.recurrence.rrule] : [];
-      if (patch.reminders !== undefined) body.reminders = patch.reminders ? { useDefault: false, overrides: patch.reminders.map(r => ({ method: r.method, minutes: r.minutes })) } : { useDefault: false };
+      if (patch.start !== undefined)
+        body.start = patch.allDay
+          ? { date: (patch.start as any).date }
+          : { dateTime: (patch.start as any).dateTime, timeZone: (patch.start as any).timezone };
+      if (patch.end !== undefined)
+        body.end = patch.allDay
+          ? { date: (patch.end as any).date }
+          : { dateTime: (patch.end as any).dateTime, timeZone: (patch.end as any).timezone };
+      if (patch.transparency !== undefined)
+        body.transparency = patch.transparency === 'transparent' ? 'transparent' : 'opaque';
+      if (patch.visibility !== undefined)
+        body.visibility =
+          patch.visibility === 'public'
+            ? 'public'
+            : patch.visibility === 'private'
+              ? 'private'
+              : 'default';
+      if (patch.attendees !== undefined)
+        body.attendees = patch.attendees.map((a) => ({
+          email: a.email,
+          displayName: a.displayName,
+        }));
+      if (patch.recurrence !== undefined)
+        body.recurrence = patch.recurrence?.rrule ? [patch.recurrence.rrule] : [];
+      if (patch.reminders !== undefined)
+        body.reminders = patch.reminders
+          ? {
+              useDefault: false,
+              overrides: patch.reminders.map((r) => ({ method: r.method, minutes: r.minutes })),
+            }
+          : { useDefault: false };
 
       const { data: event } = await transport.request<any>({
         method: 'PATCH',
@@ -393,12 +464,14 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
     },
 
     delete: async (token, calendarId, id, _options) => {
-      await deleteIgnoring404(() => transport.request({
-        method: 'DELETE',
-        path: `${BASE_URL}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(id)}`,
-        headers: authHeader(token),
-        responseType: 'text',
-      }));
+      await deleteIgnoring404(() =>
+        transport.request({
+          method: 'DELETE',
+          path: `${BASE_URL}/calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(id)}`,
+          headers: authHeader(token),
+          responseType: 'text',
+        })
+      );
     },
 
     move: async (token, eventId, sourceCalendarId, targetCalendarId) => {
@@ -409,7 +482,8 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
         headers: authHeader(token),
       });
 
-      return mapEventsResponse({ items: [event], kind: '', etag: '' }, '', '', targetCalendarId).items[0];
+      return mapEventsResponse({ items: [event], kind: '', etag: '' }, '', '', targetCalendarId)
+        .items[0];
     },
 
     duplicate: async (token, eventId, targetCalendarId) => {
@@ -432,7 +506,8 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
         body: clone,
       });
 
-      return mapEventsResponse({ items: [newEvent], kind: '', etag: '' }, '', '', targetCalendarId).items[0];
+      return mapEventsResponse({ items: [newEvent], kind: '', etag: '' }, '', '', targetCalendarId)
+        .items[0];
     },
 
     expandRecurrence: async (token, calendarId, eventId, timeMin, timeMax) => {
@@ -446,21 +521,28 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
         headers: authHeader(token),
       });
 
-      return data.items.map((e): ExpandedOccurrence => ({
-        id: e.id,
-        eventId,
-        title: e.summary || '(No title)',
-        start: (e.start?.dateTime
-          ? { dateTime: e.start.dateTime, timezone: e.start.timeZone || 'UTC' }
-          : { date: e.start?.date || '' }) as DateTimeValue,
-        end: (e.end?.dateTime
-          ? { dateTime: e.end.dateTime, timezone: e.end.timeZone || 'UTC' }
-          : { date: e.end?.date || '' }) as DateTimeValue,
-        allDay: !!e.start?.date,
-        status: e.status === 'confirmed' ? 'confirmed' : e.status === 'tentative' ? 'tentative' : 'cancelled',
-        location: e.location,
-        recurrenceException: false,
-      }));
+      return data.items.map(
+        (e): ExpandedOccurrence => ({
+          id: e.id,
+          eventId,
+          title: e.summary || '(No title)',
+          start: (e.start?.dateTime
+            ? { dateTime: e.start.dateTime, timezone: e.start.timeZone || 'UTC' }
+            : { date: e.start?.date || '' }) as DateTimeValue,
+          end: (e.end?.dateTime
+            ? { dateTime: e.end.dateTime, timezone: e.end.timeZone || 'UTC' }
+            : { date: e.end?.date || '' }) as DateTimeValue,
+          allDay: !!e.start?.date,
+          status:
+            e.status === 'confirmed'
+              ? 'confirmed'
+              : e.status === 'tentative'
+                ? 'tentative'
+                : 'cancelled',
+          location: e.location,
+          recurrenceException: false,
+        })
+      );
     },
   };
 
@@ -474,14 +556,17 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
           timeMin: query.timeMin.toISOString(),
           timeMax: query.timeMax.toISOString(),
           timeZone: query.timezone || 'UTC',
-          items: query.calendars.map(id => ({ id })),
+          items: query.calendars.map((id) => ({ id })),
         },
       });
 
-      const result: Record<string, Array<{ start: Date; end: Date; status: 'free' | 'busy' | 'tentative' | 'unknown' }>> = {};
+      const result: Record<
+        string,
+        Array<{ start: Date; end: Date; status: 'free' | 'busy' | 'tentative' | 'unknown' }>
+      > = {};
 
       for (const [calId, calData] of Object.entries(data.calendars)) {
-        result[calId] = (calData.busy || []).map(b => ({
+        result[calId] = (calData.busy || []).map((b) => ({
           start: new Date(b.start),
           end: new Date(b.end),
           status: 'busy' as const,
@@ -518,9 +603,11 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
       return {
         accountId: '',
         scope: 'events' as const,
-        events: mapped.items.map(e => ({ type: 'created' as const, event: e })),
+        events: mapped.items.map((e) => ({ type: 'created' as const, event: e })),
         deletions: [],
-        nextCursor: mapped.nextSyncToken ? { token: mapped.nextSyncToken, expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) } : undefined,
+        nextCursor: mapped.nextSyncToken
+          ? { token: mapped.nextSyncToken, expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) }
+          : undefined,
         expiredToken: false,
         hasMore: !!mapped.nextPageToken,
       } as SyncResult;
@@ -536,7 +623,11 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
 
         const mapped = mapEventsResponse(data, '', '', calendarId);
 
-        const events: Array<{ type: 'created' | 'updated' | 'deleted'; event?: any; eventId?: string }> = [];
+        const events: Array<{
+          type: 'created' | 'updated' | 'deleted';
+          event?: any;
+          eventId?: string;
+        }> = [];
         for (const item of mapped.items) {
           if (item.deletedAt) {
             events.push({ type: 'deleted', eventId: item.id });
@@ -550,7 +641,12 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
           scope: 'events' as const,
           events,
           deletions: [],
-          nextCursor: mapped.nextSyncToken ? { token: mapped.nextSyncToken, expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) } : undefined,
+          nextCursor: mapped.nextSyncToken
+            ? {
+                token: mapped.nextSyncToken,
+                expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+              }
+            : undefined,
           expiredToken: false,
           hasMore: !!mapped.nextPageToken,
         } as SyncResult;
@@ -583,6 +679,10 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
           expiration: config.leaseDurationSeconds
             ? String(Date.now() + config.leaseDurationSeconds * 1000)
             : String(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          // Google echoes this back as the X-Goog-Channel-Token header on every notification -
+          // without it, `config.secret` was accepted by the SDK but never actually sent to
+          // Google, so there was no way to verify a notification really came from this channel.
+          ...(config.secret ? { token: config.secret } : {}),
         },
       });
 
@@ -606,7 +706,8 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
         code: 'CAPABILITY_UNSUPPORTED',
         message: 'Google watch channels cannot be renewed in place',
         provider: 'google',
-        remediation: 'Call subscriptions.create() again to open a new channel before the old one expires.',
+        remediation:
+          'Call subscriptions.create() again to open a new channel before the old one expires.',
       });
     },
 
@@ -642,8 +743,23 @@ export function createGoogleProvider(config: GoogleProviderConfig): ProviderAdap
     sync,
     subscriptions,
     getCapabilities: () => ({
-      calendars: { create: true, update: true, delete: true, share: true, manageNotifications: true },
-      events: { list: true, create: true, update: true, delete: true, move: true, duplicate: true, attachments: true, conferenceData: true },
+      calendars: {
+        create: true,
+        update: true,
+        delete: true,
+        share: true,
+        manageNotifications: true,
+      },
+      events: {
+        list: true,
+        create: true,
+        update: true,
+        delete: true,
+        move: true,
+        duplicate: true,
+        attachments: true,
+        conferenceData: true,
+      },
       sync: { incremental: true, webhook: true, polling: true },
       availability: { freeBusy: true, suggestedTimes: false },
     }),
@@ -663,10 +779,15 @@ async function deleteIgnoring404(fn: () => Promise<unknown>): Promise<void> {
 
 function mapAccessRole(role: string): 'owner' | 'writer' | 'reader' | 'freeBusyReader' | 'none' {
   switch (role) {
-    case 'owner': return 'owner';
-    case 'writer': return 'writer';
-    case 'reader': return 'reader';
-    case 'freeBusyReader': return 'freeBusyReader';
-    default: return 'none';
+    case 'owner':
+      return 'owner';
+    case 'writer':
+      return 'writer';
+    case 'reader':
+      return 'reader';
+    case 'freeBusyReader':
+      return 'freeBusyReader';
+    default:
+      return 'none';
   }
 }

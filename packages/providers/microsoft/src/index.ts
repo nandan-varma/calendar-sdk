@@ -1,4 +1,11 @@
-import type { ProviderAdapter, TokenSet, RefreshToken, CreateAuthUrlOptions, ShareCalendarInput, RetryOptions } from '@nandan-varma/calendar-sdk';
+import type {
+  ProviderAdapter,
+  TokenSet,
+  RefreshToken,
+  CreateAuthUrlOptions,
+  ShareCalendarInput,
+  RetryOptions,
+} from '@nandan-varma/calendar-sdk';
 import type { Logger } from '@nandan-varma/calendar-sdk';
 import { CalendarSdkError, createTransport, defaultRetryOptions } from '@nandan-varma/calendar-sdk';
 
@@ -101,8 +108,23 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
         email: user.mail || user.userPrincipalName,
         status: 'connected' as const,
         capabilities: {
-          calendars: { create: true, update: true, delete: true, share: true, manageNotifications: false },
-          events: { list: true, create: true, update: true, delete: true, move: true, duplicate: false, attachments: true, conferenceData: true },
+          calendars: {
+            create: true,
+            update: true,
+            delete: true,
+            share: true,
+            manageNotifications: false,
+          },
+          events: {
+            list: true,
+            create: true,
+            update: true,
+            delete: true,
+            move: true,
+            duplicate: false,
+            attachments: true,
+            conferenceData: true,
+          },
           sync: { incremental: true, webhook: true, polling: true },
           availability: { freeBusy: true, suggestedTimes: true },
         },
@@ -138,7 +160,13 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
           readOnly: false,
           hidden: false,
           accessRole: 'owner' as const,
-          capabilities: { create: true, update: true, delete: true, share: true, manageNotifications: false },
+          capabilities: {
+            create: true,
+            update: true,
+            delete: true,
+            share: true,
+            manageNotifications: false,
+          },
           raw: cal,
           extensions: {},
           createdAt: new Date(),
@@ -166,7 +194,13 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
         readOnly: false,
         hidden: false,
         accessRole: 'owner' as const,
-        capabilities: { create: true, update: true, delete: true, share: true, manageNotifications: false },
+        capabilities: {
+          create: true,
+          update: true,
+          delete: true,
+          share: true,
+          manageNotifications: false,
+        },
         raw: cal,
         extensions: {},
         createdAt: new Date(),
@@ -174,7 +208,10 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
       };
     },
 
-    create: async (token: TokenSet, input: { name: string; description?: string; timezone?: string }) => {
+    create: async (
+      token: TokenSet,
+      input: { name: string; description?: string; timezone?: string }
+    ) => {
       const { data: cal } = await transport.request<any>({
         method: 'POST',
         path: `${GRAPH_BASE_URL}/me/calendars`,
@@ -198,7 +235,13 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
         readOnly: false,
         hidden: false,
         accessRole: 'owner' as const,
-        capabilities: { create: true, update: true, delete: true, share: true, manageNotifications: false },
+        capabilities: {
+          create: true,
+          update: true,
+          delete: true,
+          share: true,
+          manageNotifications: false,
+        },
         raw: cal,
         extensions: {},
         createdAt: new Date(),
@@ -226,7 +269,13 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
         readOnly: false,
         hidden: false,
         accessRole: 'owner' as const,
-        capabilities: { create: true, update: true, delete: true, share: true, manageNotifications: false },
+        capabilities: {
+          create: true,
+          update: true,
+          delete: true,
+          share: true,
+          manageNotifications: false,
+        },
         raw: cal,
         extensions: {},
         createdAt: new Date(),
@@ -235,12 +284,14 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
     },
 
     delete: async (token: TokenSet, id: string) => {
-      await deleteIgnoring404(() => transport.request({
-        method: 'DELETE',
-        path: `${GRAPH_BASE_URL}/me/calendars/${id}`,
-        headers: authHeader(token),
-        responseType: 'text',
-      }));
+      await deleteIgnoring404(() =>
+        transport.request({
+          method: 'DELETE',
+          path: `${GRAPH_BASE_URL}/me/calendars/${id}`,
+          headers: authHeader(token),
+          responseType: 'text',
+        })
+      );
     },
 
     // Microsoft Graph calendarPermissions: https://learn.microsoft.com/en-us/graph/api/calendar-post-calendarpermissions
@@ -258,10 +309,22 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
   };
 
   const events = {
-    list: async (token: TokenSet, calendarId: string, query?: { pageToken?: string; limit?: number; timeMin?: Date; timeMax?: Date; showDeleted?: boolean }) => {
+    list: async (
+      token: TokenSet,
+      calendarId: string,
+      query?: {
+        pageToken?: string;
+        limit?: number;
+        timeMin?: Date;
+        timeMax?: Date;
+        showDeleted?: boolean;
+      }
+    ) => {
       const params: Record<string, string> = {
         startDateTime: (query?.timeMin || new Date()).toISOString(),
-        endDateTime: (query?.timeMax || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)).toISOString(),
+        endDateTime: (
+          query?.timeMax || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        ).toISOString(),
       };
       if (query?.limit) params.$top = String(query.limit);
 
@@ -291,8 +354,14 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
         subject: input.title,
         body: { contentType: 'HTML', content: input.description || '' },
         location: input.location ? { displayName: input.location } : undefined,
-        start: { dateTime: input.start.dateTime || input.start.date, timeZone: input.start.timezone || 'UTC' },
-        end: { dateTime: input.end.dateTime || input.end.date, timeZone: input.end.timezone || 'UTC' },
+        start: {
+          dateTime: input.start.dateTime || input.start.date,
+          timeZone: input.start.timezone || 'UTC',
+        },
+        end: {
+          dateTime: input.end.dateTime || input.end.date,
+          timeZone: input.end.timezone || 'UTC',
+        },
         isAllDay: input.allDay ?? false,
         showAs: input.transparency === 'transparent' ? 'free' : 'busy',
         sensitivity: input.visibility === 'private' ? 'private' : 'normal',
@@ -305,7 +374,7 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
         }));
       }
       if (input.recurrence?.rrule) {
-        body.recurrence = parseRRuleToOutlook(input.recurrence.rrule);
+        body.recurrence = rruleToOutlookRecurrence(input.recurrence.rrule, input.start);
       }
 
       const { data: evt } = await transport.request<any>({
@@ -321,10 +390,24 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
     update: async (token: TokenSet, calendarId: string, id: string, patch: any, _options?: any) => {
       const body: any = {};
       if (patch.title !== undefined) body.subject = patch.title;
-      if (patch.description !== undefined) body.body = { contentType: 'HTML', content: patch.description };
+      if (patch.description !== undefined)
+        body.body = { contentType: 'HTML', content: patch.description };
       if (patch.location !== undefined) body.location = { displayName: patch.location };
-      if (patch.start !== undefined) body.start = { dateTime: patch.start.dateTime || patch.start.date, timeZone: patch.start.timezone || 'UTC' };
-      if (patch.end !== undefined) body.end = { dateTime: patch.end.dateTime || patch.end.date, timeZone: patch.end.timezone || 'UTC' };
+      if (patch.start !== undefined)
+        body.start = {
+          dateTime: patch.start.dateTime || patch.start.date,
+          timeZone: patch.start.timezone || 'UTC',
+        };
+      if (patch.end !== undefined)
+        body.end = {
+          dateTime: patch.end.dateTime || patch.end.date,
+          timeZone: patch.end.timezone || 'UTC',
+        };
+      if (patch.recurrence !== undefined) {
+        body.recurrence = patch.recurrence?.rrule
+          ? rruleToOutlookRecurrence(patch.recurrence.rrule, patch.start)
+          : null;
+      }
 
       const { data: evt } = await transport.request<any>({
         method: 'PATCH',
@@ -337,12 +420,14 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
     },
 
     delete: async (token: TokenSet, calendarId: string, id: string, _options?: any) => {
-      await deleteIgnoring404(() => transport.request({
-        method: 'DELETE',
-        path: `${GRAPH_BASE_URL}/me/calendars/${calendarId}/events/${id}`,
-        headers: authHeader(token),
-        responseType: 'text',
-      }));
+      await deleteIgnoring404(() =>
+        transport.request({
+          method: 'DELETE',
+          path: `${GRAPH_BASE_URL}/me/calendars/${calendarId}/events/${id}`,
+          headers: authHeader(token),
+          responseType: 'text',
+        })
+      );
     },
 
     move: async () => {
@@ -371,7 +456,10 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
   };
 
   const availability = {
-    freeBusy: async (token: TokenSet, query: { timeMin: Date; timeMax: Date; calendars: string[]; timezone?: string }) => {
+    freeBusy: async (
+      token: TokenSet,
+      query: { timeMin: Date; timeMax: Date; calendars: string[]; timezone?: string }
+    ) => {
       const { data } = await transport.request<any>({
         method: 'POST',
         path: `${GRAPH_BASE_URL}/me/calendar/getSchedule`,
@@ -388,26 +476,35 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
         result[schedule.scheduleId] = (schedule.scheduleItems || []).map((item: any) => ({
           start: new Date(item.start.dateTime),
           end: new Date(item.end.dateTime),
-          status: item.status === 'free' ? 'free' : item.status === 'tentative' ? 'tentative' : 'busy',
+          status:
+            item.status === 'free' ? 'free' : item.status === 'tentative' ? 'tentative' : 'busy',
         }));
       }
 
       return { calendars: result, timezone: query.timezone || 'UTC' };
     },
 
-    suggestMeeting: async (token: TokenSet, query: { timeMin: Date; timeMax: Date; meetingDuration: number; attendees: string[] }) => {
+    suggestMeeting: async (
+      token: TokenSet,
+      query: { timeMin: Date; timeMax: Date; meetingDuration: number; attendees: string[] }
+    ) => {
       const { data } = await transport.request<any>({
         method: 'POST',
         path: `${GRAPH_BASE_URL}/me/findMeetingTimes`,
         headers: authHeader(token),
         body: {
-          attendees: query.attendees.map(a => ({ emailAddress: { address: a }, type: 'required' })),
+          attendees: query.attendees.map((a) => ({
+            emailAddress: { address: a },
+            type: 'required',
+          })),
           timeConstraint: {
             activityDomain: 'work',
-            timeSlots: [{
-              start: { dateTime: query.timeMin.toISOString(), timeZone: 'UTC' },
-              end: { dateTime: query.timeMax.toISOString(), timeZone: 'UTC' },
-            }],
+            timeSlots: [
+              {
+                start: { dateTime: query.timeMin.toISOString(), timeZone: 'UTC' },
+                end: { dateTime: query.timeMax.toISOString(), timeZone: 'UTC' },
+              },
+            ],
           },
           meetingDuration: `PT${query.meetingDuration}M`,
         },
@@ -426,10 +523,16 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
   };
 
   const sync = {
-    fullSync: async (token: TokenSet, calendarId: string, options?: { timeMin?: Date; timeMax?: Date; limit?: number }) => {
+    fullSync: async (
+      token: TokenSet,
+      calendarId: string,
+      options?: { timeMin?: Date; timeMax?: Date; limit?: number }
+    ) => {
       const params: Record<string, string> = {
         startDateTime: (options?.timeMin || new Date()).toISOString(),
-        endDateTime: (options?.timeMax || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)).toISOString(),
+        endDateTime: (
+          options?.timeMax || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        ).toISOString(),
       };
       if (options?.limit) params.$top = String(options.limit);
 
@@ -442,7 +545,10 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
       return {
         accountId: '',
         scope: 'events' as const,
-        events: data.value.map((evt: any) => ({ type: 'created' as const, event: mapMicrosoftEvent(evt, calendarId) })),
+        events: data.value.map((evt: any) => ({
+          type: 'created' as const,
+          event: mapMicrosoftEvent(evt, calendarId),
+        })),
         deletions: [],
         expiredToken: false,
         hasMore: !!data['@odata.nextLink'],
@@ -452,15 +558,28 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
     incrementalSync: async () => {
       throw new CalendarSdkError({
         code: 'CAPABILITY_UNSUPPORTED',
-        message: 'Incremental sync requires Microsoft Graph delta query, which is not yet implemented',
+        message:
+          'Incremental sync requires Microsoft Graph delta query, which is not yet implemented',
         provider: 'microsoft',
       });
     },
   };
 
   const subscriptions = {
-    create: async (token: TokenSet, config: { resource: string; webhookUrl?: string; leaseDurationSeconds?: number }) => {
-      const { data } = await transport.request<{ id: string; expirationDateTime: string; resource: string }>({
+    create: async (
+      token: TokenSet,
+      config: {
+        resource: string;
+        webhookUrl?: string;
+        leaseDurationSeconds?: number;
+        secret?: string;
+      }
+    ) => {
+      const { data } = await transport.request<{
+        id: string;
+        expirationDateTime: string;
+        resource: string;
+      }>({
         method: 'POST',
         path: `${GRAPH_BASE_URL}/subscriptions`,
         headers: authHeader(token),
@@ -468,7 +587,13 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
           changeType: 'created,updated,deleted',
           notificationUrl: config.webhookUrl,
           resource: config.resource,
-          expirationDateTime: new Date(Date.now() + (config.leaseDurationSeconds || 4230) * 1000).toISOString(),
+          expirationDateTime: new Date(
+            Date.now() + (config.leaseDurationSeconds || 4230) * 1000
+          ).toISOString(),
+          // Graph echoes this back on every notification payload - without it, `config.secret`
+          // was accepted by the SDK but never actually sent to Microsoft, so there was no way
+          // to verify a notification really belongs to this subscription.
+          ...(config.secret ? { clientState: config.secret } : {}),
         },
       });
 
@@ -479,6 +604,7 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
         resource: config.resource,
         webhookUrl: config.webhookUrl,
         leaseExpiry: new Date(data.expirationDateTime),
+        secret: config.secret,
         renewalPolicy: 'auto' as const,
         status: 'active' as const,
         createdAt: new Date(),
@@ -487,7 +613,11 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
     },
 
     renew: async (token: TokenSet, subscriptionId: string) => {
-      const { data } = await transport.request<{ id: string; expirationDateTime: string; resource: string }>({
+      const { data } = await transport.request<{
+        id: string;
+        expirationDateTime: string;
+        resource: string;
+      }>({
         method: 'PATCH',
         path: `${GRAPH_BASE_URL}/subscriptions/${subscriptionId}`,
         headers: authHeader(token),
@@ -538,8 +668,23 @@ export function createMicrosoftProvider(config: MicrosoftProviderConfig): Provid
     sync,
     subscriptions,
     getCapabilities: () => ({
-      calendars: { create: true, update: true, delete: true, share: true, manageNotifications: false },
-      events: { list: true, create: true, update: true, delete: true, move: true, duplicate: false, attachments: true, conferenceData: true },
+      calendars: {
+        create: true,
+        update: true,
+        delete: true,
+        share: true,
+        manageNotifications: false,
+      },
+      events: {
+        list: true,
+        create: true,
+        update: true,
+        delete: true,
+        move: true,
+        duplicate: false,
+        attachments: true,
+        conferenceData: true,
+      },
       sync: { incremental: true, webhook: true, polling: true },
       availability: { freeBusy: true, suggestedTimes: true },
     }),
@@ -583,7 +728,10 @@ function mapMicrosoftEvent(evt: any, calendarId: string): any {
     end: { dateTime: evt.end.dateTime, timezone: evt.end.timeZone },
     allDay: evt.isAllDay ?? false,
     timezone: evt.originalStartTimeZone || 'UTC',
-    status: evt.showAs === 'free' ? 'confirmed' : evt.showAs === 'tentative' ? 'tentative' : 'confirmed',
+    // showAs is the organizer's busy/free indicator, not cancellation state - Graph's actual
+    // cancellation flag is isCancelled. Deriving status from showAs meant a cancelled Microsoft
+    // event could never be detected as cancelled by sync/reconcile.
+    status: evt.isCancelled ? 'cancelled' : evt.showAs === 'tentative' ? 'tentative' : 'confirmed',
     transparency: evt.showAs === 'free' ? 'transparent' : 'opaque',
     visibility: evt.sensitivity === 'private' ? 'private' : 'default',
     attendees: (evt.attendees || []).map((a: any) => ({
@@ -591,9 +739,13 @@ function mapMicrosoftEvent(evt: any, calendarId: string): any {
       displayName: a.emailAddress.name,
       responseStatus: a.status?.response || 'none',
     })),
-    organizer: evt.organizer ? { email: evt.organizer.emailAddress.address, displayName: evt.organizer.emailAddress.name } : undefined,
-    reminders: evt.isReminderOn ? [{ method: 'popup' as const, minutes: evt.reminderMinutesBeforeStart || 15 }] : undefined,
-    recurrence: evt.recurrence ? { rrule: '' } : undefined,
+    organizer: evt.organizer
+      ? { email: evt.organizer.emailAddress.address, displayName: evt.organizer.emailAddress.name }
+      : undefined,
+    reminders: evt.isReminderOn
+      ? [{ method: 'popup' as const, minutes: evt.reminderMinutesBeforeStart || 15 }]
+      : undefined,
+    recurrence: evt.recurrence ? { rrule: outlookRecurrenceToRRule(evt.recurrence) } : undefined,
     recurrenceMaster: !evt.seriesMasterId,
     recurringEventId: evt.seriesMasterId,
     exceptions: [],
@@ -603,9 +755,173 @@ function mapMicrosoftEvent(evt: any, calendarId: string): any {
     extensions: {},
     createdAt: new Date(evt.createdDateTime),
     updatedAt: new Date(evt.lastModifiedDateTime),
+    deletedAt: evt.isCancelled ? new Date() : undefined,
   };
 }
 
-function parseRRuleToOutlook(_rrule: string): any {
-  return { pattern: { type: 'daily' }, range: { type: 'numbered', numberOfOccurrences: 10 } };
+const ICAL_WEEKDAYS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+const OUTLOOK_WEEKDAYS = [
+  'sunday',
+  'monday',
+  'tuesday',
+  'wednesday',
+  'thursday',
+  'friday',
+  'saturday',
+];
+const OUTLOOK_ORDINALS: Record<string, number> = {
+  first: 1,
+  second: 2,
+  third: 3,
+  fourth: 4,
+  last: -1,
+};
+
+function icalDayToOutlook(code: string): string {
+  const idx = ICAL_WEEKDAYS.indexOf(code);
+  return idx >= 0 ? OUTLOOK_WEEKDAYS[idx] : 'monday';
+}
+
+function outlookDayToIcal(day: string): string {
+  const idx = OUTLOOK_WEEKDAYS.indexOf(day);
+  return idx >= 0 ? ICAL_WEEKDAYS[idx] : 'MO';
+}
+
+function weekdayFromDateString(dateStr: string): string {
+  const day = new Date(`${dateStr}T00:00:00Z`).getUTCDay();
+  return OUTLOOK_WEEKDAYS[day] ?? 'monday';
+}
+
+// Parses a BYDAY token like "2MO" or "-1FR" into an Outlook ordinal ("second"/"last") + weekday.
+function parseByDayToken(token: string): { ordinal: string; day: string } {
+  const match = /^(-?\d+)?([A-Z]{2})$/.exec(token.trim());
+  const num = match?.[1] ? Number.parseInt(match[1], 10) : 1;
+  const day = match?.[2] ? icalDayToOutlook(match[2]) : 'monday';
+  const ordinal = Object.entries(OUTLOOK_ORDINALS).find(([, n]) => n === num)?.[0] ?? 'first';
+  return { ordinal, day };
+}
+
+function untilToOutlookDate(until: string): string {
+  const digits = until.replace(/[^0-9]/g, '');
+  return `${digits.slice(0, 4)}-${digits.slice(4, 6)}-${digits.slice(6, 8)}`;
+}
+
+function startDateOf(dt: { date?: string; dateTime?: string } | undefined): string {
+  if (dt?.date) return dt.date;
+  if (dt?.dateTime) return dt.dateTime.slice(0, 10);
+  return new Date().toISOString().slice(0, 10);
+}
+
+// Translates the common subset of RFC 5545 RRULE (FREQ/INTERVAL/COUNT/UNTIL/BYDAY/BYMONTHDAY/
+// BYMONTH) into a Microsoft Graph `recurrence` object. Covers daily/weekly/monthly/yearly with
+// a single BYDAY ordinal - patterns using BYSETPOS or multiple simultaneous rule parts beyond
+// that fall back to a same-frequency approximation rather than a fabricated, unrelated one.
+function rruleToOutlookRecurrence(
+  rrule: string,
+  start: { date?: string; dateTime?: string } | undefined
+): unknown {
+  const parts: Record<string, string> = {};
+  for (const segment of rrule.split(';')) {
+    const [key, value] = segment.split('=');
+    if (key && value) parts[key.toUpperCase()] = value;
+  }
+
+  const freq = (parts.FREQ || 'DAILY').toUpperCase();
+  const interval = parts.INTERVAL ? Number.parseInt(parts.INTERVAL, 10) || 1 : 1;
+  const startDate = startDateOf(start);
+
+  const pattern: Record<string, unknown> = { interval };
+
+  switch (freq) {
+    case 'WEEKLY': {
+      pattern.type = 'weekly';
+      pattern.daysOfWeek = parts.BYDAY
+        ? parts.BYDAY.split(',').map((token) => icalDayToOutlook(token.replace(/^-?\d+/, '')))
+        : [weekdayFromDateString(startDate)];
+      break;
+    }
+    case 'MONTHLY': {
+      if (parts.BYDAY) {
+        const { ordinal, day } = parseByDayToken(parts.BYDAY.split(',')[0]);
+        pattern.type = 'relativeMonthly';
+        pattern.daysOfWeek = [day];
+        pattern.index = ordinal;
+      } else {
+        pattern.type = 'absoluteMonthly';
+        pattern.dayOfMonth = parts.BYMONTHDAY
+          ? Number.parseInt(parts.BYMONTHDAY.split(',')[0], 10)
+          : Number.parseInt(startDate.slice(8, 10), 10);
+      }
+      break;
+    }
+    case 'YEARLY': {
+      if (parts.BYDAY) {
+        const { ordinal, day } = parseByDayToken(parts.BYDAY.split(',')[0]);
+        pattern.type = 'relativeYearly';
+        pattern.daysOfWeek = [day];
+        pattern.index = ordinal;
+      } else {
+        pattern.type = 'absoluteYearly';
+        pattern.dayOfMonth = parts.BYMONTHDAY
+          ? Number.parseInt(parts.BYMONTHDAY.split(',')[0], 10)
+          : Number.parseInt(startDate.slice(8, 10), 10);
+      }
+      pattern.month = parts.BYMONTH
+        ? Number.parseInt(parts.BYMONTH.split(',')[0], 10)
+        : Number.parseInt(startDate.slice(5, 7), 10);
+      break;
+    }
+    default:
+      pattern.type = 'daily';
+  }
+
+  const range: Record<string, unknown> = { type: 'noEnd', startDate };
+  if (parts.COUNT) {
+    range.type = 'numbered';
+    range.numberOfOccurrences = Number.parseInt(parts.COUNT, 10);
+  } else if (parts.UNTIL) {
+    range.type = 'endDate';
+    range.endDate = untilToOutlookDate(parts.UNTIL);
+  }
+
+  return { pattern, range };
+}
+
+// Reverses rruleToOutlookRecurrence() well enough to round-trip the patterns it produces - Graph
+// never returns an RRULE string itself, so events read back need this to populate Recurrence.rrule
+// instead of silently discarding the recurrence rule.
+function outlookRecurrenceToRRule(recurrence: any): string {
+  const pattern = recurrence?.pattern;
+  const range = recurrence?.range;
+  if (!pattern) return '';
+
+  const freqByType: Record<string, string> = {
+    daily: 'DAILY',
+    weekly: 'WEEKLY',
+    absoluteMonthly: 'MONTHLY',
+    relativeMonthly: 'MONTHLY',
+    absoluteYearly: 'YEARLY',
+    relativeYearly: 'YEARLY',
+  };
+
+  const segments: string[] = [`FREQ=${freqByType[pattern.type] ?? 'DAILY'}`];
+  if (pattern.interval && pattern.interval !== 1) segments.push(`INTERVAL=${pattern.interval}`);
+
+  if (Array.isArray(pattern.daysOfWeek) && pattern.daysOfWeek.length > 0) {
+    const isRelative = pattern.type === 'relativeMonthly' || pattern.type === 'relativeYearly';
+    const ordinalPrefix = isRelative ? String(OUTLOOK_ORDINALS[pattern.index] ?? 1) : '';
+    segments.push(
+      `BYDAY=${pattern.daysOfWeek.map((d: string) => `${ordinalPrefix}${outlookDayToIcal(d)}`).join(',')}`
+    );
+  }
+  if (pattern.dayOfMonth) segments.push(`BYMONTHDAY=${pattern.dayOfMonth}`);
+  if (pattern.month) segments.push(`BYMONTH=${pattern.month}`);
+
+  if (range?.type === 'numbered' && range.numberOfOccurrences) {
+    segments.push(`COUNT=${range.numberOfOccurrences}`);
+  } else if (range?.type === 'endDate' && range.endDate) {
+    segments.push(`UNTIL=${String(range.endDate).replace(/-/g, '')}T235959Z`);
+  }
+
+  return segments.join(';');
 }

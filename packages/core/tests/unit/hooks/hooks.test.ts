@@ -88,8 +88,12 @@ describe('EventEmitter', () => {
     const emitter = new EventEmitter({ async: true });
     const order: string[] = [];
 
-    emitter.on('auth', async () => { order.push('first'); });
-    emitter.on('auth', async () => { order.push('second'); });
+    emitter.on('auth', async () => {
+      order.push('first');
+    });
+    emitter.on('auth', async () => {
+      order.push('second');
+    });
 
     await emitter.emit(authEvent());
 
@@ -100,7 +104,9 @@ describe('EventEmitter', () => {
     const errorHandler = vi.fn();
     const emitter = new EventEmitter({ async: true, errorHandler });
 
-    emitter.on('auth', () => { throw new Error('boom'); });
+    emitter.on('auth', () => {
+      throw new Error('boom');
+    });
     await emitter.emit(authEvent());
 
     expect(errorHandler).toHaveBeenCalledTimes(1);

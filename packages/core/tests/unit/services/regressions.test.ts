@@ -4,10 +4,12 @@ import { createMemoryStorage } from '../../../src/storage/index.js';
 import { noopLogger } from '../../../src/logger/index.js';
 import type { ProviderAdapter, TokenSet } from '../../../src/adapters/provider.js';
 
-function fakeMicrosoftProvider(overrides: {
-  shareImpl?: ProviderAdapter['calendars']['share'];
-  accessRole?: 'owner' | 'writer' | 'reader';
-} = {}): ProviderAdapter {
+function fakeMicrosoftProvider(
+  overrides: {
+    shareImpl?: ProviderAdapter['calendars']['share'];
+    accessRole?: 'owner' | 'writer' | 'reader';
+  } = {}
+): ProviderAdapter {
   const calendar = {
     id: 'provider-cal-1',
     accountId: '',
@@ -19,7 +21,13 @@ function fakeMicrosoftProvider(overrides: {
     hidden: false,
     accessRole: overrides.accessRole ?? ('owner' as const),
     // Overwritten by CalendarsService.list() based on accessRole - the value here is unused.
-    capabilities: { create: true, update: true, delete: true, share: true, manageNotifications: false },
+    capabilities: {
+      create: true,
+      update: true,
+      delete: true,
+      share: true,
+      manageNotifications: false,
+    },
     raw: {},
     extensions: {},
     createdAt: new Date(),
@@ -31,7 +39,11 @@ function fakeMicrosoftProvider(overrides: {
     displayName: 'Fake Microsoft',
     auth: {
       createAuthorizationUrl: async () => '',
-      exchangeCode: async () => ({ accessToken: 'access-token', refreshToken: 'refresh-token', expiresAt: new Date(Date.now() + 3600_000) }),
+      exchangeCode: async () => ({
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+        expiresAt: new Date(Date.now() + 3600_000),
+      }),
       refreshToken: async () => ({ accessToken: 'access-token' }),
       revokeToken: async () => {},
     },
@@ -43,8 +55,23 @@ function fakeMicrosoftProvider(overrides: {
         email: 'ada@example.com',
         status: 'connected' as const,
         capabilities: {
-          calendars: { create: true, update: true, delete: true, share: true, manageNotifications: false },
-          events: { list: true, create: true, update: true, delete: true, move: true, duplicate: true, attachments: true, conferenceData: true },
+          calendars: {
+            create: true,
+            update: true,
+            delete: true,
+            share: true,
+            manageNotifications: false,
+          },
+          events: {
+            list: true,
+            create: true,
+            update: true,
+            delete: true,
+            move: true,
+            duplicate: true,
+            attachments: true,
+            conferenceData: true,
+          },
           sync: { incremental: true, webhook: true, polling: true },
           availability: { freeBusy: true, suggestedTimes: true },
         },
@@ -64,11 +91,19 @@ function fakeMicrosoftProvider(overrides: {
     },
     events: {
       list: async () => ({ items: [] }),
-      get: async () => { throw new Error('unused in these tests'); },
-      create: async () => { throw new Error('unused in these tests'); },
-      update: async () => { throw new Error('unused in these tests'); },
+      get: async () => {
+        throw new Error('unused in these tests');
+      },
+      create: async () => {
+        throw new Error('unused in these tests');
+      },
+      update: async () => {
+        throw new Error('unused in these tests');
+      },
       delete: async () => {},
-      move: async () => { throw new Error('unused in these tests'); },
+      move: async () => {
+        throw new Error('unused in these tests');
+      },
       duplicate: async (_token, eventId, targetCalendarId) => ({
         id: 'duplicated-provider-id',
         accountId: '',
@@ -98,23 +133,62 @@ function fakeMicrosoftProvider(overrides: {
       suggestMeeting: async () => ({ meetingSuggestions: [] }),
     },
     sync: {
-      fullSync: async () => ({ accountId: '', scope: 'events', events: [], deletions: [], expiredToken: false, hasMore: false }),
-      incrementalSync: async () => ({ accountId: '', scope: 'events', events: [], deletions: [], expiredToken: false, hasMore: false }),
+      fullSync: async () => ({
+        accountId: '',
+        scope: 'events',
+        events: [],
+        deletions: [],
+        expiredToken: false,
+        hasMore: false,
+      }),
+      incrementalSync: async () => ({
+        accountId: '',
+        scope: 'events',
+        events: [],
+        deletions: [],
+        expiredToken: false,
+        hasMore: false,
+      }),
     },
     subscriptions: {
-      create: async () => { throw new Error('unused in these tests'); },
-      renew: async () => { throw new Error('unused in these tests'); },
+      create: async () => {
+        throw new Error('unused in these tests');
+      },
+      renew: async () => {
+        throw new Error('unused in these tests');
+      },
       delete: async () => {},
       list: async () => [],
-      get: async () => { throw new Error('unused in these tests'); },
+      get: async () => {
+        throw new Error('unused in these tests');
+      },
     },
     getCapabilities: () => ({
-      calendars: { create: true, update: true, delete: true, share: true, manageNotifications: false },
-      events: { list: true, create: true, update: true, delete: true, move: true, duplicate: true, attachments: true, conferenceData: true },
+      calendars: {
+        create: true,
+        update: true,
+        delete: true,
+        share: true,
+        manageNotifications: false,
+      },
+      events: {
+        list: true,
+        create: true,
+        update: true,
+        delete: true,
+        move: true,
+        duplicate: true,
+        attachments: true,
+        conferenceData: true,
+      },
       sync: { incremental: true, webhook: true, polling: true },
       availability: { freeBusy: true, suggestedTimes: true },
     }),
-    createTransport: () => ({ request: async () => { throw new Error('not used in these tests'); } }),
+    createTransport: () => ({
+      request: async () => {
+        throw new Error('not used in these tests');
+      },
+    }),
   };
 }
 
@@ -145,8 +219,9 @@ describe('regression: errors no longer hardcode the "google" provider', () => {
   it('reports the real connected provider ("microsoft") once an account is resolved, never a hardcoded default', async () => {
     const { sdk } = await connectedSdk();
 
-    await expect(sdk.accounts.connect('unregistered-provider', { authInput: { authorizationCode: 'x' } }))
-      .rejects.toMatchObject({ code: 'CAPABILITY_UNSUPPORTED', provider: 'unregistered-provider' });
+    await expect(
+      sdk.accounts.connect('unregistered-provider', { authInput: { authorizationCode: 'x' } })
+    ).rejects.toMatchObject({ code: 'CAPABILITY_UNSUPPORTED', provider: 'unregistered-provider' });
   });
 });
 
@@ -273,7 +348,9 @@ describe('regression: per-calendar capabilities (accessRole) are enforced, not j
 
     // ...but only an owner can delete or share it, even though the account-wide capability map
     // (a provider-level flag) says the provider supports both operations.
-    await expect(sdk.calendars.delete(calendar.id)).rejects.toMatchObject({ code: 'CAPABILITY_UNSUPPORTED' });
+    await expect(sdk.calendars.delete(calendar.id)).rejects.toMatchObject({
+      code: 'CAPABILITY_UNSUPPORTED',
+    });
     await expect(
       sdk.calendars.share(calendar.id, { email: 'teammate@example.com', role: 'reader' })
     ).rejects.toMatchObject({ code: 'CAPABILITY_UNSUPPORTED' });

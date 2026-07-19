@@ -14,8 +14,23 @@ function fakeAccount(overrides: Partial<Account> = {}): Account {
     email: 'test@example.com',
     status: 'connected',
     capabilities: {
-      calendars: { create: true, update: true, delete: true, share: true, manageNotifications: true },
-      events: { list: true, create: true, update: true, delete: true, move: true, duplicate: true, attachments: true, conferenceData: true },
+      calendars: {
+        create: true,
+        update: true,
+        delete: true,
+        share: true,
+        manageNotifications: true,
+      },
+      events: {
+        list: true,
+        create: true,
+        update: true,
+        delete: true,
+        move: true,
+        duplicate: true,
+        attachments: true,
+        conferenceData: true,
+      },
       sync: { incremental: true, webhook: true, polling: true },
       availability: { freeBusy: true, suggestedTimes: true },
     },
@@ -27,7 +42,9 @@ function fakeAccount(overrides: Partial<Account> = {}): Account {
   };
 }
 
-function fakeProvider(refreshToken: (token: { refreshToken: string }) => Promise<TokenSet>): ProviderAdapter {
+function fakeProvider(
+  refreshToken: (token: { refreshToken: string }) => Promise<TokenSet>
+): ProviderAdapter {
   return {
     key: 'google',
     displayName: 'Fake Google',
@@ -62,7 +79,8 @@ describe('TokenManager', () => {
       await storage.tokens.save('account-1', {
         accessToken: 'valid-token',
         refreshToken: 'refresh-token',
-        expiresAt: new Date(Date.now() + 60_000),
+        // Comfortably outside the 60s pre-emptive refresh buffer, not just barely "not expired".
+        expiresAt: new Date(Date.now() + 10 * 60_000),
       });
 
       const manager = createTokenManager(storage, providers, noopLogger);
@@ -76,7 +94,7 @@ describe('TokenManager', () => {
       await storage.tokens.save('account-1', {
         accessToken: 'valid-token',
         refreshToken: 'refresh-token',
-        expiresAt: new Date(Date.now() + 60_000),
+        expiresAt: new Date(Date.now() + 10 * 60_000),
       });
 
       const manager = createTokenManager(storage, providers, noopLogger);
@@ -132,6 +150,84 @@ describe('TokenManager', () => {
       expect(account?.status).toBe('expired');
     });
 
+    it('proactively refreshes a token that is inside the buffer window but not yet actually expired', async () => {
+      await storage.accounts.save(fakeAccount());
+      await storage.tokens.save('account-1', {
+        accessToken: 'about-to-expire',
+        refreshToken: 'refresh-token',
+        expiresAt: new Date(Date.now() + 30_000), // inside the 60s buffer, still technically valid
+      });
+
+      const refreshFn = vi.fn().mockResolvedValue({
+        accessToken: 'fresh-token',
+        refreshToken: 'refresh-token',
+        expiresAt: new Date(Date.now() + 3600_000),
+      });
+      providers.set('google', fakeProvider(refreshFn));
+
+      const manager = createTokenManager(storage, providers, noopLogger);
+      const token = await manager.getToken('account-1');
+
+      expect(refreshFn).toHaveBeenCalled();
+      expect(token?.accessToken).toBe('fresh-token');
+    });
+
+    it('reuses a still-valid token instead of failing when a buffer-window refresh fails transiently', async () => {
+      await storage.accounts.save(fakeAccount());
+      await storage.tokens.save('account-1', {
+        accessToken: 'about-to-expire',
+        refreshToken: 'refresh-token',
+        expiresAt: new Date(Date.now() + 30_000),
+      });
+
+      const { CalendarSdkError } = await import('../../../src/errors/index.js');
+      providers.set(
+        'google',
+        fakeProvider(
+          vi
+            .fn()
+            .mockRejectedValue(
+              new CalendarSdkError({ code: 'NETWORK_ERROR', message: 'fetch failed' })
+            )
+        )
+      );
+
+      const manager = createTokenManager(storage, providers, noopLogger);
+      const token = await manager.getToken('account-1');
+
+      expect(token?.accessToken).toBe('about-to-expire');
+      const account = await storage.accounts.get('account-1');
+      expect(account?.status).toBe('connected');
+    });
+
+    it('returns null (without marking expired) when a fully-expired token fails to refresh transiently', async () => {
+      await storage.accounts.save(fakeAccount());
+      await storage.tokens.save('account-1', {
+        accessToken: 'stale-token',
+        refreshToken: 'refresh-token',
+        expiresAt: new Date(Date.now() - 1000),
+      });
+
+      const { CalendarSdkError } = await import('../../../src/errors/index.js');
+      providers.set(
+        'google',
+        fakeProvider(
+          vi
+            .fn()
+            .mockRejectedValue(
+              new CalendarSdkError({ code: 'NETWORK_ERROR', message: 'fetch failed' })
+            )
+        )
+      );
+
+      const manager = createTokenManager(storage, providers, noopLogger);
+      const token = await manager.getToken('account-1');
+
+      expect(token).toBeNull();
+      const account = await storage.accounts.get('account-1');
+      expect(account?.status).toBe('connected');
+    });
+
     it('returns null without attempting refresh when there is no refresh token', async () => {
       await storage.accounts.save(fakeAccount());
       await storage.tokens.save('account-1', {
@@ -156,7 +252,7 @@ describe('TokenManager', () => {
       await storage.tokens.save('account-1', {
         accessToken: 'still-valid',
         refreshToken: 'refresh-token',
-        expiresAt: new Date(Date.now() + 60_000),
+        expiresAt: new Date(Date.now() + 10 * 60_000),
       });
 
       const refreshFn = vi.fn().mockResolvedValue({
@@ -191,7 +287,7 @@ describe('TokenManager', () => {
       await storage.tokens.save('account-1', {
         accessToken: 'first',
         refreshToken: 'refresh-token',
-        expiresAt: new Date(Date.now() + 60_000),
+        expiresAt: new Date(Date.now() + 10 * 60_000),
       });
 
       const manager = createTokenManager(storage, providers, noopLogger);
@@ -200,7 +296,7 @@ describe('TokenManager', () => {
       await storage.tokens.save('account-1', {
         accessToken: 'second',
         refreshToken: 'refresh-token',
-        expiresAt: new Date(Date.now() + 60_000),
+        expiresAt: new Date(Date.now() + 10 * 60_000),
       });
       manager.invalidate('account-1');
 

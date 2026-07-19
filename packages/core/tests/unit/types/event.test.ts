@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import type { CalendarEvent, CreateEventInput, UpdateEventInput, Attendee } from '../../../src/types/event.js';
+import type {
+  CalendarEvent,
+  CreateEventInput,
+  UpdateEventInput,
+  Attendee,
+} from '../../../src/types/event.js';
 
 describe('Event Types', () => {
   describe('CalendarEvent', () => {

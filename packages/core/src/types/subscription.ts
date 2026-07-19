@@ -54,9 +54,17 @@ export interface SubscriptionNotification {
   timestamp: Date;
   expiration?: Date;
   changes?: SubscriptionChange[];
+  /**
+   * The verification value the provider echoed back on this notification - Google's
+   * `X-Goog-Channel-Token` header, or Microsoft's `clientState` field on the notification
+   * payload. Pass it through from your webhook handler so `handleNotification()` can check it
+   * against `Subscription.secret`; if the subscription has a `secret` and this doesn't match,
+   * the notification is rejected as unverified.
+   */
+  token?: string;
 }
 
-export type SubscriptionChange = 
+export type SubscriptionChange =
   | { type: 'created'; resourceId: string; resource?: unknown }
   | { type: 'updated'; resourceId: string; resource?: unknown }
   | { type: 'deleted'; resourceId: string };

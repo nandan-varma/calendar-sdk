@@ -3,19 +3,24 @@ import { createCalendarSdk } from '../../../src/index.js';
 import { createMemoryStorage } from '../../../src/storage/index.js';
 import { noopLogger } from '../../../src/logger/index.js';
 import { createHooks } from '../../../src/hooks/index.js';
+import { CalendarSdkError } from '../../../src/errors/index.js';
 import type { ProviderAdapter, TokenSet } from '../../../src/adapters/provider.js';
 import type { HookEvent } from '../../../src/hooks/index.js';
 
-function fakeProvider(overrides: {
-  refreshToken?: ProviderAdapter['auth']['refreshToken'];
-  revokeToken?: ProviderAdapter['auth']['revokeToken'];
-} = {}): ProviderAdapter {
+function fakeProvider(
+  overrides: {
+    refreshToken?: ProviderAdapter['auth']['refreshToken'];
+    revokeToken?: ProviderAdapter['auth']['revokeToken'];
+  } = {}
+): ProviderAdapter {
   return {
     key: 'google',
     displayName: 'Fake Google',
     auth: {
       createAuthorizationUrl: async () => '',
-      exchangeCode: async () => { throw new Error('unused in these tests'); },
+      exchangeCode: async () => {
+        throw new Error('unused in these tests');
+      },
       refreshToken: overrides.refreshToken ?? (async () => ({ accessToken: 'refreshed-token' })),
       revokeToken: overrides.revokeToken ?? (async () => {}),
     },
@@ -27,8 +32,23 @@ function fakeProvider(overrides: {
         email: 'ada@example.com',
         status: 'connected' as const,
         capabilities: {
-          calendars: { create: true, update: true, delete: true, share: true, manageNotifications: false },
-          events: { list: true, create: true, update: true, delete: true, move: true, duplicate: true, attachments: true, conferenceData: true },
+          calendars: {
+            create: true,
+            update: true,
+            delete: true,
+            share: true,
+            manageNotifications: false,
+          },
+          events: {
+            list: true,
+            create: true,
+            update: true,
+            delete: true,
+            move: true,
+            duplicate: true,
+            attachments: true,
+            conferenceData: true,
+          },
           sync: { incremental: true, webhook: true, polling: true },
           availability: { freeBusy: true, suggestedTimes: true },
         },
@@ -40,19 +60,35 @@ function fakeProvider(overrides: {
     },
     calendars: {
       list: async () => ({ items: [] }),
-      get: async () => { throw new Error('unused'); },
-      create: async () => { throw new Error('unused'); },
-      update: async () => { throw new Error('unused'); },
+      get: async () => {
+        throw new Error('unused');
+      },
+      create: async () => {
+        throw new Error('unused');
+      },
+      update: async () => {
+        throw new Error('unused');
+      },
       delete: async () => {},
     },
     events: {
       list: async () => ({ items: [] }),
-      get: async () => { throw new Error('unused'); },
-      create: async () => { throw new Error('unused'); },
-      update: async () => { throw new Error('unused'); },
+      get: async () => {
+        throw new Error('unused');
+      },
+      create: async () => {
+        throw new Error('unused');
+      },
+      update: async () => {
+        throw new Error('unused');
+      },
       delete: async () => {},
-      move: async () => { throw new Error('unused'); },
-      duplicate: async () => { throw new Error('unused'); },
+      move: async () => {
+        throw new Error('unused');
+      },
+      duplicate: async () => {
+        throw new Error('unused');
+      },
       expandRecurrence: async () => [],
     },
     availability: {
@@ -60,23 +96,62 @@ function fakeProvider(overrides: {
       suggestMeeting: async () => ({ meetingSuggestions: [] }),
     },
     sync: {
-      fullSync: async () => ({ accountId: '', scope: 'events', events: [], deletions: [], expiredToken: false, hasMore: false }),
-      incrementalSync: async () => ({ accountId: '', scope: 'events', events: [], deletions: [], expiredToken: false, hasMore: false }),
+      fullSync: async () => ({
+        accountId: '',
+        scope: 'events',
+        events: [],
+        deletions: [],
+        expiredToken: false,
+        hasMore: false,
+      }),
+      incrementalSync: async () => ({
+        accountId: '',
+        scope: 'events',
+        events: [],
+        deletions: [],
+        expiredToken: false,
+        hasMore: false,
+      }),
     },
     subscriptions: {
-      create: async () => { throw new Error('unused'); },
-      renew: async () => { throw new Error('unused'); },
+      create: async () => {
+        throw new Error('unused');
+      },
+      renew: async () => {
+        throw new Error('unused');
+      },
       delete: async () => {},
       list: async () => [],
-      get: async () => { throw new Error('unused'); },
+      get: async () => {
+        throw new Error('unused');
+      },
     },
     getCapabilities: () => ({
-      calendars: { create: true, update: true, delete: true, share: true, manageNotifications: false },
-      events: { list: true, create: true, update: true, delete: true, move: true, duplicate: true, attachments: true, conferenceData: true },
+      calendars: {
+        create: true,
+        update: true,
+        delete: true,
+        share: true,
+        manageNotifications: false,
+      },
+      events: {
+        list: true,
+        create: true,
+        update: true,
+        delete: true,
+        move: true,
+        duplicate: true,
+        attachments: true,
+        conferenceData: true,
+      },
       sync: { incremental: true, webhook: true, polling: true },
       availability: { freeBusy: true, suggestedTimes: true },
     }),
-    createTransport: () => ({ request: async () => { throw new Error('unused'); } }),
+    createTransport: () => ({
+      request: async () => {
+        throw new Error('unused');
+      },
+    }),
   };
 }
 
@@ -117,6 +192,30 @@ describe('AccountsService.connect - AuthInput.expiresAt', () => {
   });
 });
 
+describe('AccountsService.connect - token persistence without a refresh token (e.g. CalDAV Basic auth)', () => {
+  it('still persists the access token when the provider never issues a refresh token', async () => {
+    const sdk = createCalendarSdk({
+      providers: [fakeProvider()],
+      storage: createMemoryStorage(),
+      logger: noopLogger,
+    });
+
+    await sdk.accounts.connect('google', {
+      // No refreshToken, like CalDAV's Basic-auth exchangeCode()/refreshToken().
+      authInput: { accessToken: 'basic-auth-token' },
+    });
+
+    const account = (await sdk.accounts.list())[0];
+    const stored = await sdk.storage.tokens.get(account.id);
+    expect(stored?.accessToken).toBe('basic-auth-token');
+
+    // The actual regression: getToken() must find the persisted token afterwards, or every
+    // call past connect() fails with AUTH_REQUIRED even though connect() reported success.
+    const token = await sdk.accounts.getToken(account.id);
+    expect(token).toBe('basic-auth-token');
+  });
+});
+
 describe('AccountsService - hook emission', () => {
   it('emits auth/connected on a successful connect', async () => {
     const hooks = createHooks();
@@ -140,7 +239,9 @@ describe('AccountsService - hook emission', () => {
   it('emits auth/error when connect fails', async () => {
     const hooks = createHooks();
     const events: HookEvent[] = [];
-    hooks.on('auth', (e) => { events.push(e); });
+    hooks.on('auth', (e) => {
+      events.push(e);
+    });
 
     const sdk = createCalendarSdk({
       providers: [fakeProvider()],
@@ -153,27 +254,78 @@ describe('AccountsService - hook emission', () => {
       code: 'VALIDATION_FAILED',
     });
 
-    expect(events).toContainEqual(expect.objectContaining({ type: 'auth', event: 'error', provider: 'google' }));
+    expect(events).toContainEqual(
+      expect.objectContaining({ type: 'auth', event: 'error', provider: 'google' })
+    );
   });
 
   it('emits auth/refreshed on a successful refresh, and auth/expired when refresh fails', async () => {
     const hooks = createHooks();
     const events: HookEvent[] = [];
-    hooks.on('auth', (e) => { events.push(e); });
+    hooks.on('auth', (e) => {
+      events.push(e);
+    });
 
     const sdk = createCalendarSdk({
-      providers: [fakeProvider({ refreshToken: async () => { throw new Error('provider rejected refresh'); } })],
+      providers: [
+        fakeProvider({
+          refreshToken: async () => {
+            throw new Error('provider rejected refresh');
+          },
+        }),
+      ],
       storage: createMemoryStorage(),
       logger: noopLogger,
       hooks,
     });
 
-    await sdk.accounts.connect('google', { authInput: { accessToken: 'token', refreshToken: 'refresh' } });
+    await sdk.accounts.connect('google', {
+      authInput: { accessToken: 'token', refreshToken: 'refresh' },
+    });
     const account = (await sdk.accounts.list())[0];
 
     await expect(sdk.accounts.refresh(account.id)).rejects.toMatchObject({ code: 'AUTH_EXPIRED' });
 
-    expect(events).toContainEqual(expect.objectContaining({ type: 'auth', event: 'expired', accountId: account.id }));
+    expect(events).toContainEqual(
+      expect.objectContaining({ type: 'auth', event: 'expired', accountId: account.id })
+    );
+  });
+
+  it('does not mark the account expired on a transient refresh failure (network/5xx)', async () => {
+    const hooks = createHooks();
+    const events: HookEvent[] = [];
+    hooks.on('auth', (e) => {
+      events.push(e);
+    });
+
+    const sdk = createCalendarSdk({
+      providers: [
+        fakeProvider({
+          refreshToken: async () => {
+            throw new CalendarSdkError({ code: 'NETWORK_ERROR', message: 'fetch failed' });
+          },
+        }),
+      ],
+      storage: createMemoryStorage(),
+      logger: noopLogger,
+      hooks,
+    });
+
+    await sdk.accounts.connect('google', {
+      authInput: { accessToken: 'token', refreshToken: 'refresh' },
+    });
+    const account = (await sdk.accounts.list())[0];
+
+    await expect(sdk.accounts.refresh(account.id)).rejects.toMatchObject({ code: 'NETWORK_ERROR' });
+
+    const afterFailedRefresh = await sdk.accounts.get(account.id);
+    expect(afterFailedRefresh?.status).toBe('connected');
+    expect(events).toContainEqual(
+      expect.objectContaining({ type: 'auth', event: 'error', accountId: account.id })
+    );
+    expect(events).not.toContainEqual(
+      expect.objectContaining({ type: 'auth', event: 'expired', accountId: account.id })
+    );
   });
 
   it('emits auth/revoked on disconnect', async () => {
@@ -188,7 +340,9 @@ describe('AccountsService - hook emission', () => {
       hooks,
     });
 
-    await sdk.accounts.connect('google', { authInput: { accessToken: 'token', refreshToken: 'refresh' } });
+    await sdk.accounts.connect('google', {
+      authInput: { accessToken: 'token', refreshToken: 'refresh' },
+    });
     const account = (await sdk.accounts.list())[0];
     onAuth.mockClear();
 

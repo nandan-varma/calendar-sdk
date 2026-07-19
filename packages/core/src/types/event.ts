@@ -130,18 +130,6 @@ export interface Attachment {
   isInline?: boolean;
 }
 
-export interface EventCapabilityMap {
-  create: boolean;
-  update: boolean;
-  delete: boolean;
-  move: boolean;
-  duplicate: boolean;
-  attachments: boolean;
-  conferenceData: boolean;
-  recurrence: boolean;
-  exceptions: boolean;
-}
-
 export interface CreateEventInput {
   title: string;
   description?: string;

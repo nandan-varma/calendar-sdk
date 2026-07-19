@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { type DateTime, type DateOnly, type DateTimeValue, isAllDay, toDate, toDateTimeString } from '../../../src/types/common.js';
+import {
+  type DateTime,
+  type DateOnly,
+  type DateTimeValue,
+  isAllDay,
+  toDate,
+  toDateTimeString,
+} from '../../../src/types/common.js';
 
 describe('DateTime Types', () => {
   describe('isAllDay', () => {
@@ -19,7 +26,10 @@ describe('DateTime Types', () => {
     });
 
     it('should correctly identify timed events from Google format', () => {
-      const googleTimed: DateTime = { dateTime: '2024-01-15T10:00:00-07:00', timezone: 'America/Los_Angeles' };
+      const googleTimed: DateTime = {
+        dateTime: '2024-01-15T10:00:00-07:00',
+        timezone: 'America/Los_Angeles',
+      };
       expect(isAllDay(googleTimed)).toBe(false);
     });
   });
@@ -62,6 +72,18 @@ describe('DateTime Types', () => {
     it('should return empty string for empty dateTime', () => {
       const dateTime: DateTime = { dateTime: '', timezone: 'UTC' };
       expect(toDateTimeString(dateTime)).toBe('');
+    });
+
+    it('regression: converting to a different timezone returns a parseable ISO string, not a locale-formatted one', () => {
+      const dateTime: DateTime = { dateTime: '2024-06-15T18:00:00Z', timezone: 'UTC' };
+      const result = toDateTimeString(dateTime, 'America/Los_Angeles');
+
+      // Previously this was `date.toLocaleString(...)`, e.g. "6/15/2024, 11:00:00 AM" - not
+      // ISO 8601, and `new Date(...)` on it would silently produce an Invalid Date.
+      expect(result).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}[+-]\d{2}:\d{2}$/);
+      // Same instant, just expressed in the target timezone's wall-clock time (PDT is UTC-7 in June).
+      expect(result).toBe('2024-06-15T11:00:00-07:00');
+      expect(new Date(result).getTime()).toBe(new Date(dateTime.dateTime).getTime());
     });
   });
 

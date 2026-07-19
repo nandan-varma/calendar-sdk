@@ -45,7 +45,9 @@ describe('createAuthorizationUrl', () => {
     });
 
     const parsed = new URL(url);
-    expect(parsed.origin + parsed.pathname).toBe('https://login.microsoftonline.com/common/oauth2/v2.0/authorize');
+    expect(parsed.origin + parsed.pathname).toBe(
+      'https://login.microsoftonline.com/common/oauth2/v2.0/authorize'
+    );
     expect(parsed.searchParams.has('access_type')).toBe(false);
     expect(parsed.searchParams.has('prompt')).toBe(false);
   });
@@ -59,13 +61,15 @@ describe('exchangeCodeForTokens', () => {
   });
 
   it('posts the authorization code and maps the response to a TokenSet', async () => {
-    fetchMock.mockResolvedValueOnce(jsonResponse({
-      access_token: 'access-1',
-      refresh_token: 'refresh-1',
-      expires_in: 3600,
-      token_type: 'Bearer',
-      scope: 'calendar offline_access',
-    }));
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        access_token: 'access-1',
+        refresh_token: 'refresh-1',
+        expires_in: 3600,
+        token_type: 'Bearer',
+        scope: 'calendar offline_access',
+      })
+    );
 
     const tokens = await exchangeCodeForTokens({
       provider: 'google',
@@ -93,23 +97,27 @@ describe('exchangeCodeForTokens', () => {
       text: () => Promise.resolve('invalid_grant'),
     });
 
-    await expect(exchangeCodeForTokens({
-      provider: 'google',
-      code: 'bad-code',
-      clientId: 'client-id',
-      redirectUri: 'https://app.example.com/callback',
-      fetch: fetchMock as unknown as typeof fetch,
-    })).rejects.toThrow(/invalid_grant/);
+    await expect(
+      exchangeCodeForTokens({
+        provider: 'google',
+        code: 'bad-code',
+        clientId: 'client-id',
+        redirectUri: 'https://app.example.com/callback',
+        fetch: fetchMock as unknown as typeof fetch,
+      })
+    ).rejects.toThrow(/invalid_grant/);
   });
 });
 
 describe('refreshToken', () => {
   it('preserves the original refresh token when the provider does not return a new one', async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({
-      access_token: 'rotated-access',
-      expires_in: 3600,
-      token_type: 'Bearer',
-    }));
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        access_token: 'rotated-access',
+        expires_in: 3600,
+        token_type: 'Bearer',
+      })
+    );
 
     const tokens = await refreshToken(
       { provider: 'google', clientId: 'client-id', fetch: fetchMock as unknown as typeof fetch },
@@ -121,18 +129,24 @@ describe('refreshToken', () => {
   });
 
   it('throws when the refresh is rejected', async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce({ ok: false, status: 401, text: () => Promise.resolve('') });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 401, text: () => Promise.resolve('') });
 
-    await expect(refreshToken(
-      { provider: 'google', clientId: 'client-id', fetch: fetchMock as unknown as typeof fetch },
-      { refreshToken: 'expired' }
-    )).rejects.toThrow('Token refresh failed');
+    await expect(
+      refreshToken(
+        { provider: 'google', clientId: 'client-id', fetch: fetchMock as unknown as typeof fetch },
+        { refreshToken: 'expired' }
+      )
+    ).rejects.toThrow('Token refresh failed');
   });
 });
 
 describe('revokeToken', () => {
   it('calls the Google revoke endpoint', async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce({ ok: true, status: 200, text: () => Promise.resolve('') });
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, text: () => Promise.resolve('') });
 
     await revokeToken('google', 'access-123', fetchMock as unknown as typeof fetch);
 
@@ -152,12 +166,14 @@ describe('revokeToken', () => {
 
 describe('createAuthFlow', () => {
   it('wires getAuthorizationUrl/exchangeCode/refreshToken/revokeToken to the same provider config', async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({
-      access_token: 'access-1',
-      refresh_token: 'refresh-1',
-      expires_in: 3600,
-      token_type: 'Bearer',
-    }));
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        access_token: 'access-1',
+        refresh_token: 'refresh-1',
+        expires_in: 3600,
+        token_type: 'Bearer',
+      })
+    );
 
     const flow = createAuthFlow({
       provider: 'google',
@@ -175,11 +191,13 @@ describe('createAuthFlow', () => {
   });
 
   it('exposes refreshToken/revokeToken bound to the flow provider config', async () => {
-    const fetchMock = vi.fn().mockResolvedValueOnce(jsonResponse({
-      access_token: 'rotated',
-      expires_in: 3600,
-      token_type: 'Bearer',
-    }));
+    const fetchMock = vi.fn().mockResolvedValueOnce(
+      jsonResponse({
+        access_token: 'rotated',
+        expires_in: 3600,
+        token_type: 'Bearer',
+      })
+    );
 
     const flow = createAuthFlow({
       provider: 'google',
@@ -215,13 +233,19 @@ describe('isTokenExpired / shouldRefreshToken', () => {
 describe('createTokenManager', () => {
   it('caches a token until it needs refreshing', async () => {
     const getRefreshToken = vi.fn().mockResolvedValue({ refreshToken: 'stable-refresh' });
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
-      access_token: 'access-1',
-      expires_in: 3600,
-      token_type: 'Bearer',
-    }));
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        access_token: 'access-1',
+        expires_in: 3600,
+        token_type: 'Bearer',
+      })
+    );
 
-    const manager = createTokenManager({ provider: 'google', clientId: 'client-id', fetch: fetchMock as unknown as typeof fetch });
+    const manager = createTokenManager({
+      provider: 'google',
+      clientId: 'client-id',
+      fetch: fetchMock as unknown as typeof fetch,
+    });
 
     const first = await manager.getToken('account-1', getRefreshToken);
     const second = await manager.getToken('account-1', getRefreshToken);
@@ -241,13 +265,19 @@ describe('createTokenManager', () => {
 
   it('invalidateToken forces the next call to refresh again', async () => {
     const getRefreshToken = vi.fn().mockResolvedValue({ refreshToken: 'stable-refresh' });
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({
-      access_token: 'access-1',
-      expires_in: 3600,
-      token_type: 'Bearer',
-    }));
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({
+        access_token: 'access-1',
+        expires_in: 3600,
+        token_type: 'Bearer',
+      })
+    );
 
-    const manager = createTokenManager({ provider: 'google', clientId: 'client-id', fetch: fetchMock as unknown as typeof fetch });
+    const manager = createTokenManager({
+      provider: 'google',
+      clientId: 'client-id',
+      fetch: fetchMock as unknown as typeof fetch,
+    });
 
     await manager.getToken('account-1', getRefreshToken);
     manager.invalidateToken('account-1');

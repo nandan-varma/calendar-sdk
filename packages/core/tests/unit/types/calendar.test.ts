@@ -1,5 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import type { Calendar, CalendarAccessRole, CreateCalendarInput, UpdateCalendarInput } from '../../../src/types/calendar.js';
+import type {
+  Calendar,
+  CalendarAccessRole,
+  CreateCalendarInput,
+  UpdateCalendarInput,
+} from '../../../src/types/calendar.js';
 import { getCalendarCapabilities } from '../../../src/types/calendar.js';
 
 describe('Calendar Types', () => {
@@ -36,8 +41,8 @@ describe('Calendar Types', () => {
 
     it('should support all access roles', () => {
       const roles: CalendarAccessRole[] = ['owner', 'writer', 'reader', 'freeBusyReader', 'none'];
-      
-      roles.forEach(role => {
+
+      roles.forEach((role) => {
         const calendar: Calendar = {
           id: 'cal-1',
           accountId: 'account-1',
@@ -69,10 +74,16 @@ describe('Calendar Types', () => {
         readOnly: false,
         hidden: false,
         accessRole: 'owner',
-        capabilities: { create: true, update: true, delete: true, share: true, manageNotifications: true },
+        capabilities: {
+          create: true,
+          update: true,
+          delete: true,
+          share: true,
+          manageNotifications: true,
+        },
         raw: {
           kind: 'calendar#calendarListEntry',
-          etag: '"abc123\"',
+          etag: '"abc123"',
           backgroundColor: '#123456',
         },
         extensions: { customProperty: 'value' },

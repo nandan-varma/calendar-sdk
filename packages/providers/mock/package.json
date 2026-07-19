@@ -35,17 +35,9 @@
   "description": "In-memory mock calendar provider for @nandan-varma/calendar-sdk - exercise the full SDK surface in tests without live credentials or network calls",
   "license": "MIT",
   "author": "Nandan Varma",
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "sideEffects": false,
-  "keywords": [
-    "calendar",
-    "sdk",
-    "typescript",
-    "testing",
-    "mock"
-  ],
+  "keywords": ["calendar", "sdk", "typescript", "testing", "mock"],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/nandan-varma/calendar-sdk.git",

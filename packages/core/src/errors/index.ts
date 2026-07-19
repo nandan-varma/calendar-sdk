@@ -49,7 +49,7 @@ export class CalendarSdkError extends Error {
     this.retryable = options.retryable ?? this.computeRetryable(options.code, options.status);
     this.remediation = options.remediation;
     this.raw = options.raw;
-    
+
     if (options.cause) {
       this.cause = options.cause;
     }
@@ -89,6 +89,23 @@ export function isCalendarSdkError(error: unknown): error is CalendarSdkError {
   return error instanceof CalendarSdkError;
 }
 
+const TRANSIENT_ERROR_CODES: ReadonlySet<ErrorCode> = new Set([
+  'NETWORK_ERROR',
+  'PROVIDER_ERROR',
+  'RATE_LIMITED',
+  'INTERNAL_ERROR',
+]);
+
+// True for failures that don't indicate the credential itself is invalid (network blips, 5xx,
+// rate limiting) - as opposed to a genuine auth rejection (401/403/invalid_grant) where the
+// account actually needs reconnecting. A refresh call that fails for a transient reason
+// shouldn't flip a healthy account to "expired" and force the user through OAuth again; only a
+// real auth rejection should. Anything that isn't a recognized CalendarSdkError (e.g. a bug in
+// a third-party provider adapter) is conservatively treated as non-transient.
+export function isTransientError(error: unknown): boolean {
+  return error instanceof CalendarSdkError && TRANSIENT_ERROR_CODES.has(error.code);
+}
+
 export function mapHttpError(
   status: number,
   provider: ProviderKey,
@@ -113,12 +130,18 @@ export function mapHttpError(
 
 function getErrorCodeFromStatus(status: number): ErrorCode {
   switch (status) {
-    case 401: return 'AUTH_REQUIRED';
-    case 403: return 'PERMISSION_DENIED';
-    case 404: return 'NOT_FOUND';
-    case 409: return 'CONFLICT';
-    case 429: return 'RATE_LIMITED';
-    case 410: return 'SYNC_CURSOR_EXPIRED';
+    case 401:
+      return 'AUTH_REQUIRED';
+    case 403:
+      return 'PERMISSION_DENIED';
+    case 404:
+      return 'NOT_FOUND';
+    case 409:
+      return 'CONFLICT';
+    case 429:
+      return 'RATE_LIMITED';
+    case 410:
+      return 'SYNC_CURSOR_EXPIRED';
     default:
       return status >= 500 ? 'PROVIDER_ERROR' : 'NETWORK_ERROR';
   }
@@ -126,23 +149,31 @@ function getErrorCodeFromStatus(status: number): ErrorCode {
 
 function extractProviderError(body: unknown): { code?: string; message?: string } {
   if (!body || typeof body !== 'object') return {};
-  
+
   const obj = body as Record<string, unknown>;
-  
+
   if ('error' in obj && typeof obj.error === 'object' && obj.error !== null) {
     const error = obj.error as Record<string, unknown>;
     return {
-      code: typeof error.code === 'string' ? error.code : 
-            typeof error.message === 'string' ? error.message : undefined,
-      message: typeof error.message === 'string' ? error.message : 
-               typeof error.description === 'string' ? error.description : undefined,
+      code:
+        typeof error.code === 'string'
+          ? error.code
+          : typeof error.message === 'string'
+            ? error.message
+            : undefined,
+      message:
+        typeof error.message === 'string'
+          ? error.message
+          : typeof error.description === 'string'
+            ? error.description
+            : undefined,
     };
   }
-  
+
   if ('error_description' in obj) {
     return { message: String(obj.error_description) };
   }
-  
+
   return {};
 }
 
@@ -185,42 +216,57 @@ function getRemediation(code: ErrorCode, provider: ProviderKey): string {
 }
 
 export const errors = {
-  authRequired: (provider?: ProviderKey, message?: string) => 
-    new CalendarSdkError({ code: 'AUTH_REQUIRED', message: message || 'Authentication required', provider }),
-  
+  authRequired: (provider?: ProviderKey, message?: string) =>
+    new CalendarSdkError({
+      code: 'AUTH_REQUIRED',
+      message: message || 'Authentication required',
+      provider,
+    }),
+
   authExpired: (provider?: ProviderKey, message?: string) =>
-    new CalendarSdkError({ code: 'AUTH_EXPIRED', message: message || 'Authentication expired', provider, retryable: true }),
-  
+    new CalendarSdkError({
+      code: 'AUTH_EXPIRED',
+      message: message || 'Authentication expired',
+      provider,
+      retryable: true,
+    }),
+
   permissionDenied: (provider?: ProviderKey, message?: string) =>
-    new CalendarSdkError({ code: 'PERMISSION_DENIED', message: message || 'Permission denied', provider }),
-  
+    new CalendarSdkError({
+      code: 'PERMISSION_DENIED',
+      message: message || 'Permission denied',
+      provider,
+    }),
+
   notFound: (provider?: ProviderKey, message?: string) =>
     new CalendarSdkError({ code: 'NOT_FOUND', message: message || 'Resource not found', provider }),
-  
+
   rateLimited: (provider?: ProviderKey, retryAfter?: number) =>
-    new CalendarSdkError({ 
-      code: 'RATE_LIMITED', 
-      message: 'Rate limit exceeded', 
-      provider, 
+    new CalendarSdkError({
+      code: 'RATE_LIMITED',
+      message: 'Rate limit exceeded',
+      provider,
       retryable: true,
-      remediation: retryAfter ? `Retry after ${retryAfter} seconds` : 'Implement exponential backoff',
+      remediation: retryAfter
+        ? `Retry after ${retryAfter} seconds`
+        : 'Implement exponential backoff',
     }),
-  
+
   providerError: (provider: ProviderKey, message: string, raw?: unknown) =>
     new CalendarSdkError({ code: 'PROVIDER_ERROR', message, provider, raw }),
-  
+
   capabilityUnsupported: (feature: string, provider: ProviderKey) =>
-    new CalendarSdkError({ 
-      code: 'CAPABILITY_UNSUPPORTED', 
+    new CalendarSdkError({
+      code: 'CAPABILITY_UNSUPPORTED',
       message: `${feature} is not supported by ${provider}`,
       provider,
       remediation: `Use a different provider or implement custom logic for ${feature}`,
     }),
-  
+
   syncCursorExpired: (provider: ProviderKey) =>
-    new CalendarSdkError({ 
-      code: 'SYNC_CURSOR_EXPIRED', 
-      message: 'Sync token has expired', 
+    new CalendarSdkError({
+      code: 'SYNC_CURSOR_EXPIRED',
+      message: 'Sync token has expired',
       provider,
       remediation: 'Perform a full sync to obtain a new sync token',
     }),

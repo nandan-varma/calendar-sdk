@@ -19,14 +19,11 @@ export async function createGoogleAuthUrl(config: OAuthConfig): Promise<string> 
     access_type: config.accessType || 'offline',
     prompt: config.prompt || 'consent',
   });
-  
+
   return `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
 }
 
-export async function exchangeGoogleCode(
-  code: string,
-  config: OAuthConfig
-): Promise<TokenSet> {
+export async function exchangeGoogleCode(code: string, config: OAuthConfig): Promise<TokenSet> {
   const response = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -92,14 +89,11 @@ export async function createMicrosoftAuthUrl(config: OAuthConfig): Promise<strin
     scope: config.scopes.join(' '),
     response_mode: 'query',
   });
-  
+
   return `https://login.microsoftonline.com/common/oauth2/v2.0/authorize?${params}`;
 }
 
-export async function exchangeMicrosoftCode(
-  code: string,
-  config: OAuthConfig
-): Promise<TokenSet> {
+export async function exchangeMicrosoftCode(code: string, config: OAuthConfig): Promise<TokenSet> {
   const response = await fetch('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -194,7 +188,7 @@ export async function interactGoogleOAuth(): Promise<TokenSet> {
   };
 
   const authUrl = await createGoogleAuthUrl(config);
-  
+
   console.log('\n');
   console.log('═══════════════════════════════════════════════════════════════');
   console.log('🔐  Google OAuth Authorization Required');
@@ -203,20 +197,20 @@ export async function interactGoogleOAuth(): Promise<TokenSet> {
   console.log(`   ${authUrl}\n`);
   console.log('⬇️  After authorizing, you will be redirected to localhost.');
   console.log('   Copy the "code" parameter from the URL and paste it below.\n');
-  
+
   const code = await promptUser('   Authorization code: ');
-  
+
   if (!code) {
     throw new Error('No authorization code provided');
   }
-  
+
   console.log('\n   🔄 Exchanging code for tokens...\n');
-  
+
   const tokens = await exchangeGoogleCode(code, config);
-  
+
   console.log('   ✅ Successfully received tokens!\n');
   console.log('═══════════════════════════════════════════════════════════════\n');
-  
+
   return tokens;
 }
 
@@ -230,15 +224,13 @@ export async function interactMicrosoftOAuth(): Promise<TokenSet> {
   const config = {
     clientId,
     clientSecret,
-    redirectUri: process.env.MICROSOFT_REDIRECT_URI || 'http://localhost:3000/auth/microsoft/callback',
-    scopes: [
-      'Calendars.ReadWrite',
-      'User.Read',
-    ],
+    redirectUri:
+      process.env.MICROSOFT_REDIRECT_URI || 'http://localhost:3000/auth/microsoft/callback',
+    scopes: ['Calendars.ReadWrite', 'User.Read'],
   };
 
   const authUrl = await createMicrosoftAuthUrl(config);
-  
+
   console.log('\n');
   console.log('═══════════════════════════════════════════════════════════════');
   console.log('🔐  Microsoft OAuth Authorization Required');
@@ -247,19 +239,19 @@ export async function interactMicrosoftOAuth(): Promise<TokenSet> {
   console.log(`   ${authUrl}\n`);
   console.log('⬇️  After authorizing, you will be redirected to localhost.');
   console.log('   Copy the "code" parameter from the URL and paste it below.\n');
-  
+
   const code = await promptUser('   Authorization code: ');
-  
+
   if (!code) {
     throw new Error('No authorization code provided');
   }
-  
+
   console.log('\n   🔄 Exchanging code for tokens...\n');
-  
+
   const tokens = await exchangeMicrosoftCode(code, config);
-  
+
   console.log('   ✅ Successfully received tokens!\n');
   console.log('═══════════════════════════════════════════════════════════════\n');
-  
+
   return tokens;
 }

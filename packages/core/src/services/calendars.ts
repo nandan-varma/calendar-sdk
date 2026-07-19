@@ -1,4 +1,11 @@
-import type { Calendar, CreateCalendarInput, UpdateCalendarInput, ListCalendarsQuery, ShareCalendarInput } from '../types/calendar.js';
+import type {
+  Calendar,
+  CreateCalendarInput,
+  UpdateCalendarInput,
+  ListCalendarsQuery,
+  ShareCalendarInput,
+} from '../types/calendar.js';
+import { getCalendarCapabilities } from '../types/calendar.js';
 import type { ProviderAdapter, TokenSet } from '../adapters/provider.js';
 import type { ProviderKey } from '../types/common.js';
 import type { StorageAdapter } from '../storage/index.js';
@@ -61,7 +68,8 @@ export class CalendarsService {
       throw new CalendarSdkError({
         code: 'NOT_FOUND',
         message: 'Calendar not found in local storage',
-        remediation: 'Call calendars.list(accountId) to sync this account before calling get() with a calendar id.',
+        remediation:
+          'Call calendars.list(accountId) to sync this account before calling get() with a calendar id.',
       });
     }
     return calendar;
@@ -119,7 +127,10 @@ export class CalendarsService {
     // a provider-wide "calendars.update: true" doesn't mean every calendar is writable,
     // e.g. one shared with this account as a reader.
     if (!calendar.capabilities.update) {
-      throw errors.capabilityUnsupported('Calendar update (insufficient access role)', account.provider);
+      throw errors.capabilityUnsupported(
+        'Calendar update (insufficient access role)',
+        account.provider
+      );
     }
 
     const token = await this.getToken(calendar.accountId);
@@ -160,7 +171,10 @@ export class CalendarsService {
       throw errors.capabilityUnsupported('Calendar deletion', account.provider);
     }
     if (!calendar.capabilities.delete) {
-      throw errors.capabilityUnsupported('Calendar deletion (insufficient access role - owner required)', account.provider);
+      throw errors.capabilityUnsupported(
+        'Calendar deletion (insufficient access role - owner required)',
+        account.provider
+      );
     }
 
     const token = await this.getToken(calendar.accountId);
@@ -192,7 +206,10 @@ export class CalendarsService {
       throw errors.capabilityUnsupported('Calendar sharing', account.provider);
     }
     if (!calendar.capabilities.share) {
-      throw errors.capabilityUnsupported('Calendar sharing (insufficient access role - owner required)', account.provider);
+      throw errors.capabilityUnsupported(
+        'Calendar sharing (insufficient access role - owner required)',
+        account.provider
+      );
     }
 
     const provider = this.getProvider(account.provider);
@@ -210,13 +227,10 @@ export class CalendarsService {
     await provider.calendars.share(token, calendar.providerId, input);
   }
 
-  private getCalendarCapabilities(accessRole: string): Calendar['capabilities'] {
-    return {
-      create: accessRole === 'owner' || accessRole === 'writer',
-      update: accessRole === 'owner' || accessRole === 'writer',
-      delete: accessRole === 'owner',
-      share: accessRole === 'owner',
-      manageNotifications: accessRole === 'owner' || accessRole === 'writer',
-    };
+  // Delegates to the exported getCalendarCapabilities() (types/calendar.ts) rather than
+  // duplicating the create/update/delete/share rules here - the two had already drifted
+  // apart once (this copy took `accessRole: string`, the other `CalendarAccessRole`).
+  private getCalendarCapabilities(accessRole: Calendar['accessRole']): Calendar['capabilities'] {
+    return getCalendarCapabilities(accessRole);
   }
 }

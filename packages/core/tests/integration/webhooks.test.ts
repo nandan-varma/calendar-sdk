@@ -31,7 +31,7 @@ describe.skipIf(!hasGoogleCredentials() || !hasWebhookUrl())('Webhook Integratio
         console.warn(`   ⚠️  Failed to delete subscription: ${message}`);
       }
     }
-    
+
     // Clean up test calendar
     if (testCalendar && token) {
       try {
@@ -48,36 +48,36 @@ describe.skipIf(!hasGoogleCredentials() || !hasWebhookUrl())('Webhook Integratio
         console.log('   ⚠️  Skipped - no webhook URL');
         return;
       }
-      
+
       // First create a test calendar
       const timestamp = Date.now();
       testCalendar = await provider.calendars.create(token, {
         name: `${TEST_PREFIX}${timestamp}`,
         description: 'Calendar for webhook testing',
       });
-      
+
       console.log(`   📅 Created test calendar: ${testCalendar.name}`);
-      
+
       // Create subscription
       const subscription = await provider.subscriptions.create(token, {
         resource: testCalendar.providerId,
         webhookUrl: testEnv.webhookUrl,
         leaseDurationSeconds: 86400, // 24 hours
       });
-      
+
       expect(subscription).toBeDefined();
       expect(subscription.id).toBeDefined();
       expect(subscription.leaseExpiry).toBeDefined();
-      
+
       subscriptions.push(subscription);
-      
+
       console.log(`   ✅ Created watch channel: ${subscription.id}`);
       console.log(`   📅 Expires: ${subscription.leaseExpiry.toISOString()}`);
     });
 
     it('should list subscriptions', async () => {
       const result = await provider.subscriptions.list(token, 'test-account');
-      
+
       expect(result).toBeDefined();
       console.log(`   ✅ Listed subscriptions (total: ${subscriptions.length})`);
     });
@@ -87,22 +87,22 @@ describe.skipIf(!hasGoogleCredentials() || !hasWebhookUrl())('Webhook Integratio
         console.log('   ⚠️  Skipped - no test calendar or webhook URL');
         return;
       }
-      
+
       // Create an event - this should trigger a webhook notification
       const event = await provider.events.create(token, testCalendar.providerId, {
         title: `TEST: Webhook trigger ${Date.now()}`,
         start: { dateTime: new Date().toISOString(), timezone: 'UTC' },
         end: { dateTime: new Date(Date.now() + 3600000).toISOString(), timezone: 'UTC' },
       });
-      
+
       console.log(`   ✅ Created event: ${event.title}`);
       console.log(`   📡 Check ${testEnv.webhookUrl} for webhook notification`);
-      
+
       // Note: Actual webhook delivery verification would require:
       // 1. A webhook server to receive the notification
       // 2. Checking ngrok dashboard for the request
       // 3. Parsing the notification payload
-      
+
       // For now, we just verify the subscription was created and event was created
     });
 
@@ -111,7 +111,7 @@ describe.skipIf(!hasGoogleCredentials() || !hasWebhookUrl())('Webhook Integratio
         console.log('   ⚠️  Skipped - no subscriptions');
         return;
       }
-      
+
       // Note: Google Watch channels cannot be renewed - they must be recreated
       // But Microsoft Graph subscriptions CAN be renewed
       console.log('   ℹ️  Note: Google Watch channels cannot be renewed, must recreate');
@@ -123,12 +123,12 @@ describe.skipIf(!hasGoogleCredentials() || !hasWebhookUrl())('Webhook Integratio
         console.log('   ⚠️  Skipped - no subscriptions');
         return;
       }
-      
+
       const sub = subscriptions[subscriptions.length - 1];
       await provider.subscriptions.delete(token, sub.id);
-      
-      subscriptions = subscriptions.filter(s => s.id !== sub.id);
-      
+
+      subscriptions = subscriptions.filter((s) => s.id !== sub.id);
+
       console.log(`   ✅ Deleted subscription: ${sub.id}`);
     });
   });

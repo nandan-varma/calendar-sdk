@@ -68,7 +68,12 @@ describe('Transport request options', () => {
 
     const transport = createTransport('caldav', { fetch: fetchMock as any });
 
-    await transport.request({ method: 'REPORT', path: '/calendar', body: '<query/>', responseType: 'text' });
+    await transport.request({
+      method: 'REPORT',
+      path: '/calendar',
+      body: '<query/>',
+      responseType: 'text',
+    });
 
     const [, init] = fetchMock.mock.calls[0];
     expect(init.method).toBe('REPORT');
@@ -114,22 +119,33 @@ describe('Transport request options', () => {
 
     const transport = createTransport('caldav', { fetch: fetchMock as any });
 
-    const result = await transport.request({ method: 'DELETE', path: '/event.ics', responseType: 'text' });
+    const result = await transport.request({
+      method: 'DELETE',
+      path: '/event.ics',
+      responseType: 'text',
+    });
 
     expect(result.data).toBeNull();
   });
 
   describe('debug logging cost', () => {
-    const fetchMock = () => vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      headers: new Headers({ 'content-type': 'application/json' }),
-      json: () => Promise.resolve({ ok: true }),
-    });
+    const fetchMock = () =>
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'application/json' }),
+        json: () => Promise.resolve({ ok: true }),
+      });
 
     it('skips building the request debug log (with its expensive redaction) when the logger reports debug is disabled', async () => {
       const debug = vi.fn();
-      const logger = { debug, info: vi.fn(), warn: vi.fn(), error: vi.fn(), isLevelEnabled: () => false };
+      const logger = {
+        debug,
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        isLevelEnabled: () => false,
+      };
 
       const transport = createTransport('google', { fetch: fetchMock() }, logger);
       await transport.request({ path: '/test', body: { secret: 'do-not-touch' } });
@@ -140,7 +156,13 @@ describe('Transport request options', () => {
 
     it('still logs request details (redacted body/headers included) when the logger reports debug is enabled', async () => {
       const debug = vi.fn();
-      const logger = { debug, info: vi.fn(), warn: vi.fn(), error: vi.fn(), isLevelEnabled: () => true };
+      const logger = {
+        debug,
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        isLevelEnabled: () => true,
+      };
 
       const transport = createTransport('google', { fetch: fetchMock() }, logger);
       await transport.request({ path: '/test', body: { title: 'Test' } });
@@ -162,7 +184,13 @@ describe('Transport request options', () => {
 
     it('redacts secrets in urlencoded string bodies (OAuth token exchange), not just JSON objects', async () => {
       const debug = vi.fn();
-      const logger = { debug, info: vi.fn(), warn: vi.fn(), error: vi.fn(), isLevelEnabled: () => true };
+      const logger = {
+        debug,
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+        isLevelEnabled: () => true,
+      };
 
       const transport = createTransport('google', { fetch: fetchMock() }, logger);
       const body = new URLSearchParams({

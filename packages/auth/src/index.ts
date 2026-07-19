@@ -62,7 +62,12 @@ export function createAuthFlow(options: AuthFlowOptions): AuthFlow {
     },
     async refreshToken(token: RefreshToken): Promise<TokenSet> {
       return refreshToken(
-        { provider: options.provider, clientId: options.clientId, clientSecret: options.clientSecret, fetch: options.fetch },
+        {
+          provider: options.provider,
+          clientId: options.clientId,
+          clientSecret: options.clientSecret,
+          fetch: options.fetch,
+        },
         token
       );
     },
@@ -81,9 +86,10 @@ export function createAuthorizationUrl(options: AuthFlowOptions): string {
     ...(options.provider === 'google' && { access_type: 'offline', prompt: 'consent' }),
   });
 
-  const baseUrl = options.provider === 'google'
-    ? 'https://accounts.google.com/o/oauth2/v2/auth'
-    : 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
+  const baseUrl =
+    options.provider === 'google'
+      ? 'https://accounts.google.com/o/oauth2/v2/auth'
+      : 'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
 
   return `${baseUrl}?${params}`;
 }
@@ -112,9 +118,10 @@ export async function exchangeCodeForTokens(options: {
     grant_type: 'authorization_code',
   });
 
-  const tokenUrl = options.provider === 'google'
-    ? 'https://oauth2.googleapis.com/token'
-    : 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
+  const tokenUrl =
+    options.provider === 'google'
+      ? 'https://oauth2.googleapis.com/token'
+      : 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
 
   const fetchImpl = options.fetch ?? fetch;
   const response = await fetchImpl(tokenUrl, {
@@ -139,7 +146,10 @@ export async function exchangeCodeForTokens(options: {
   };
 }
 
-export async function refreshToken(options: RefreshOptions, token: RefreshToken): Promise<TokenSet> {
+export async function refreshToken(
+  options: RefreshOptions,
+  token: RefreshToken
+): Promise<TokenSet> {
   const params = new URLSearchParams({
     refresh_token: token.refreshToken,
     client_id: options.clientId,
@@ -147,9 +157,10 @@ export async function refreshToken(options: RefreshOptions, token: RefreshToken)
     grant_type: 'refresh_token',
   });
 
-  const tokenUrl = options.provider === 'google'
-    ? 'https://oauth2.googleapis.com/token'
-    : 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
+  const tokenUrl =
+    options.provider === 'google'
+      ? 'https://oauth2.googleapis.com/token'
+      : 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
 
   const fetchImpl = options.fetch ?? fetch;
   const response = await fetchImpl(tokenUrl, {
@@ -173,7 +184,11 @@ export async function refreshToken(options: RefreshOptions, token: RefreshToken)
   };
 }
 
-export async function revokeToken(provider: 'google' | 'microsoft', accessToken: string, fetchImpl: typeof fetch = fetch): Promise<void> {
+export async function revokeToken(
+  provider: 'google' | 'microsoft',
+  accessToken: string,
+  fetchImpl: typeof fetch = fetch
+): Promise<void> {
   if (provider === 'google') {
     await fetchImpl('https://oauth2.googleapis.com/revoke', {
       method: 'POST',
@@ -206,7 +221,7 @@ class InternalTokenManager {
     getRefreshToken: () => Promise<RefreshToken | null>
   ): Promise<TokenSet | null> {
     const cached = this.cache.get(accountId);
-    
+
     if (cached && !shouldRefreshToken(cached.token)) {
       return cached.token;
     }
@@ -238,7 +253,10 @@ export function createTokenManager(options: RefreshOptions): TokenManagerHandle 
 }
 
 export interface TokenManagerHandle {
-  getToken(accountId: string, getRefreshToken: () => Promise<RefreshToken | null>): Promise<TokenSet | null>;
+  getToken(
+    accountId: string,
+    getRefreshToken: () => Promise<RefreshToken | null>
+  ): Promise<TokenSet | null>;
   invalidateToken(accountId: string): void;
   clear(): void;
 }
@@ -253,7 +271,7 @@ export interface AuthFlow {
 export function createState(): string {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
-  return Array.from(array, b => b.toString(16).padStart(2, '0')).join('');
+  return Array.from(array, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
 export function verifyState(state: string, storedState: string): boolean {

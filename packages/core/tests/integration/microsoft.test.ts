@@ -43,7 +43,7 @@ describe.skipIf(!hasMicrosoftCredentials())('Microsoft Graph Integration', () =>
   describe('Account', () => {
     it('should get account info', async () => {
       const account = await provider.accounts.getAccount(token);
-      
+
       expect(account).toBeDefined();
       expect(account.provider).toBe('microsoft');
       expect(account.email).toBeDefined();
@@ -55,7 +55,7 @@ describe.skipIf(!hasMicrosoftCredentials())('Microsoft Graph Integration', () =>
   describe('Calendars', () => {
     it('should list calendars', async () => {
       const result = await provider.calendars.list(token);
-      
+
       expect(result.items).toBeDefined();
       expect(result.items.length).toBeGreaterThan(0);
       console.log(`   ✅ Found ${result.items.length} calendars`);
@@ -64,19 +64,19 @@ describe.skipIf(!hasMicrosoftCredentials())('Microsoft Graph Integration', () =>
     it('should create a test calendar', async () => {
       const timestamp = Date.now();
       const calendarName = `${TEST_PREFIX}${timestamp}`;
-      
+
       const calendar = await provider.calendars.create(token, {
         name: calendarName,
         description: 'Test calendar created by calendar-sdk integration tests',
       });
-      
+
       expect(calendar).toBeDefined();
       expect(calendar.name).toBe(calendarName);
       expect(calendar.providerId).toBeDefined();
-      
+
       testCalendar = calendar;
       testCalendarsCreated.push(calendar.providerId);
-      
+
       console.log(`   ✅ Created calendar: ${calendarName} (${calendar.providerId})`);
     });
 
@@ -85,9 +85,9 @@ describe.skipIf(!hasMicrosoftCredentials())('Microsoft Graph Integration', () =>
         console.log('   ⚠️  Skipped - no test calendar');
         return;
       }
-      
+
       const calendar = await provider.calendars.get(token, testCalendar.providerId);
-      
+
       expect(calendar).toBeDefined();
       expect(calendar?.name).toBe(testCalendar.name);
       console.log(`   ✅ Retrieved calendar: ${calendar?.name}`);
@@ -98,11 +98,11 @@ describe.skipIf(!hasMicrosoftCredentials())('Microsoft Graph Integration', () =>
         console.log('   ⚠️  Skipped - no test calendar');
         return;
       }
-      
+
       const updated = await provider.calendars.update(token, testCalendar.providerId, {
         description: 'Updated by Microsoft integration test',
       });
-      
+
       expect(updated.description).toBe('Updated by Microsoft integration test');
       console.log(`   ✅ Updated calendar description`);
     });
@@ -117,10 +117,10 @@ describe.skipIf(!hasMicrosoftCredentials())('Microsoft Graph Integration', () =>
         console.log('   ⚠️  Skipped - no test calendar');
         return;
       }
-      
+
       const startTime = new Date(Date.now() + 24 * 60 * 60 * 1000);
       const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
-      
+
       const event = await provider.events.create(token, testCalendar.providerId, {
         title: `TEST: Microsoft Test Event ${eventTimestamp}`,
         description: 'This is a test event created by calendar-sdk Microsoft integration tests',
@@ -129,10 +129,10 @@ describe.skipIf(!hasMicrosoftCredentials())('Microsoft Graph Integration', () =>
         end: { dateTime: endTime.toISOString(), timezone: 'UTC' },
         status: 'confirmed',
       });
-      
+
       expect(event).toBeDefined();
       expect(event.title).toContain('TEST: Microsoft Test Event');
-      
+
       testEvent = event;
       console.log(`   ✅ Created event: ${event.title} (${event.providerId})`);
     });
@@ -142,9 +142,9 @@ describe.skipIf(!hasMicrosoftCredentials())('Microsoft Graph Integration', () =>
         console.log('   ⚠️  Skipped - no test event');
         return;
       }
-      
+
       const event = await provider.events.get(token, testCalendar.providerId, testEvent.providerId);
-      
+
       expect(event).toBeDefined();
       expect(event?.title).toBe(testEvent.title);
       console.log(`   ✅ Retrieved event: ${event?.title}`);
@@ -155,11 +155,16 @@ describe.skipIf(!hasMicrosoftCredentials())('Microsoft Graph Integration', () =>
         console.log('   ⚠️  Skipped - no test event');
         return;
       }
-      
-      const updated = await provider.events.update(token, testCalendar.providerId, testEvent.providerId, {
-        description: 'Updated description by Microsoft integration test',
-      });
-      
+
+      const updated = await provider.events.update(
+        token,
+        testCalendar.providerId,
+        testEvent.providerId,
+        {
+          description: 'Updated description by Microsoft integration test',
+        }
+      );
+
       expect(updated.description).toBe('Updated description by Microsoft integration test');
       console.log(`   ✅ Updated event description`);
     });
@@ -169,9 +174,9 @@ describe.skipIf(!hasMicrosoftCredentials())('Microsoft Graph Integration', () =>
         console.log('   ⚠️  Skipped - no test event');
         return;
       }
-      
+
       await provider.events.delete(token, testCalendar.providerId, testEvent.providerId);
-      
+
       console.log(`   ✅ Deleted event`);
       testEvent = null;
     });
@@ -183,17 +188,17 @@ describe.skipIf(!hasMicrosoftCredentials())('Microsoft Graph Integration', () =>
         console.log('   ⚠️  Skipped - no test calendar');
         return;
       }
-      
+
       const now = new Date();
       const end = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-      
+
       const result = await provider.availability.freeBusy(token, {
         timeMin: now,
         timeMax: end,
         calendars: ['primary'],
         timezone: 'UTC',
       });
-      
+
       expect(result).toBeDefined();
       console.log(`   ✅ Queried free/busy`);
     });
@@ -201,14 +206,14 @@ describe.skipIf(!hasMicrosoftCredentials())('Microsoft Graph Integration', () =>
     it('should suggest meeting times', async () => {
       const now = new Date();
       const end = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-      
+
       const result = await provider.availability.suggestMeeting(token, {
         timeMin: now,
         timeMax: end,
         meetingDuration: 60,
         attendees: ['test@example.com'],
       });
-      
+
       expect(result).toBeDefined();
       expect(result.meetingSuggestions).toBeDefined();
       console.log(`   ✅ Got meeting suggestions`);
@@ -221,11 +226,11 @@ describe.skipIf(!hasMicrosoftCredentials())('Microsoft Graph Integration', () =>
         console.log('   ⚠️  Skipped - no test calendar');
         return;
       }
-      
+
       await provider.calendars.delete(token, testCalendar.providerId);
-      
-      testCalendarsCreated = testCalendarsCreated.filter(id => id !== testCalendar?.providerId);
-      
+
+      testCalendarsCreated = testCalendarsCreated.filter((id) => id !== testCalendar?.providerId);
+
       console.log(`   ✅ Deleted test calendar: ${testCalendar.name}`);
       testCalendar = null;
     });

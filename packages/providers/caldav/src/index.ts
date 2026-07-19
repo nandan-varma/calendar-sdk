@@ -1,4 +1,10 @@
-import type { ProviderAdapter, TokenSet, RefreshToken, CreateAuthUrlOptions, RetryOptions } from '@nandan-varma/calendar-sdk';
+import type {
+  ProviderAdapter,
+  TokenSet,
+  RefreshToken,
+  CreateAuthUrlOptions,
+  RetryOptions,
+} from '@nandan-varma/calendar-sdk';
 import type { Logger } from '@nandan-varma/calendar-sdk';
 import { CalendarSdkError, createTransport, defaultRetryOptions } from '@nandan-varma/calendar-sdk';
 import { randomUUID } from 'node:crypto';
@@ -54,8 +60,23 @@ export function createCalDavProvider(config: CalDavProviderConfig): ProviderAdap
       email: config.username,
       status: 'connected' as const,
       capabilities: {
-        calendars: { create: true, update: true, delete: true, share: false, manageNotifications: false },
-        events: { list: true, create: true, update: true, delete: true, move: false, duplicate: false, attachments: false, conferenceData: false },
+        calendars: {
+          create: true,
+          update: true,
+          delete: true,
+          share: false,
+          manageNotifications: false,
+        },
+        events: {
+          list: true,
+          create: true,
+          update: true,
+          delete: true,
+          move: false,
+          duplicate: false,
+          attachments: false,
+          conferenceData: false,
+        },
         sync: { incremental: false, webhook: false, polling: true },
         availability: { freeBusy: true, suggestedTimes: false },
       },
@@ -87,7 +108,7 @@ export function createCalDavProvider(config: CalDavProviderConfig): ProviderAdap
       const calendarIds = parseCalendarIdsFromPropfind(text);
 
       return {
-        items: calendarIds.map(id => ({
+        items: calendarIds.map((id) => ({
           id,
           accountId: '',
           providerId: id,
@@ -97,7 +118,13 @@ export function createCalDavProvider(config: CalDavProviderConfig): ProviderAdap
           readOnly: false,
           hidden: false,
           accessRole: 'owner' as const,
-          capabilities: { create: true, update: true, delete: true, share: false, manageNotifications: false },
+          capabilities: {
+            create: true,
+            update: true,
+            delete: true,
+            share: false,
+            manageNotifications: false,
+          },
           raw: { id },
           extensions: {},
           createdAt: new Date(),
@@ -116,7 +143,13 @@ export function createCalDavProvider(config: CalDavProviderConfig): ProviderAdap
       readOnly: false,
       hidden: false,
       accessRole: 'owner' as const,
-      capabilities: { create: true, update: true, delete: true, share: false, manageNotifications: false },
+      capabilities: {
+        create: true,
+        update: true,
+        delete: true,
+        share: false,
+        manageNotifications: false,
+      },
       raw: { id },
       extensions: {},
       createdAt: new Date(),
@@ -135,7 +168,13 @@ export function createCalDavProvider(config: CalDavProviderConfig): ProviderAdap
         readOnly: false,
         hidden: false,
         accessRole: 'owner' as const,
-        capabilities: { create: true, update: true, delete: true, share: false, manageNotifications: false },
+        capabilities: {
+          create: true,
+          update: true,
+          delete: true,
+          share: false,
+          manageNotifications: false,
+        },
         raw: {},
         extensions: {},
         createdAt: new Date(),
@@ -143,7 +182,11 @@ export function createCalDavProvider(config: CalDavProviderConfig): ProviderAdap
       };
     },
 
-    update: async (_token: TokenSet, id: string, _patch: { name?: string; description?: string }) => ({
+    update: async (
+      _token: TokenSet,
+      id: string,
+      _patch: { name?: string; description?: string }
+    ) => ({
       id,
       accountId: '',
       providerId: id,
@@ -153,7 +196,13 @@ export function createCalDavProvider(config: CalDavProviderConfig): ProviderAdap
       readOnly: false,
       hidden: false,
       accessRole: 'owner' as const,
-      capabilities: { create: true, update: true, delete: true, share: false, manageNotifications: false },
+      capabilities: {
+        create: true,
+        update: true,
+        delete: true,
+        share: false,
+        manageNotifications: false,
+      },
       raw: {},
       extensions: {},
       createdAt: new Date(),
@@ -169,10 +218,15 @@ export function createCalDavProvider(config: CalDavProviderConfig): ProviderAdap
   };
 
   const events = {
-    list: async (_token: TokenSet, calendarId: string, query?: { timeMin?: Date; timeMax?: Date }) => {
-      const filter = query?.timeMin && query?.timeMax
-        ? `<C:time-range start="${query.timeMin.toISOString()}" end="${query.timeMax.toISOString()}"/>`
-        : '';
+    list: async (
+      _token: TokenSet,
+      calendarId: string,
+      query?: { timeMin?: Date; timeMax?: Date }
+    ) => {
+      const filter =
+        query?.timeMin && query?.timeMax
+          ? `<C:time-range start="${query.timeMin.toISOString()}" end="${query.timeMax.toISOString()}"/>`
+          : '';
 
       const { data: text } = await transport.request<string>({
         method: 'REPORT',
@@ -236,27 +290,44 @@ export function createCalDavProvider(config: CalDavProviderConfig): ProviderAdap
     },
 
     delete: async (_token: TokenSet, calendarId: string, id: string) => {
-      await deleteIgnoring404(() => transport.request({
-        method: 'DELETE',
-        path: `${calendarId}/${id}.ics`,
-        headers: davHeaders(),
-        responseType: 'text',
-      }));
+      await deleteIgnoring404(() =>
+        transport.request({
+          method: 'DELETE',
+          path: `${calendarId}/${id}.ics`,
+          headers: davHeaders(),
+          responseType: 'text',
+        })
+      );
     },
 
     move: async () => {
-      throw new CalendarSdkError({ code: 'CAPABILITY_UNSUPPORTED', message: 'Event move is not supported by CalDAV', provider: 'caldav' });
+      throw new CalendarSdkError({
+        code: 'CAPABILITY_UNSUPPORTED',
+        message: 'Event move is not supported by CalDAV',
+        provider: 'caldav',
+      });
     },
     duplicate: async () => {
-      throw new CalendarSdkError({ code: 'CAPABILITY_UNSUPPORTED', message: 'Event duplicate is not supported by CalDAV', provider: 'caldav' });
+      throw new CalendarSdkError({
+        code: 'CAPABILITY_UNSUPPORTED',
+        message: 'Event duplicate is not supported by CalDAV',
+        provider: 'caldav',
+      });
     },
     expandRecurrence: async () => {
-      throw new CalendarSdkError({ code: 'CAPABILITY_UNSUPPORTED', message: 'Recurrence expansion is not supported by CalDAV', provider: 'caldav' });
+      throw new CalendarSdkError({
+        code: 'CAPABILITY_UNSUPPORTED',
+        message: 'Recurrence expansion is not supported by CalDAV',
+        provider: 'caldav',
+      });
     },
   };
 
   const availability = {
-    freeBusy: async (_token: TokenSet, query: { timeMin: Date; timeMax: Date; calendars: string[] }) => {
+    freeBusy: async (
+      _token: TokenSet,
+      query: { timeMin: Date; timeMax: Date; calendars: string[] }
+    ) => {
       const results: Record<string, any[]> = {};
 
       for (const calendarId of query.calendars) {
@@ -285,17 +356,28 @@ export function createCalDavProvider(config: CalDavProviderConfig): ProviderAdap
     },
 
     suggestMeeting: async () => {
-      throw new CalendarSdkError({ code: 'CAPABILITY_UNSUPPORTED', message: 'Meeting time suggestions are not supported by CalDAV', provider: 'caldav' });
+      throw new CalendarSdkError({
+        code: 'CAPABILITY_UNSUPPORTED',
+        message: 'Meeting time suggestions are not supported by CalDAV',
+        provider: 'caldav',
+      });
     },
   };
 
   const sync = {
-    fullSync: async (token: TokenSet, calendarId: string, options?: { timeMin?: Date; timeMax?: Date }) => {
-      const result = await events.list(token, calendarId, { timeMin: options?.timeMin, timeMax: options?.timeMax });
+    fullSync: async (
+      token: TokenSet,
+      calendarId: string,
+      options?: { timeMin?: Date; timeMax?: Date }
+    ) => {
+      const result = await events.list(token, calendarId, {
+        timeMin: options?.timeMin,
+        timeMax: options?.timeMax,
+      });
       return {
         accountId: '',
         scope: 'events' as const,
-        events: result.items.map(e => ({ type: 'created' as const, event: e })),
+        events: result.items.map((e) => ({ type: 'created' as const, event: e })),
         deletions: [],
         expiredToken: false,
         hasMore: false,
@@ -303,23 +385,43 @@ export function createCalDavProvider(config: CalDavProviderConfig): ProviderAdap
     },
 
     incrementalSync: async () => {
-      throw new CalendarSdkError({ code: 'CAPABILITY_UNSUPPORTED', message: 'Incremental sync is not supported by CalDAV', provider: 'caldav' });
+      throw new CalendarSdkError({
+        code: 'CAPABILITY_UNSUPPORTED',
+        message: 'Incremental sync is not supported by CalDAV',
+        provider: 'caldav',
+      });
     },
   };
 
   const subscriptions = {
     create: async () => {
-      throw new CalendarSdkError({ code: 'CAPABILITY_UNSUPPORTED', message: 'Webhooks are not supported by CalDAV', provider: 'caldav' });
+      throw new CalendarSdkError({
+        code: 'CAPABILITY_UNSUPPORTED',
+        message: 'Webhooks are not supported by CalDAV',
+        provider: 'caldav',
+      });
     },
     renew: async () => {
-      throw new CalendarSdkError({ code: 'CAPABILITY_UNSUPPORTED', message: 'Webhooks are not supported by CalDAV', provider: 'caldav' });
+      throw new CalendarSdkError({
+        code: 'CAPABILITY_UNSUPPORTED',
+        message: 'Webhooks are not supported by CalDAV',
+        provider: 'caldav',
+      });
     },
     delete: async () => {
-      throw new CalendarSdkError({ code: 'CAPABILITY_UNSUPPORTED', message: 'Webhooks are not supported by CalDAV', provider: 'caldav' });
+      throw new CalendarSdkError({
+        code: 'CAPABILITY_UNSUPPORTED',
+        message: 'Webhooks are not supported by CalDAV',
+        provider: 'caldav',
+      });
     },
     list: async () => [],
     get: async () => {
-      throw new CalendarSdkError({ code: 'CAPABILITY_UNSUPPORTED', message: 'Webhooks are not supported by CalDAV', provider: 'caldav' });
+      throw new CalendarSdkError({
+        code: 'CAPABILITY_UNSUPPORTED',
+        message: 'Webhooks are not supported by CalDAV',
+        provider: 'caldav',
+      });
     },
   };
 
@@ -334,8 +436,23 @@ export function createCalDavProvider(config: CalDavProviderConfig): ProviderAdap
     sync,
     subscriptions,
     getCapabilities: () => ({
-      calendars: { create: true, update: true, delete: true, share: false, manageNotifications: false },
-      events: { list: true, create: true, update: true, delete: true, move: false, duplicate: false, attachments: false, conferenceData: false },
+      calendars: {
+        create: true,
+        update: true,
+        delete: true,
+        share: false,
+        manageNotifications: false,
+      },
+      events: {
+        list: true,
+        create: true,
+        update: true,
+        delete: true,
+        move: false,
+        duplicate: false,
+        attachments: false,
+        conferenceData: false,
+      },
       sync: { incremental: false, webhook: false, polling: true },
       availability: { freeBusy: true, suggestedTimes: false },
     }),
@@ -359,7 +476,10 @@ async function deleteIgnoring404(fn: () => Promise<unknown>): Promise<void> {
 // name only (ignoring whatever prefix, if any, precedes it) is what makes parsing robust across
 // iCloud/Fastmail/Nextcloud/Radicale/Baïkal instead of silently returning nothing.
 function extractElementText(xml: string, localName: string): string[] {
-  const pattern = new RegExp(`<(?:[\\w.-]+:)?${localName}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/(?:[\\w.-]+:)?${localName}>`, 'gi');
+  const pattern = new RegExp(
+    `<(?:[\\w.-]+:)?${localName}(?:\\s[^>]*)?>([\\s\\S]*?)<\\/(?:[\\w.-]+:)?${localName}>`,
+    'gi'
+  );
   const matches: string[] = [];
   for (const match of xml.matchAll(pattern)) {
     matches.push(match[1]);
@@ -369,12 +489,12 @@ function extractElementText(xml: string, localName: string): string[] {
 
 function parseCalendarIdsFromPropfind(xml: string): string[] {
   return extractElementText(xml, 'href')
-    .map(text => text.replace(/<[^>]+>/g, '').trim())
-    .filter(u => u.includes('/'));
+    .map((text) => text.replace(/<[^>]+>/g, '').trim())
+    .filter((u) => u.includes('/'));
 }
 
 function parseEventsFromReport(xml: string): any[] {
-  return extractElementText(xml, 'calendar-data').map(text => parseIcsEvent(text.trim(), ''));
+  return extractElementText(xml, 'calendar-data').map((text) => parseIcsEvent(text.trim(), ''));
 }
 
 function parseIcsEvent(ics: string, calendarId: string): any {
@@ -507,7 +627,8 @@ function buildIcsEvent(uid: string, input: any): string {
 
   if (input.description) lines.push(`DESCRIPTION:${escapeIcsText(input.description)}`);
   if (input.location) lines.push(`LOCATION:${escapeIcsText(input.location)}`);
-  if (input.recurrence?.rrule) lines.push(`RRULE:${sanitizeIcsStructuredValue(input.recurrence.rrule)}`);
+  if (input.recurrence?.rrule)
+    lines.push(`RRULE:${sanitizeIcsStructuredValue(input.recurrence.rrule)}`);
 
   lines.push('END:VEVENT', 'END:VCALENDAR');
   return lines.join('\r\n');

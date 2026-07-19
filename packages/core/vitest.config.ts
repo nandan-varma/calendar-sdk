@@ -25,22 +25,34 @@ const baseConfig = defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      '@nandan-varma/calendar-sdk-google': path.resolve(__dirname, '../providers/google/src/index.ts'),
-      '@nandan-varma/calendar-sdk-microsoft': path.resolve(__dirname, '../providers/microsoft/src/index.ts'),
+      '@nandan-varma/calendar-sdk-google': path.resolve(
+        __dirname,
+        '../providers/google/src/index.ts'
+      ),
+      '@nandan-varma/calendar-sdk-microsoft': path.resolve(
+        __dirname,
+        '../providers/microsoft/src/index.ts'
+      ),
     },
   },
 });
 
-export default mergeConfig(baseConfig, defineConfig({
-  test: {
-    include: ['tests/basic.test.ts', 'tests/unit/**/*.test.ts', 'tests/integration/sdk.test.ts'],
-  },
-}));
+export default mergeConfig(
+  baseConfig,
+  defineConfig({
+    test: {
+      include: ['tests/basic.test.ts', 'tests/unit/**/*.test.ts', 'tests/integration/sdk.test.ts'],
+    },
+  })
+);
 
-export const integrationConfig = mergeConfig(baseConfig, defineConfig({
-  test: {
-    include: ['tests/integration/**/*.test.ts'],
-    testTimeout: 120000,
-    hookTimeout: 120000,
-  },
-}));
+export const integrationConfig = mergeConfig(
+  baseConfig,
+  defineConfig({
+    test: {
+      include: ['tests/integration/**/*.test.ts'],
+      testTimeout: 120000,
+      hookTimeout: 120000,
+    },
+  })
+);

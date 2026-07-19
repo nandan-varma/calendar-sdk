@@ -3,6 +3,10 @@ import type { Logger } from '../logger/index.js';
 import { CalendarSdkError, mapHttpError } from '../errors/index.js';
 import { redactSensitive } from '../utils/redact.js';
 
+// Keep in sync with the "version" field in packages/core/package.json - a JSON import here
+// would fight the tsup/tsc rootDir setup for a one-line string, so it's tracked manually.
+const SDK_VERSION = '0.0.1';
+
 export interface TransportConfig {
   baseUrl?: string;
   timeout?: number;
@@ -60,12 +64,7 @@ export function createTransport(
   config: TransportConfig = {},
   logger?: Logger
 ): Transport {
-  const {
-    timeout = 30000,
-    headers = {},
-    retryOptions = defaultRetryOptions,
-    signal,
-  } = config;
+  const { timeout = 30000, headers = {}, retryOptions = defaultRetryOptions, signal } = config;
 
   const fetchImpl = config.fetch ?? globalThis.fetch.bind(globalThis);
 
@@ -83,9 +82,9 @@ export function createTransport(
       } = options;
 
       const url = buildUrl(config.baseUrl, path, query);
-      
+
       const mergedHeaders: Record<string, string> = {
-        'User-Agent': 'calendar-sdk/1.0',
+        'User-Agent': `calendar-sdk/${SDK_VERSION}`,
         ...headers,
         ...requestHeaders,
       };
@@ -95,7 +94,8 @@ export function createTransport(
         mergedHeaders['Content-Type'] = 'application/json';
       }
 
-      const serializedBody = body === undefined ? undefined : isStringBody ? (body as string) : JSON.stringify(body);
+      const serializedBody =
+        body === undefined ? undefined : isStringBody ? (body as string) : JSON.stringify(body);
 
       // Redaction recursively walks the whole body/headers - skip building it when debug
       // logging won't actually be emitted (the default logger's minLevel is 'info').
@@ -119,7 +119,9 @@ export function createTransport(
           () => controller.abort(new Error(`Request timeout after ${requestTimeout ?? timeout}ms`)),
           requestTimeout ?? timeout
         );
-        const detachExternalSignal = requestSignal ? attachSignal(requestSignal, controller) : undefined;
+        const detachExternalSignal = requestSignal
+          ? attachSignal(requestSignal, controller)
+          : undefined;
 
         try {
           const response = await fetchImpl(url, {
@@ -161,11 +163,12 @@ export function createTransport(
             throw error;
           }
 
-          const data: T = response.status === 204
-            ? (null as T)
-            : responseType === 'text'
-              ? (await response.text() as unknown as T)
-              : (await response.json() as T);
+          const data: T =
+            response.status === 204
+              ? (null as T)
+              : responseType === 'text'
+                ? ((await response.text()) as unknown as T)
+                : ((await response.json()) as T);
 
           logger?.debug(`[${provider}] Response ${response.status}`, {
             requestId,
@@ -173,7 +176,6 @@ export function createTransport(
           });
 
           return { data, status: response.status, headers: responseHeaders, requestId };
-
         } catch (error) {
           lastError = error as Error;
 
@@ -201,10 +203,10 @@ export function createTransport(
             }
 
             const effectiveRetryOptions = retryOptions || defaultRetryOptions;
-            const retryableErrors = effectiveRetryOptions?.retryableErrors ?? defaultRetryOptions.retryableErrors;
-            const isRetryableError = retryableErrors?.some(
-              e => error.message.includes(e) || error.name === e
-            ) ?? false;
+            const retryableErrors =
+              effectiveRetryOptions?.retryableErrors ?? defaultRetryOptions.retryableErrors;
+            const isRetryableError =
+              retryableErrors?.some((e) => error.message.includes(e) || error.name === e) ?? false;
 
             if (isRetryableError && attempt < maxRetries) {
               const delay = calculateBackoff(attempt, retryOptions);
@@ -231,23 +233,30 @@ export function createTransport(
         }
       }
 
-      throw lastError || new CalendarSdkError({
-        code: 'INTERNAL_ERROR',
-        message: 'Max retries exceeded',
-        provider,
-      });
+      throw (
+        lastError ||
+        new CalendarSdkError({
+          code: 'INTERNAL_ERROR',
+          message: 'Max retries exceeded',
+          provider,
+        })
+      );
     },
   };
 }
 
 function hasHeader(headers: Record<string, string>, name: string): boolean {
   const target = name.toLowerCase();
-  return Object.keys(headers).some(key => key.toLowerCase() === target);
+  return Object.keys(headers).some((key) => key.toLowerCase() === target);
 }
 
-function buildUrl(baseUrl: string | undefined, path: string, query?: Record<string, string>): string {
+function buildUrl(
+  baseUrl: string | undefined,
+  path: string,
+  query?: Record<string, string>
+): string {
   const url = baseUrl ? `${baseUrl.replace(/\/$/, '')}${path}` : path;
-  
+
   if (!query || Object.keys(query).length === 0) {
     return url;
   }
@@ -270,11 +279,7 @@ function parseResponseHeaders(headers: Headers): Record<string, string> {
   return result;
 }
 
-function calculateBackoff(
-  attempt: number,
-  options: RetryOptions,
-  retryAfter?: number
-): number {
+function calculateBackoff(attempt: number, options: RetryOptions, retryAfter?: number): number {
   if (retryAfter && !Number.isNaN(retryAfter)) {
     return retryAfter * 1000;
   }
@@ -303,7 +308,7 @@ function attachSignal(external: AbortSignal, controller: AbortController): () =>
 }
 
 function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms));
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 export { createTransport as default };

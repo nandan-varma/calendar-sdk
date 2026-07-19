@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { createCalendarSdk, createMemoryStorage, createLogger, isCalendarSdkError, type CalendarSdk } from '../../src/index.js';
+import {
+  createCalendarSdk,
+  createMemoryStorage,
+  createLogger,
+  isCalendarSdkError,
+  type CalendarSdk,
+} from '../../src/index.js';
 
 describe('SDK Integration', () => {
   let sdk: CalendarSdk;
@@ -178,12 +184,19 @@ describe('SDK Integration', () => {
 
     it('should emit and receive events', async () => {
       const receivedEvents: any[] = [];
-      
+
       sdk.hooks.on('*', (event) => {
         receivedEvents.push(event);
       });
 
-      await sdk.hooks.emit({ type: 'request', event: 'start', provider: 'google', operation: 'list', path: '/calendars', method: 'GET' });
+      await sdk.hooks.emit({
+        type: 'request',
+        event: 'start',
+        provider: 'google',
+        operation: 'list',
+        path: '/calendars',
+        method: 'GET',
+      });
 
       expect(receivedEvents).toHaveLength(1);
     });
@@ -208,8 +221,8 @@ describe('SDK with Providers', () => {
   });
 
   it('should accept custom logger options', () => {
-    const logger = createLogger({ 
-      minLevel: 'debug', 
+    const logger = createLogger({
+      minLevel: 'debug',
       includeTimestamp: true,
       redactSensitive: true,
     });

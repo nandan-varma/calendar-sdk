@@ -1,7 +1,7 @@
-import type { 
-  CalendarEvent, 
-  CreateEventInput, 
-  UpdateEventInput, 
+import type {
+  CalendarEvent,
+  CreateEventInput,
+  UpdateEventInput,
   ListEventsQuery,
   EventOptions,
 } from '../types/event.js';
@@ -51,7 +51,7 @@ export class EventsService {
 
     const result = await provider.events.list(token, calendar.providerId, query);
 
-    const events: CalendarEvent[] = result.items.map(evt => ({
+    const events: CalendarEvent[] = result.items.map((evt) => ({
       ...evt,
       id: evt.id || randomUUID(),
       accountId: calendar.accountId,
@@ -70,13 +70,18 @@ export class EventsService {
       throw new CalendarSdkError({
         code: 'NOT_FOUND',
         message: 'Event not found in local storage',
-        remediation: 'Call events.list(calendarId) to sync this calendar before calling get() with an event id.',
+        remediation:
+          'Call events.list(calendarId) to sync this calendar before calling get() with an event id.',
       });
     }
     return event;
   }
 
-  async create(calendarId: string, input: CreateEventInput, options?: EventOptions): Promise<CalendarEvent> {
+  async create(
+    calendarId: string,
+    input: CreateEventInput,
+    options?: EventOptions
+  ): Promise<CalendarEvent> {
     const calendar = await this.storage.calendars.get(calendarId);
     if (!calendar) {
       throw errors.notFound(undefined, 'Calendar not found');
@@ -95,7 +100,10 @@ export class EventsService {
     // (owner/writer) - a provider-wide "events.create: true" doesn't mean every calendar is
     // writable, e.g. a calendar shared with the account as a reader.
     if (!calendar.capabilities.create) {
-      throw errors.capabilityUnsupported('Event creation on this calendar (insufficient access role)', account.provider);
+      throw errors.capabilityUnsupported(
+        'Event creation on this calendar (insufficient access role)',
+        account.provider
+      );
     }
 
     const provider = this.getProvider(account.provider);
@@ -121,7 +129,11 @@ export class EventsService {
     return event;
   }
 
-  async update(eventId: string, patch: UpdateEventInput, options?: EventOptions): Promise<CalendarEvent> {
+  async update(
+    eventId: string,
+    patch: UpdateEventInput,
+    options?: EventOptions
+  ): Promise<CalendarEvent> {
     const event = await this.storage.events.get(eventId);
     if (!event) {
       throw errors.notFound(undefined, 'Event not found');
@@ -142,7 +154,10 @@ export class EventsService {
       throw errors.capabilityUnsupported('Event update', account.provider);
     }
     if (!calendar.capabilities.update) {
-      throw errors.capabilityUnsupported('Event update on this calendar (insufficient access role)', account.provider);
+      throw errors.capabilityUnsupported(
+        'Event update on this calendar (insufficient access role)',
+        account.provider
+      );
     }
 
     const provider = this.getProvider(account.provider);
@@ -153,7 +168,13 @@ export class EventsService {
 
     this.logger.info('Updating event', { eventId, updates: Object.keys(patch) });
 
-    const updated = await provider.events.update(token, calendar.providerId, event.providerId, patch, options);
+    const updated = await provider.events.update(
+      token,
+      calendar.providerId,
+      event.providerId,
+      patch,
+      options
+    );
 
     const result: CalendarEvent = {
       ...updated,
@@ -191,7 +212,10 @@ export class EventsService {
     // owner-only one - `calendar.capabilities.delete` means "delete this calendar itself"
     // (owner-only) and would incorrectly block a writer from deleting events they can edit.
     if (!calendar.capabilities.update) {
-      throw errors.capabilityUnsupported('Event deletion on this calendar (insufficient access role)', account.provider);
+      throw errors.capabilityUnsupported(
+        'Event deletion on this calendar (insufficient access role)',
+        account.provider
+      );
     }
 
     const provider = this.getProvider(account.provider);
@@ -246,7 +270,12 @@ export class EventsService {
 
     this.logger.info('Moving event', { eventId, from: event.calendarId, to: targetCalendarId });
 
-    const moved = await provider.events.move(token, event.providerId, sourceCalendar.providerId, targetCalendar.providerId);
+    const moved = await provider.events.move(
+      token,
+      event.providerId,
+      sourceCalendar.providerId,
+      targetCalendar.providerId
+    );
 
     const result: CalendarEvent = {
       ...moved,
@@ -294,7 +323,11 @@ export class EventsService {
 
     this.logger.info('Duplicating event', { eventId, to: targetCalendarId });
 
-    const duplicated = await provider.events.duplicate(token, event.providerId, targetCalendar.providerId);
+    const duplicated = await provider.events.duplicate(
+      token,
+      event.providerId,
+      targetCalendar.providerId
+    );
 
     const result: CalendarEvent = {
       ...duplicated,

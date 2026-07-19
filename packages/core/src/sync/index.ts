@@ -58,7 +58,10 @@ export class SyncService {
   // Sync results only carry the provider's own event id (see SyncEvent's 'deleted' variant),
   // but storage is keyed by the SDK-local id - this is the only correct way to translate one
   // to the other. Returns null (and does nothing) if the event was never synced locally.
-  private async resolveLocalDeletionId(calendar: Calendar, providerEventId: string): Promise<string | null> {
+  private async resolveLocalDeletionId(
+    calendar: Calendar,
+    providerEventId: string
+  ): Promise<string | null> {
     const existing = await this.storage.events.getByProviderId(calendar.id, providerEventId);
     return existing?.id ?? null;
   }
@@ -72,7 +75,13 @@ export class SyncService {
     try {
       const { account, provider, token } = await this.resolveAccountAndToken(accountId);
       resolvedProvider = account.provider;
-      this.hooks.emit({ type: 'sync', event: 'start', provider: account.provider, accountId, scope: 'events' });
+      this.hooks.emit({
+        type: 'sync',
+        event: 'start',
+        provider: account.provider,
+        accountId,
+        scope: 'events',
+      });
       const calendars = await this.resolveCalendars(accountId, calendarId);
 
       const results: SyncResult = {
@@ -87,7 +96,11 @@ export class SyncService {
       let lastSyncResult: SyncResult | undefined;
 
       for (const calendar of calendars) {
-        const syncResult = await provider.sync.fullSync(token, calendar.providerId, { timeMin, timeMax, limit });
+        const syncResult = await provider.sync.fullSync(token, calendar.providerId, {
+          timeMin,
+          timeMax,
+          limit,
+        });
         lastSyncResult = syncResult;
 
         for (const event of syncResult.events) {
@@ -122,9 +135,14 @@ export class SyncService {
         results.nextCursor = cursor;
       }
 
-      const created = results.events.filter(e => e.type === 'created').length;
-      const updated = results.events.filter(e => e.type === 'updated').length;
-      this.logger.info('Full sync completed', { accountId, created, updated, deleted: results.deletions.length });
+      const created = results.events.filter((e) => e.type === 'created').length;
+      const updated = results.events.filter((e) => e.type === 'updated').length;
+      this.logger.info('Full sync completed', {
+        accountId,
+        created,
+        updated,
+        deleted: results.deletions.length,
+      });
       this.hooks.emit({
         type: 'sync',
         event: 'end',
@@ -171,13 +189,20 @@ export class SyncService {
     try {
       const { account, provider, token } = await this.resolveAccountAndToken(accountId);
       resolvedProvider = account.provider;
-      this.hooks.emit({ type: 'sync', event: 'start', provider: account.provider, accountId, scope: cursor.scope });
+      this.hooks.emit({
+        type: 'sync',
+        event: 'start',
+        provider: account.provider,
+        accountId,
+        scope: cursor.scope,
+      });
       const [calendar] = await this.resolveCalendars(accountId, options?.calendarId);
       if (!calendar) {
         throw new CalendarSdkError({
           code: 'VALIDATION_FAILED',
           message: 'No calendar to sync',
-          remediation: 'Pass options.calendarId, or sync an account that has at least one calendar from calendars.list().',
+          remediation:
+            'Pass options.calendarId, or sync an account that has at least one calendar from calendars.list().',
         });
       }
 
@@ -216,9 +241,10 @@ export class SyncService {
         });
       }
 
-      const created = result.events.filter(e => e.type === 'created').length;
-      const updated = result.events.filter(e => e.type === 'updated').length;
-      const deleted = result.events.filter(e => e.type === 'deleted').length + result.deletions.length;
+      const created = result.events.filter((e) => e.type === 'created').length;
+      const updated = result.events.filter((e) => e.type === 'updated').length;
+      const deleted =
+        result.events.filter((e) => e.type === 'deleted').length + result.deletions.length;
       this.logger.info('Incremental sync completed', {
         accountId,
         changes: result.events.length + result.deletions.length,
@@ -266,7 +292,11 @@ export class SyncService {
     }
   }
 
-  async reconcile(accountId: string, scope: SyncScope, options?: ReconcileOptions): Promise<ReconcileResult> {
+  async reconcile(
+    accountId: string,
+    scope: SyncScope,
+    options?: ReconcileOptions
+  ): Promise<ReconcileResult> {
     this.logger.info('Starting reconciliation', { accountId, scope });
 
     const { provider, token } = await this.resolveAccountAndToken(accountId);
@@ -286,7 +316,7 @@ export class SyncService {
         timeMin: options?.timeMin,
         timeMax: options?.timeMax,
       });
-      const localByProviderId = new Map(localEvents.map(e => [e.providerId, e] as const));
+      const localByProviderId = new Map(localEvents.map((e) => [e.providerId, e] as const));
 
       const remoteResult = await provider.sync.fullSync(token, calendar.providerId, {
         timeMin: options?.timeMin,
@@ -344,15 +374,16 @@ export class SyncService {
 
     return {
       accountId,
-      cursors: cursors.map(c => ({
+      cursors: cursors.map((c) => ({
         scope: c.scope,
         hasCursor: !!c.token,
         expired: c.expiry < new Date(),
         expiresAt: c.expiry,
       })),
-      lastSync: cursors.length > 0
-        ? new Date(Math.max(...cursors.map(c => c.updatedAt.getTime())))
-        : undefined,
+      lastSync:
+        cursors.length > 0
+          ? new Date(Math.max(...cursors.map((c) => c.updatedAt.getTime())))
+          : undefined,
     };
   }
 }

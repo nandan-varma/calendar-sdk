@@ -37,9 +37,7 @@
   "description": "Provider-agnostic TypeScript calendar SDK: one API for events, calendars, availability, sync, and webhooks across Google Calendar, Microsoft Graph, and CalDAV",
   "license": "MIT",
   "author": "Nandan Varma",
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "sideEffects": false,
   "keywords": [
     "calendar",

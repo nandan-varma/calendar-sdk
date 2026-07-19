@@ -71,9 +71,11 @@ describe('createCalDavProvider', () => {
     });
 
     it('parses calendar hrefs out of the multistatus response', async () => {
-      fetchMock.mockResolvedValueOnce(xmlResponse(
-        '<D:multistatus><D:response><D:href>/calendars/ada/work/</D:href></D:response></D:multistatus>'
-      ));
+      fetchMock.mockResolvedValueOnce(
+        xmlResponse(
+          '<D:multistatus><D:response><D:href>/calendars/ada/work/</D:href></D:response></D:multistatus>'
+        )
+      );
 
       const result = await provider().calendars.list(TOKEN);
 
@@ -83,9 +85,11 @@ describe('createCalDavProvider', () => {
     });
 
     it('parses hrefs regardless of XML namespace prefix (different servers use different prefixes)', async () => {
-      fetchMock.mockResolvedValueOnce(xmlResponse(
-        '<cal:multistatus xmlns:cal="DAV:"><cal:response><cal:href>/calendars/ada/work/</cal:href></cal:response></cal:multistatus>'
-      ));
+      fetchMock.mockResolvedValueOnce(
+        xmlResponse(
+          '<cal:multistatus xmlns:cal="DAV:"><cal:response><cal:href>/calendars/ada/work/</cal:href></cal:response></cal:multistatus>'
+        )
+      );
 
       const result = await provider().calendars.list(TOKEN);
       expect(result.items).toHaveLength(1);
@@ -93,9 +97,11 @@ describe('createCalDavProvider', () => {
     });
 
     it('parses hrefs with no namespace prefix at all (default namespace)', async () => {
-      fetchMock.mockResolvedValueOnce(xmlResponse(
-        '<multistatus xmlns="DAV:"><response><href>/calendars/ada/work/</href></response></multistatus>'
-      ));
+      fetchMock.mockResolvedValueOnce(
+        xmlResponse(
+          '<multistatus xmlns="DAV:"><response><href>/calendars/ada/work/</href></response></multistatus>'
+        )
+      );
 
       const result = await provider().calendars.list(TOKEN);
       expect(result.items).toHaveLength(1);
@@ -131,9 +137,11 @@ describe('createCalDavProvider', () => {
     });
 
     it('parses events out of calendar-data blocks in the REPORT response', async () => {
-      fetchMock.mockResolvedValueOnce(xmlResponse(
-        `<D:multistatus><D:response><C:calendar-data>${icsEvent}</C:calendar-data></D:response></D:multistatus>`
-      ));
+      fetchMock.mockResolvedValueOnce(
+        xmlResponse(
+          `<D:multistatus><D:response><C:calendar-data>${icsEvent}</C:calendar-data></D:response></D:multistatus>`
+        )
+      );
 
       const result = await provider().events.list(TOKEN, '/calendars/ada/work/');
 
@@ -143,9 +151,11 @@ describe('createCalDavProvider', () => {
     });
 
     it('parses calendar-data blocks regardless of XML namespace prefix', async () => {
-      fetchMock.mockResolvedValueOnce(xmlResponse(
-        `<multistatus xmlns="DAV:"><response><cal:calendar-data xmlns:cal="urn:ietf:params:xml:ns:caldav">${icsEvent}</cal:calendar-data></response></multistatus>`
-      ));
+      fetchMock.mockResolvedValueOnce(
+        xmlResponse(
+          `<multistatus xmlns="DAV:"><response><cal:calendar-data xmlns:cal="urn:ietf:params:xml:ns:caldav">${icsEvent}</cal:calendar-data></response></multistatus>`
+        )
+      );
 
       const result = await provider().events.list(TOKEN, '/calendars/ada/work/');
       expect(result.items).toHaveLength(1);
@@ -227,13 +237,21 @@ describe('createCalDavProvider', () => {
     it('deletes an event and tolerates 404 as a successful no-op', async () => {
       fetchMock.mockResolvedValueOnce(xmlResponse('not found', 404));
 
-      await expect(provider().events.delete(TOKEN, '/calendars/ada/work/', 'evt-1')).resolves.toBeUndefined();
+      await expect(
+        provider().events.delete(TOKEN, '/calendars/ada/work/', 'evt-1')
+      ).resolves.toBeUndefined();
     });
 
     it('throws CAPABILITY_UNSUPPORTED for move/duplicate/expandRecurrence', async () => {
-      await expect(provider().events.move(TOKEN, 'evt-1', 'a', 'b')).rejects.toMatchObject({ code: 'CAPABILITY_UNSUPPORTED' });
-      await expect(provider().events.duplicate(TOKEN, 'evt-1', 'b')).rejects.toMatchObject({ code: 'CAPABILITY_UNSUPPORTED' });
-      await expect(provider().events.expandRecurrence(TOKEN, 'cal', 'evt-1', new Date(), new Date())).rejects.toMatchObject({ code: 'CAPABILITY_UNSUPPORTED' });
+      await expect(provider().events.move(TOKEN, 'evt-1', 'a', 'b')).rejects.toMatchObject({
+        code: 'CAPABILITY_UNSUPPORTED',
+      });
+      await expect(provider().events.duplicate(TOKEN, 'evt-1', 'b')).rejects.toMatchObject({
+        code: 'CAPABILITY_UNSUPPORTED',
+      });
+      await expect(
+        provider().events.expandRecurrence(TOKEN, 'cal', 'evt-1', new Date(), new Date())
+      ).rejects.toMatchObject({ code: 'CAPABILITY_UNSUPPORTED' });
     });
   });
 
@@ -262,7 +280,9 @@ describe('createCalDavProvider', () => {
     });
 
     it('throws CAPABILITY_UNSUPPORTED for incremental sync', async () => {
-      await expect(provider().sync.incrementalSync(TOKEN, 'cal', {} as never)).rejects.toMatchObject({
+      await expect(
+        provider().sync.incrementalSync(TOKEN, 'cal', {} as never)
+      ).rejects.toMatchObject({
         code: 'CAPABILITY_UNSUPPORTED',
       });
     });
@@ -270,9 +290,15 @@ describe('createCalDavProvider', () => {
 
   describe('subscriptions', () => {
     it('throws CAPABILITY_UNSUPPORTED for every webhook operation', async () => {
-      await expect(provider().subscriptions.create(TOKEN, {} as never)).rejects.toMatchObject({ code: 'CAPABILITY_UNSUPPORTED' });
-      await expect(provider().subscriptions.renew(TOKEN, 'id')).rejects.toMatchObject({ code: 'CAPABILITY_UNSUPPORTED' });
-      await expect(provider().subscriptions.delete(TOKEN, 'id')).rejects.toMatchObject({ code: 'CAPABILITY_UNSUPPORTED' });
+      await expect(provider().subscriptions.create(TOKEN, {} as never)).rejects.toMatchObject({
+        code: 'CAPABILITY_UNSUPPORTED',
+      });
+      await expect(provider().subscriptions.renew(TOKEN, 'id')).rejects.toMatchObject({
+        code: 'CAPABILITY_UNSUPPORTED',
+      });
+      await expect(provider().subscriptions.delete(TOKEN, 'id')).rejects.toMatchObject({
+        code: 'CAPABILITY_UNSUPPORTED',
+      });
     });
   });
 

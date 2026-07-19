@@ -40,13 +40,7 @@ export interface CalendarSdk {
 
 export function createCalendarSdk(config: SdkConfig): CalendarSdk {
   const usingDefaultStorage = config.storage === undefined;
-  const {
-    providers,
-    storage = createMemoryStorage(),
-    logger,
-    loggerOptions,
-    hooks,
-  } = config;
+  const { providers, storage = createMemoryStorage(), logger, loggerOptions, hooks } = config;
 
   const effectiveLogger = logger ?? createLogger({ ...loggerOptions, prettyPrint: true });
   const effectiveHooks = hooks ?? createHooks();
@@ -71,12 +65,35 @@ export function createCalendarSdk(config: SdkConfig): CalendarSdk {
   const tokenManager = createTokenManager(storage, providerMap, effectiveLogger);
   const getToken = (accountId: string) => tokenManager.getToken(accountId);
 
-  const accountsService = new AccountsService(storage, providerMap, effectiveLogger, tokenManager, effectiveHooks);
+  const accountsService = new AccountsService(
+    storage,
+    providerMap,
+    effectiveLogger,
+    tokenManager,
+    effectiveHooks
+  );
   const calendarsService = new CalendarsService(storage, getToken, getProvider, effectiveLogger);
   const eventsService = new EventsService(storage, getToken, getProvider, effectiveLogger);
-  const availabilityService = new AvailabilityService(storage, getToken, getProvider, effectiveLogger);
-  const subscriptionsService = new SubscriptionsService(storage, getToken, getProvider, effectiveLogger, effectiveHooks);
-  const syncService = new SyncService({ storage, logger: effectiveLogger, getToken, getProvider, hooks: effectiveHooks });
+  const availabilityService = new AvailabilityService(
+    storage,
+    getToken,
+    getProvider,
+    effectiveLogger
+  );
+  const subscriptionsService = new SubscriptionsService(
+    storage,
+    getToken,
+    getProvider,
+    effectiveLogger,
+    effectiveHooks
+  );
+  const syncService = new SyncService({
+    storage,
+    logger: effectiveLogger,
+    getToken,
+    getProvider,
+    hooks: effectiveHooks,
+  });
 
   effectiveLogger.info('Calendar SDK initialized', {
     providers: providers.map((p) => p.key),
@@ -109,25 +126,105 @@ export type {
   RequestOptions as TransportRequestOptions,
 } from './transport/index.js';
 
-export { 
-  Account, AccountStatus, AccountInput, AuthInput, ConnectOptions,
-  Calendar, CalendarAccessRole, CreateCalendarInput, UpdateCalendarInput, ListCalendarsQuery, ShareCalendarInput,
-  CalendarEvent, Attendee, Organizer, Reminder, Recurrence, EventException, ConferenceData, ConferenceEntryPoint, Attachment, CreateEventInput, AttendeeInput, CreateConferenceInput, CreateAttachmentInput, UpdateEventInput, ListEventsQuery, EventOptions, ExpandedOccurrence, EventStatus, EventTransparency, EventVisibility,
-  FreeBusyQuery, FreeBusyResult, FreeBusyStatus, FreeBusyBlock, MeetingTimeSuggestion, SuggestMeetingQuery, SuggestMeetingResult,
-  SyncCursor, SyncCursorInput, SyncResult, SyncEvent, FullSyncOptions, IncrementalSyncOptions, ReconcileOptions,
-  Subscription, SubscriptionStatus, SubscriptionRenewalPolicy, SubscriptionInput, SubscriptionConfig, SubscriptionRetryPolicy, CreateSubscriptionOptions, SubscriptionNotification, SubscriptionChange,
-  ProviderKey, DateTime, DateOnly, DateTimeValue, PaginationToken, Paginated, RequestOptions, RawProviderData, Extensions, isAllDay, toDate, toDateTimeString,
+export {
+  Account,
+  AccountStatus,
+  AccountInput,
+  AuthInput,
+  ConnectOptions,
+  Calendar,
+  CalendarAccessRole,
+  CreateCalendarInput,
+  UpdateCalendarInput,
+  ListCalendarsQuery,
+  ShareCalendarInput,
+  CalendarEvent,
+  Attendee,
+  Organizer,
+  Reminder,
+  Recurrence,
+  EventException,
+  ConferenceData,
+  ConferenceEntryPoint,
+  Attachment,
+  CreateEventInput,
+  AttendeeInput,
+  CreateConferenceInput,
+  CreateAttachmentInput,
+  UpdateEventInput,
+  ListEventsQuery,
+  EventOptions,
+  ExpandedOccurrence,
+  EventStatus,
+  EventTransparency,
+  EventVisibility,
+  FreeBusyQuery,
+  FreeBusyResult,
+  FreeBusyStatus,
+  FreeBusyBlock,
+  MeetingTimeSuggestion,
+  SuggestMeetingQuery,
+  SuggestMeetingResult,
+  SyncCursor,
+  SyncCursorInput,
+  SyncResult,
+  SyncEvent,
+  FullSyncOptions,
+  IncrementalSyncOptions,
+  ReconcileOptions,
+  Subscription,
+  SubscriptionStatus,
+  SubscriptionRenewalPolicy,
+  SubscriptionInput,
+  SubscriptionConfig,
+  SubscriptionRetryPolicy,
+  CreateSubscriptionOptions,
+  SubscriptionNotification,
+  SubscriptionChange,
+  ProviderKey,
+  DateTime,
+  DateOnly,
+  DateTimeValue,
+  PaginationToken,
+  Paginated,
+  RequestOptions,
+  RawProviderData,
+  Extensions,
+  isAllDay,
+  toDate,
+  toDateTimeString,
 } from './types/index.js';
 
-export { CalendarSdkError, ErrorCode, isCalendarSdkError, mapHttpError, errors } from './errors/index.js';
+export {
+  CalendarSdkError,
+  ErrorCode,
+  isCalendarSdkError,
+  isTransientError,
+  mapHttpError,
+  errors,
+} from './errors/index.js';
 
-export { 
-  CapabilityMap, CalendarCapabilityMap, EventCapabilityMap, SyncCapabilityMap, AvailabilityCapabilityMap,
-  defaultCapabilityMap, mergeCapabilities, getCapabilitiesForProvider,
+export {
+  CapabilityMap,
+  CalendarCapabilityMap,
+  EventCapabilityMap,
+  SyncCapabilityMap,
+  AvailabilityCapabilityMap,
+  defaultCapabilityMap,
+  mergeCapabilities,
+  getCapabilitiesForProvider,
 } from './capabilities/index.js';
 
 export {
-  ProviderAdapter, AuthProviderMethods, CreateAuthUrlOptions, TokenSet, RefreshToken, AccountsProviderMethods,
-  CalendarsProviderMethods, EventsProviderMethods, AvailabilityProviderMethods, SyncProviderMethods,
+  ProviderAdapter,
+  AuthProviderMethods,
+  CreateAuthUrlOptions,
+  TokenSet,
+  RefreshToken,
+  AccountsProviderMethods,
+  CalendarsProviderMethods,
+  EventsProviderMethods,
+  AvailabilityProviderMethods,
+  SyncProviderMethods,
   SubscriptionsProviderMethods,
 } from './adapters/provider.js';

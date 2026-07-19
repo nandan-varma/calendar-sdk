@@ -59,15 +59,20 @@ describe('createMicrosoftProvider', () => {
     });
 
     it('exchanges a code for a token set', async () => {
-      fetchMock.mockResolvedValueOnce(jsonResponse({
-        access_token: 'new-access',
-        refresh_token: 'new-refresh',
-        expires_in: 3600,
-        token_type: 'Bearer',
-        scope: 'Calendars.ReadWrite offline_access',
-      }));
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({
+          access_token: 'new-access',
+          refresh_token: 'new-refresh',
+          expires_in: 3600,
+          token_type: 'Bearer',
+          scope: 'Calendars.ReadWrite offline_access',
+        })
+      );
 
-      const tokens = await provider().auth.exchangeCode('auth-code', 'https://app.example.com/callback');
+      const tokens = await provider().auth.exchangeCode(
+        'auth-code',
+        'https://app.example.com/callback'
+      );
 
       expect(tokens.accessToken).toBe('new-access');
       expect(tokens.scope).toEqual(['Calendars.ReadWrite', 'offline_access']);
@@ -81,11 +86,13 @@ describe('createMicrosoftProvider', () => {
 
   describe('accounts.getAccount', () => {
     it('falls back to userPrincipalName when mail is absent', async () => {
-      fetchMock.mockResolvedValueOnce(jsonResponse({
-        id: 'user-1',
-        displayName: 'Ada Lovelace',
-        userPrincipalName: 'ada@contoso.onmicrosoft.com',
-      }));
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({
+          id: 'user-1',
+          displayName: 'Ada Lovelace',
+          userPrincipalName: 'ada@contoso.onmicrosoft.com',
+        })
+      );
 
       const account = await provider().accounts.getAccount(TOKEN);
 
@@ -96,9 +103,11 @@ describe('createMicrosoftProvider', () => {
 
   describe('calendars', () => {
     it('lists calendars from the me/calendars endpoint', async () => {
-      fetchMock.mockResolvedValueOnce(jsonResponse({
-        value: [{ id: 'cal-1', name: 'Calendar', isDefaultCalendar: true }],
-      }));
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({
+          value: [{ id: 'cal-1', name: 'Calendar', isDefaultCalendar: true }],
+        })
+      );
 
       const result = await provider().calendars.list(TOKEN);
 
@@ -115,17 +124,26 @@ describe('createMicrosoftProvider', () => {
     it('shares a calendar via calendarPermissions, mapping the access role to a Graph role', async () => {
       fetchMock.mockResolvedValueOnce(jsonResponse({ id: 'perm-1', role: 'write' }));
 
-      await provider().calendars.share!(TOKEN, 'cal-1', { email: 'ada@example.com', role: 'writer' });
+      await provider().calendars.share!(TOKEN, 'cal-1', {
+        email: 'ada@example.com',
+        role: 'writer',
+      });
 
       const [url, init] = fetchMock.mock.calls[0];
       expect(url).toBe('https://graph.microsoft.com/v1.0/me/calendars/cal-1/calendarPermissions');
-      expect(JSON.parse(init.body)).toEqual({ emailAddress: { address: 'ada@example.com' }, role: 'write' });
+      expect(JSON.parse(init.body)).toEqual({
+        emailAddress: { address: 'ada@example.com' },
+        role: 'write',
+      });
     });
 
-    it('maps freeBusyReader to Graph\'s freeBusyRead role', async () => {
+    it("maps freeBusyReader to Graph's freeBusyRead role", async () => {
       fetchMock.mockResolvedValueOnce(jsonResponse({ id: 'perm-1' }));
 
-      await provider().calendars.share!(TOKEN, 'cal-1', { email: 'ada@example.com', role: 'freeBusyReader' });
+      await provider().calendars.share!(TOKEN, 'cal-1', {
+        email: 'ada@example.com',
+        role: 'freeBusyReader',
+      });
 
       const [, init] = fetchMock.mock.calls[0];
       expect(JSON.parse(init.body).role).toBe('freeBusyRead');
@@ -152,20 +170,27 @@ describe('createMicrosoftProvider', () => {
     it('does not crash building the request (regression for the removed Date.prototype.toTimezoneOffset call)', async () => {
       fetchMock.mockResolvedValueOnce(jsonResponse({ value: [] }));
 
-      await expect(provider().events.list(TOKEN, 'cal-1', {})).resolves.toEqual({ items: [], nextPageToken: undefined });
+      await expect(provider().events.list(TOKEN, 'cal-1', {})).resolves.toEqual({
+        items: [],
+        nextPageToken: undefined,
+      });
     });
 
     it('maps returned events to the canonical shape', async () => {
-      fetchMock.mockResolvedValueOnce(jsonResponse({
-        value: [{
-          id: 'evt-1',
-          subject: 'Standup',
-          start: { dateTime: '2026-08-01T10:00:00.0000000', timeZone: 'UTC' },
-          end: { dateTime: '2026-08-01T10:15:00.0000000', timeZone: 'UTC' },
-          createdDateTime: '2026-07-01T00:00:00Z',
-          lastModifiedDateTime: '2026-07-01T00:00:00Z',
-        }],
-      }));
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({
+          value: [
+            {
+              id: 'evt-1',
+              subject: 'Standup',
+              start: { dateTime: '2026-08-01T10:00:00.0000000', timeZone: 'UTC' },
+              end: { dateTime: '2026-08-01T10:15:00.0000000', timeZone: 'UTC' },
+              createdDateTime: '2026-07-01T00:00:00Z',
+              lastModifiedDateTime: '2026-07-01T00:00:00Z',
+            },
+          ],
+        })
+      );
 
       const result = await provider().events.list(TOKEN, 'cal-1', {});
 
@@ -175,14 +200,16 @@ describe('createMicrosoftProvider', () => {
 
   describe('events', () => {
     it('creates an event with the mapped request body', async () => {
-      fetchMock.mockResolvedValueOnce(jsonResponse({
-        id: 'evt-1',
-        subject: 'Standup',
-        start: { dateTime: '2026-08-01T10:00:00Z', timeZone: 'UTC' },
-        end: { dateTime: '2026-08-01T10:15:00Z', timeZone: 'UTC' },
-        createdDateTime: '2026-07-01T00:00:00Z',
-        lastModifiedDateTime: '2026-07-01T00:00:00Z',
-      }));
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({
+          id: 'evt-1',
+          subject: 'Standup',
+          start: { dateTime: '2026-08-01T10:00:00Z', timeZone: 'UTC' },
+          end: { dateTime: '2026-08-01T10:15:00Z', timeZone: 'UTC' },
+          createdDateTime: '2026-07-01T00:00:00Z',
+          lastModifiedDateTime: '2026-07-01T00:00:00Z',
+        })
+      );
 
       await provider().events.create(TOKEN, 'cal-1', {
         title: 'Standup',
@@ -193,6 +220,76 @@ describe('createMicrosoftProvider', () => {
       const [url, init] = fetchMock.mock.calls[0];
       expect(url).toBe('https://graph.microsoft.com/v1.0/me/calendars/cal-1/events');
       expect(JSON.parse(init.body).subject).toBe('Standup');
+    });
+
+    it('maps isCancelled to status: cancelled, not the showAs busy/free indicator', async () => {
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({
+          id: 'evt-1',
+          subject: 'Standup',
+          isCancelled: true,
+          showAs: 'busy',
+          start: { dateTime: '2026-08-01T10:00:00Z', timeZone: 'UTC' },
+          end: { dateTime: '2026-08-01T10:15:00Z', timeZone: 'UTC' },
+          createdDateTime: '2026-07-01T00:00:00Z',
+          lastModifiedDateTime: '2026-07-01T00:00:00Z',
+        })
+      );
+
+      const result = await provider().events.get(TOKEN, 'cal-1', 'evt-1');
+
+      expect(result.status).toBe('cancelled');
+      expect(result.deletedAt).toBeInstanceOf(Date);
+    });
+
+    it('translates the actual RRULE into an Outlook recurrence pattern, not a hardcoded daily x10', async () => {
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({
+          id: 'evt-1',
+          subject: 'Weekly sync',
+          start: { dateTime: '2026-08-03T10:00:00Z', timeZone: 'UTC' },
+          end: { dateTime: '2026-08-03T10:30:00Z', timeZone: 'UTC' },
+          createdDateTime: '2026-07-01T00:00:00Z',
+          lastModifiedDateTime: '2026-07-01T00:00:00Z',
+        })
+      );
+
+      await provider().events.create(TOKEN, 'cal-1', {
+        title: 'Weekly sync',
+        start: { dateTime: '2026-08-03T10:00:00Z', timezone: 'UTC' },
+        end: { dateTime: '2026-08-03T10:30:00Z', timezone: 'UTC' },
+        recurrence: { rrule: 'FREQ=WEEKLY;INTERVAL=2;BYDAY=MO,WE;COUNT=8' },
+      });
+
+      const [, init] = fetchMock.mock.calls[0];
+      const body = JSON.parse(init.body);
+      expect(body.recurrence.pattern).toMatchObject({
+        type: 'weekly',
+        interval: 2,
+        daysOfWeek: ['monday', 'wednesday'],
+      });
+      expect(body.recurrence.range).toMatchObject({ type: 'numbered', numberOfOccurrences: 8 });
+    });
+
+    it('reconstructs an RRULE string from a Graph recurrence pattern when reading an event back', async () => {
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({
+          id: 'evt-1',
+          subject: 'Monthly review',
+          start: { dateTime: '2026-08-03T10:00:00Z', timeZone: 'UTC' },
+          end: { dateTime: '2026-08-03T10:30:00Z', timeZone: 'UTC' },
+          createdDateTime: '2026-07-01T00:00:00Z',
+          lastModifiedDateTime: '2026-07-01T00:00:00Z',
+          recurrence: {
+            pattern: { type: 'absoluteMonthly', interval: 1, dayOfMonth: 3 },
+            range: { type: 'endDate', startDate: '2026-08-03', endDate: '2027-08-03' },
+          },
+        })
+      );
+
+      const result = await provider().events.get(TOKEN, 'cal-1', 'evt-1');
+
+      expect(result.recurrence?.rrule).toBe('FREQ=MONTHLY;BYMONTHDAY=3;UNTIL=20270803T235959Z');
     });
 
     it('throws CAPABILITY_UNSUPPORTED for move (not supported by Graph)', async () => {
@@ -216,12 +313,22 @@ describe('createMicrosoftProvider', () => {
 
   describe('availability', () => {
     it('computes free/busy from getSchedule', async () => {
-      fetchMock.mockResolvedValueOnce(jsonResponse({
-        value: [{
-          scheduleId: 'ada@example.com',
-          scheduleItems: [{ status: 'busy', start: { dateTime: '2026-08-01T09:00:00' }, end: { dateTime: '2026-08-01T10:00:00' } }],
-        }],
-      }));
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({
+          value: [
+            {
+              scheduleId: 'ada@example.com',
+              scheduleItems: [
+                {
+                  status: 'busy',
+                  start: { dateTime: '2026-08-01T09:00:00' },
+                  end: { dateTime: '2026-08-01T10:00:00' },
+                },
+              ],
+            },
+          ],
+        })
+      );
 
       const result = await provider().availability.freeBusy(TOKEN, {
         timeMin: new Date('2026-08-01T00:00:00Z'),
@@ -234,13 +341,17 @@ describe('createMicrosoftProvider', () => {
     });
 
     it('suggests meeting times via findMeetingTimes', async () => {
-      fetchMock.mockResolvedValueOnce(jsonResponse({
-        meetingTimeSuggestions: [{
-          meetingTimeSlot: { start: { dateTime: '2026-08-01T09:00:00' } },
-          confidence: 100,
-          organizerAvailability: 'free',
-        }],
-      }));
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({
+          meetingTimeSuggestions: [
+            {
+              meetingTimeSlot: { start: { dateTime: '2026-08-01T09:00:00' } },
+              confidence: 100,
+              organizerAvailability: 'free',
+            },
+          ],
+        })
+      );
 
       const result = await provider().availability.suggestMeeting(TOKEN, {
         timeMin: new Date(),
@@ -255,7 +366,9 @@ describe('createMicrosoftProvider', () => {
 
   describe('sync', () => {
     it('throws CAPABILITY_UNSUPPORTED for incremental sync (delta query not implemented)', async () => {
-      await expect(provider().sync.incrementalSync(TOKEN, 'cal-1', {} as never)).rejects.toMatchObject({
+      await expect(
+        provider().sync.incrementalSync(TOKEN, 'cal-1', {} as never)
+      ).rejects.toMatchObject({
         code: 'CAPABILITY_UNSUPPORTED',
       });
     });
@@ -272,16 +385,41 @@ describe('createMicrosoftProvider', () => {
 
   describe('subscriptions', () => {
     it('creates a change-notification subscription', async () => {
-      fetchMock.mockResolvedValueOnce(jsonResponse({
-        id: 'sub-1',
-        expirationDateTime: new Date(Date.now() + 3600_000).toISOString(),
-        resource: 'me/events',
-      }));
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({
+          id: 'sub-1',
+          expirationDateTime: new Date(Date.now() + 3600_000).toISOString(),
+          resource: 'me/events',
+        })
+      );
 
-      const sub = await provider().subscriptions.create(TOKEN, { resource: 'me/events', webhookUrl: 'https://app.example.com/hook' });
+      const sub = await provider().subscriptions.create(TOKEN, {
+        resource: 'me/events',
+        webhookUrl: 'https://app.example.com/hook',
+      });
 
       expect(sub.id).toBe('sub-1');
       expect(sub.status).toBe('active');
+    });
+
+    it('forwards a configured secret as clientState, so it can be verified later', async () => {
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({
+          id: 'sub-1',
+          expirationDateTime: new Date(Date.now() + 3600_000).toISOString(),
+          resource: 'me/events',
+        })
+      );
+
+      const sub = await provider().subscriptions.create(TOKEN, {
+        resource: 'me/events',
+        webhookUrl: 'https://app.example.com/hook',
+        secret: 'shh-its-a-secret',
+      });
+
+      const [, init] = fetchMock.mock.calls[0];
+      expect(JSON.parse(init.body).clientState).toBe('shh-its-a-secret');
+      expect(sub.secret).toBe('shh-its-a-secret');
     });
   });
 });

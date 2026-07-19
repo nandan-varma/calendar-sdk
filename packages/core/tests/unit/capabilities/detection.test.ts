@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { 
-  type CapabilityMap, 
-  CalendarCapabilityMap, 
-  EventCapabilityMap, 
-  SyncCapabilityMap, 
+import {
+  type CapabilityMap,
+  CalendarCapabilityMap,
+  EventCapabilityMap,
+  SyncCapabilityMap,
   AvailabilityCapabilityMap,
   defaultCapabilityMap,
   getCapabilitiesForProvider,
@@ -43,7 +43,7 @@ describe('Capability Model', () => {
   describe('getCapabilitiesForProvider', () => {
     it('should return full capabilities for Google', () => {
       const caps = getCapabilitiesForProvider('google');
-      
+
       expect(caps.calendars.create).toBe(true);
       expect(caps.calendars.share).toBe(true);
       expect(caps.events.move).toBe(true);
@@ -57,7 +57,7 @@ describe('Capability Model', () => {
 
     it('should return Microsoft-specific capabilities', () => {
       const caps = getCapabilitiesForProvider('microsoft');
-      
+
       expect(caps.calendars.share).toBe(true);
       expect(caps.events.move).toBe(true);
       expect(caps.events.conferenceData).toBe(true);
@@ -69,7 +69,7 @@ describe('Capability Model', () => {
 
     it('should return CalDAV-specific capabilities', () => {
       const caps = getCapabilitiesForProvider('caldav');
-      
+
       expect(caps.calendars.create).toBe(true);
       expect(caps.calendars.update).toBe(true);
       expect(caps.calendars.delete).toBe(true);
@@ -116,8 +116,23 @@ describe('Capability Model', () => {
   describe('CapabilityMap type', () => {
     it('should have calendar capabilities', () => {
       const caps: CapabilityMap = {
-        calendars: { create: true, update: true, delete: true, share: false, manageNotifications: false },
-        events: { list: true, create: true, update: true, delete: true, move: false, duplicate: false, attachments: false, conferenceData: false },
+        calendars: {
+          create: true,
+          update: true,
+          delete: true,
+          share: false,
+          manageNotifications: false,
+        },
+        events: {
+          list: true,
+          create: true,
+          update: true,
+          delete: true,
+          move: false,
+          duplicate: false,
+          attachments: false,
+          conferenceData: false,
+        },
         sync: { incremental: false, webhook: false, polling: true },
         availability: { freeBusy: true, suggestedTimes: false },
       };
@@ -131,13 +146,13 @@ describe('Capability Model', () => {
   describe('Provider capability discovery', () => {
     it('should allow checking specific capabilities', () => {
       const googleCaps = getCapabilitiesForProvider('google');
-      
+
       // Calendar operations
       expect(googleCaps.calendars.create).toBeDefined();
       expect(googleCaps.calendars.update).toBeDefined();
       expect(googleCaps.calendars.delete).toBeDefined();
       expect(googleCaps.calendars.share).toBeDefined();
-      
+
       // Event operations
       expect(googleCaps.events.list).toBeDefined();
       expect(googleCaps.events.create).toBeDefined();
@@ -147,12 +162,12 @@ describe('Capability Model', () => {
       expect(googleCaps.events.duplicate).toBeDefined();
       expect(googleCaps.events.attachments).toBeDefined();
       expect(googleCaps.events.conferenceData).toBeDefined();
-      
+
       // Sync
       expect(googleCaps.sync.incremental).toBeDefined();
       expect(googleCaps.sync.webhook).toBeDefined();
       expect(googleCaps.sync.polling).toBeDefined();
-      
+
       // Availability
       expect(googleCaps.availability.freeBusy).toBeDefined();
       expect(googleCaps.availability.suggestedTimes).toBeDefined();
@@ -160,16 +175,16 @@ describe('Capability Model', () => {
 
     it('should provide boolean values for feature detection', () => {
       const caps = getCapabilitiesForProvider('google');
-      
+
       // These should be simple booleans for easy conditional checks
       if (caps.events.conferenceData) {
         expect(true).toBe(true); // Conference data supported
       }
-      
+
       if (!caps.sync.webhook) {
         expect(true).toBe(true); // Webhooks not supported
       }
-      
+
       const canMoveEvents = caps.events.move && caps.events.update;
       expect(typeof canMoveEvents).toBe('boolean');
     });

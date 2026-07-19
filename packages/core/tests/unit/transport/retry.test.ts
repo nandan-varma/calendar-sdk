@@ -3,7 +3,7 @@ import { createTransport, defaultRetryOptions } from '../../../src/transport/ind
 
 describe('Transport', () => {
   let fetchMock: ReturnType<typeof vi.fn>;
-  
+
   beforeEach(() => {
     fetchMock = vi.fn();
   });
@@ -20,7 +20,7 @@ describe('Transport', () => {
         baseUrl: 'https://api.example.com',
         timeout: 5000,
       });
-      
+
       expect(transport).toBeDefined();
     });
   });
@@ -33,15 +33,15 @@ describe('Transport', () => {
         headers: new Headers({ 'content-type': 'application/json' }),
         json: () => Promise.resolve({ data: 'test' }),
       };
-      
+
       fetchMock.mockResolvedValueOnce(mockResponse);
-      
+
       const transport = createTransport('google', { fetch: fetchMock as any });
-      
+
       const result = await transport.request({
         path: '/test',
       });
-      
+
       expect(fetchMock).toHaveBeenCalled();
       expect(result.status).toBe(200);
       expect(result.data).toEqual({ data: 'test' });
@@ -54,16 +54,19 @@ describe('Transport', () => {
         headers: new Headers({ 'content-type': 'application/json' }),
         json: () => Promise.resolve({ items: [] }),
       };
-      
+
       fetchMock.mockResolvedValueOnce(mockResponse);
-      
-      const transport = createTransport('google', { fetch: fetchMock as any, baseUrl: 'https://api.example.com' });
-      
+
+      const transport = createTransport('google', {
+        fetch: fetchMock as any,
+        baseUrl: 'https://api.example.com',
+      });
+
       await transport.request({
         path: '/items',
         query: { page: '1', limit: '10' },
       });
-      
+
       expect(fetchMock).toHaveBeenCalledWith(
         'https://api.example.com/items?page=1&limit=10',
         expect.any(Object)
@@ -77,17 +80,17 @@ describe('Transport', () => {
         headers: new Headers({ 'content-type': 'application/json' }),
         json: () => Promise.resolve({ id: '123' }),
       };
-      
+
       fetchMock.mockResolvedValueOnce(mockResponse);
-      
+
       const transport = createTransport('google', { fetch: fetchMock as any });
-      
+
       const result = await transport.request({
         method: 'POST',
         path: '/events',
         body: { title: 'Test Event' },
       });
-      
+
       expect(result.status).toBe(201);
       expect(result.data).toEqual({ id: '123' });
     });
@@ -99,16 +102,16 @@ describe('Transport', () => {
         headers: new Headers(),
         json: () => Promise.resolve(null),
       };
-      
+
       fetchMock.mockResolvedValueOnce(mockResponse);
-      
+
       const transport = createTransport('google', { fetch: fetchMock as any });
-      
+
       const result = await transport.request({
         method: 'DELETE',
         path: '/events/123',
       });
-      
+
       expect(result.status).toBe(204);
       expect(result.data).toBeNull();
     });
@@ -122,27 +125,25 @@ describe('Transport', () => {
         headers: new Headers({ 'content-type': 'application/json' }),
         json: () => Promise.resolve({ error: { message: 'Rate limited' } }),
       };
-      
+
       const successResponse = {
         ok: true,
         status: 200,
         headers: new Headers({ 'content-type': 'application/json' }),
         json: () => Promise.resolve({ data: 'success' }),
       };
-      
-      fetchMock
-        .mockResolvedValueOnce(errorResponse)
-        .mockResolvedValueOnce(successResponse);
-      
-      const transport = createTransport('google', { 
+
+      fetchMock.mockResolvedValueOnce(errorResponse).mockResolvedValueOnce(successResponse);
+
+      const transport = createTransport('google', {
         fetch: fetchMock as any,
         retryOptions: { ...defaultRetryOptions, maxRetries: 1 },
       });
-      
+
       const result = await transport.request({
         path: '/test',
       });
-      
+
       expect(fetchMock).toHaveBeenCalledTimes(2);
       expect(result.data).toEqual({ data: 'success' });
     });
@@ -154,27 +155,25 @@ describe('Transport', () => {
         headers: new Headers({ 'content-type': 'application/json' }),
         json: () => Promise.resolve({ error: 'Internal Server Error' }),
       };
-      
+
       const successResponse = {
         ok: true,
         status: 200,
         headers: new Headers({ 'content-type': 'application/json' }),
         json: () => Promise.resolve({ data: 'success' }),
       };
-      
-      fetchMock
-        .mockResolvedValueOnce(errorResponse)
-        .mockResolvedValueOnce(successResponse);
-      
-      const transport = createTransport('google', { 
+
+      fetchMock.mockResolvedValueOnce(errorResponse).mockResolvedValueOnce(successResponse);
+
+      const transport = createTransport('google', {
         fetch: fetchMock as any,
         retryOptions: { ...defaultRetryOptions, maxRetries: 1 },
       });
-      
+
       const result = await transport.request({
         path: '/test',
       });
-      
+
       expect(result.data).toEqual({ data: 'success' });
     });
 
@@ -185,14 +184,14 @@ describe('Transport', () => {
         headers: new Headers({ 'content-type': 'application/json' }),
         json: () => Promise.resolve({ error: 'Not Found' }),
       };
-      
+
       fetchMock.mockResolvedValueOnce(errorResponse);
-      
-      const transport = createTransport('google', { 
+
+      const transport = createTransport('google', {
         fetch: fetchMock as any,
         retryOptions: { ...defaultRetryOptions, maxRetries: 1 },
       });
-      
+
       try {
         await transport.request({
           path: '/test',
@@ -206,33 +205,31 @@ describe('Transport', () => {
       const errorResponse = {
         ok: false,
         status: 429,
-        headers: new Headers({ 
+        headers: new Headers({
           'content-type': 'application/json',
           'retry-after': '2',
         }),
         json: () => Promise.resolve({ error: { message: 'Rate limited' } }),
       };
-      
+
       const successResponse = {
         ok: true,
         status: 200,
         headers: new Headers({ 'content-type': 'application/json' }),
         json: () => Promise.resolve({ data: 'success' }),
       };
-      
-      fetchMock
-        .mockResolvedValueOnce(errorResponse)
-        .mockResolvedValueOnce(successResponse);
-      
-      const transport = createTransport('google', { 
+
+      fetchMock.mockResolvedValueOnce(errorResponse).mockResolvedValueOnce(successResponse);
+
+      const transport = createTransport('google', {
         fetch: fetchMock as any,
         retryOptions: { ...defaultRetryOptions, maxRetries: 1 },
       });
-      
+
       const start = Date.now();
       await transport.request({ path: '/test' });
       const elapsed = Date.now() - start;
-      
+
       expect(elapsed).toBeGreaterThanOrEqual(2000);
     });
   });
@@ -240,9 +237,9 @@ describe('Transport', () => {
   describe('Error handling', () => {
     it('should throw on network error', async () => {
       fetchMock.mockRejectedValueOnce(new Error('Network error'));
-      
+
       const transport = createTransport('google', { fetch: fetchMock as any });
-      
+
       try {
         await transport.request({ path: '/test' });
       } catch (e: any) {
@@ -252,7 +249,7 @@ describe('Transport', () => {
 
     it('should handle timeout', async () => {
       fetchMock.mockRejectedValueOnce(
-        Object.assign(new Error('The operation was aborted'), { name: 'AbortError' }),
+        Object.assign(new Error('The operation was aborted'), { name: 'AbortError' })
       );
 
       const transport = createTransport('google', {
@@ -276,16 +273,16 @@ describe('Transport', () => {
         headers: new Headers({ 'content-type': 'application/json' }),
         json: () => Promise.resolve({}),
       };
-      
+
       fetchMock.mockResolvedValueOnce(mockResponse);
-      
+
       const transport = createTransport('google', { fetch: fetchMock as any });
-      
+
       await transport.request({
         path: '/test',
         headers: { 'X-Custom-Header': 'value' },
       });
-      
+
       expect(fetchMock).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({
@@ -301,17 +298,17 @@ describe('Transport', () => {
         headers: new Headers({ 'content-type': 'application/json' }),
         json: () => Promise.resolve({}),
       };
-      
+
       fetchMock.mockResolvedValueOnce(mockResponse);
-      
+
       const transport = createTransport('google', { fetch: fetchMock as any });
-      
+
       await transport.request({
         method: 'POST',
         path: '/test',
         body: { key: 'value' },
       });
-      
+
       expect(fetchMock).toHaveBeenCalledWith(
         expect.any(String),
         expect.objectContaining({

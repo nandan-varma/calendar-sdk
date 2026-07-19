@@ -36,9 +36,7 @@
   "description": "CalDAV / iCloud calendar provider adapter for @nandan-varma/calendar-sdk",
   "license": "MIT",
   "author": "Nandan Varma",
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "sideEffects": false,
   "keywords": [
     "calendar",

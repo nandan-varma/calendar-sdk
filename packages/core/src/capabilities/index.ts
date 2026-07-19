@@ -80,7 +80,7 @@ export function getCapabilitiesForProvider(
   provider: 'google' | 'microsoft' | 'caldav'
 ): CapabilityMap {
   const base = defaultCapabilityMap;
-  
+
   switch (provider) {
     case 'google':
       return {

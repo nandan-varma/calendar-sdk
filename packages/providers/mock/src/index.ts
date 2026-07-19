@@ -47,7 +47,16 @@ interface ChangeLogEntry {
 export function createMockProvider(config: MockProviderConfig = {}): ProviderAdapter {
   const calendars = new Map<string, StoredCalendar>();
   const events = new Map<string, StoredEvent>();
-  const subscriptions = new Map<string, { id: string; resource: string; webhookUrl?: string; leaseExpiry: Date; status: 'active' | 'expired' }>();
+  const subscriptions = new Map<
+    string,
+    {
+      id: string;
+      resource: string;
+      webhookUrl?: string;
+      leaseExpiry: Date;
+      status: 'active' | 'expired';
+    }
+  >();
   const changeLog: ChangeLogEntry[] = [];
   let version = 0;
 
@@ -70,7 +79,11 @@ export function createMockProvider(config: MockProviderConfig = {}): ProviderAda
   function requireCalendar(id: string): StoredCalendar {
     const calendar = calendars.get(id);
     if (!calendar) {
-      throw new CalendarSdkError({ code: 'NOT_FOUND', message: `Mock calendar not found: ${id}`, provider: 'mock' });
+      throw new CalendarSdkError({
+        code: 'NOT_FOUND',
+        message: `Mock calendar not found: ${id}`,
+        provider: 'mock',
+      });
     }
     return calendar;
   }
@@ -169,15 +182,15 @@ export function createMockProvider(config: MockProviderConfig = {}): ProviderAda
   const eventsApi: EventsProviderMethods = {
     list: async (_token, calendarId, query) => {
       requireCalendar(calendarId);
-      let items = [...events.values()].filter(e => e.calendarId === calendarId);
+      let items = [...events.values()].filter((e) => e.calendarId === calendarId);
 
       if (query?.timeMin) {
         const min = query.timeMin;
-        items = items.filter(e => toDate(e.end) >= min);
+        items = items.filter((e) => toDate(e.end) >= min);
       }
       if (query?.timeMax) {
         const max = query.timeMax;
-        items = items.filter(e => toDate(e.start) <= max);
+        items = items.filter((e) => toDate(e.start) <= max);
       }
 
       return { items: items.map(toEvent) };
@@ -186,7 +199,10 @@ export function createMockProvider(config: MockProviderConfig = {}): ProviderAda
     get: async (_token, calendarId, id) => {
       const event = requireEvent(id);
       if (event.calendarId !== calendarId) {
-        throw new CalendarSdkError({ code: 'NOT_FOUND', message: `Mock event not found in calendar ${calendarId}: ${id}` });
+        throw new CalendarSdkError({
+          code: 'NOT_FOUND',
+          message: `Mock event not found in calendar ${calendarId}: ${id}`,
+        });
       }
       return toEvent(event);
     },
@@ -209,7 +225,11 @@ export function createMockProvider(config: MockProviderConfig = {}): ProviderAda
         status: input.status ?? 'confirmed',
         transparency: input.transparency ?? 'opaque',
         visibility: input.visibility ?? 'default',
-        attendees: (input.attendees ?? []).map(a => ({ email: a.email, displayName: a.displayName, responseStatus: 'needsAction' as const })),
+        attendees: (input.attendees ?? []).map((a) => ({
+          email: a.email,
+          displayName: a.displayName,
+          responseStatus: 'needsAction' as const,
+        })),
         reminders: input.reminders,
         recurrence: input.recurrence,
         recurrenceMaster: !input.recurrence,
@@ -239,9 +259,16 @@ export function createMockProvider(config: MockProviderConfig = {}): ProviderAda
         status: patch.status ?? existing.status,
         transparency: patch.transparency ?? existing.transparency,
         visibility: patch.visibility ?? existing.visibility,
-        attendees: patch.attendees ? patch.attendees.map(a => ({ email: a.email, displayName: a.displayName, responseStatus: 'needsAction' as const })) : existing.attendees,
+        attendees: patch.attendees
+          ? patch.attendees.map((a) => ({
+              email: a.email,
+              displayName: a.displayName,
+              responseStatus: 'needsAction' as const,
+            }))
+          : existing.attendees,
         reminders: patch.reminders ?? existing.reminders,
-        recurrence: patch.recurrence === null ? undefined : (patch.recurrence ?? existing.recurrence),
+        recurrence:
+          patch.recurrence === null ? undefined : (patch.recurrence ?? existing.recurrence),
         updatedAt: new Date(),
       };
       events.set(id, updated);
@@ -258,7 +285,10 @@ export function createMockProvider(config: MockProviderConfig = {}): ProviderAda
     move: async (_token, eventId, sourceCalendarId, targetCalendarId) => {
       const event = requireEvent(eventId);
       if (event.calendarId !== sourceCalendarId) {
-        throw new CalendarSdkError({ code: 'VALIDATION_FAILED', message: 'Event does not belong to the source calendar' });
+        throw new CalendarSdkError({
+          code: 'VALIDATION_FAILED',
+          message: 'Event does not belong to the source calendar',
+        });
       }
       requireCalendar(targetCalendarId);
       const moved: StoredEvent = { ...event, calendarId: targetCalendarId, updatedAt: new Date() };
@@ -273,7 +303,14 @@ export function createMockProvider(config: MockProviderConfig = {}): ProviderAda
       requireCalendar(targetCalendarId);
       const id = randomUUID();
       const now = new Date();
-      const duplicated: StoredEvent = { ...source, id, providerId: id, calendarId: targetCalendarId, createdAt: now, updatedAt: now };
+      const duplicated: StoredEvent = {
+        ...source,
+        id,
+        providerId: id,
+        calendarId: targetCalendarId,
+        createdAt: now,
+        updatedAt: now,
+      };
       events.set(id, duplicated);
       recordChange(targetCalendarId, { type: 'created', event: toEvent(duplicated) });
       return toEvent(duplicated);
@@ -285,33 +322,39 @@ export function createMockProvider(config: MockProviderConfig = {}): ProviderAda
       // Minimal expansion: mock doesn't implement RRULE math, just echoes the master occurrence if it's in range.
       const start = toDate(event.start);
       if (start < timeMin || start > timeMax) return [];
-      return [{
-        id: `${eventId}-0`,
-        eventId,
-        title: event.title,
-        start: event.start,
-        end: event.end,
-        allDay: event.allDay,
-        status: event.status,
-        location: event.location,
-        recurrenceException: false,
-      }];
+      return [
+        {
+          id: `${eventId}-0`,
+          eventId,
+          title: event.title,
+          start: event.start,
+          end: event.end,
+          allDay: event.allDay,
+          status: event.status,
+          location: event.location,
+          recurrenceException: false,
+        },
+      ];
     },
   };
 
   const availabilityApi: AvailabilityProviderMethods = {
     freeBusy: async (_token, query) => {
-      const result: Record<string, Array<{ start: Date; end: Date; status: 'free' | 'busy' | 'tentative' | 'unknown' }>> = {};
+      const result: Record<
+        string,
+        Array<{ start: Date; end: Date; status: 'free' | 'busy' | 'tentative' | 'unknown' }>
+      > = {};
 
       for (const calendarId of query.calendars) {
-        const busy = [...events.values()].filter(e =>
-          e.calendarId === calendarId &&
-          e.status !== 'cancelled' &&
-          e.transparency !== 'transparent' &&
-          toDate(e.end) >= query.timeMin &&
-          toDate(e.start) <= query.timeMax
+        const busy = [...events.values()].filter(
+          (e) =>
+            e.calendarId === calendarId &&
+            e.status !== 'cancelled' &&
+            e.transparency !== 'transparent' &&
+            toDate(e.end) >= query.timeMin &&
+            toDate(e.start) <= query.timeMax
         );
-        result[calendarId] = busy.map(e => ({
+        result[calendarId] = busy.map((e) => ({
           start: toDate(e.start),
           end: toDate(e.end),
           status: 'busy' as const,
@@ -322,29 +365,42 @@ export function createMockProvider(config: MockProviderConfig = {}): ProviderAda
     },
 
     suggestMeeting: async (_token, query) => ({
-      meetingSuggestions: [{
-        meetingTime: query.timeMin,
-        confidence: 1,
-        organizerAvailability: 'free',
-        attendeeAvailability: Object.fromEntries(query.attendees.map(a => [a, 'free' as const])),
-        meetingDuration: query.meetingDuration,
-      }],
+      meetingSuggestions: [
+        {
+          meetingTime: query.timeMin,
+          confidence: 1,
+          organizerAvailability: 'free',
+          attendeeAvailability: Object.fromEntries(
+            query.attendees.map((a) => [a, 'free' as const])
+          ),
+          meetingDuration: query.meetingDuration,
+        },
+      ],
     }),
   };
 
   const syncApi: SyncProviderMethods = {
     fullSync: async (_token, calendarId, options) => {
       requireCalendar(calendarId);
-      let items = [...events.values()].filter(e => e.calendarId === calendarId);
-      if (options?.timeMin) items = items.filter(e => toDate(e.end) >= options.timeMin!);
-      if (options?.timeMax) items = items.filter(e => toDate(e.start) <= options.timeMax!);
+      let items = [...events.values()].filter((e) => e.calendarId === calendarId);
+      if (options?.timeMin) items = items.filter((e) => toDate(e.end) >= options.timeMin!);
+      if (options?.timeMax) items = items.filter((e) => toDate(e.start) <= options.timeMax!);
 
       return {
         accountId: '',
         scope: 'events',
-        events: items.map(e => ({ type: 'created' as const, event: toEvent(e) })),
+        events: items.map((e) => ({ type: 'created' as const, event: toEvent(e) })),
         deletions: [],
-        nextCursor: { id: randomUUID(), provider: 'mock', accountId: '', scope: 'events', token: String(version), expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), createdAt: new Date(), updatedAt: new Date() },
+        nextCursor: {
+          id: randomUUID(),
+          provider: 'mock',
+          accountId: '',
+          scope: 'events',
+          token: String(version),
+          expiry: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
         expiredToken: false,
         hasMore: false,
       };
@@ -353,12 +409,14 @@ export function createMockProvider(config: MockProviderConfig = {}): ProviderAda
     incrementalSync: async (_token, calendarId, cursor) => {
       requireCalendar(calendarId);
       const since = Number(cursor.token) || 0;
-      const changes = changeLog.filter(entry => entry.calendarId === calendarId && entry.version > since);
+      const changes = changeLog.filter(
+        (entry) => entry.calendarId === calendarId && entry.version > since
+      );
 
       return {
         accountId: '',
         scope: 'events',
-        events: changes.map(entry => entry.change),
+        events: changes.map((entry) => entry.change),
         deletions: [],
         nextCursor: { ...cursor, token: String(version), updatedAt: new Date() },
         expiredToken: false,
@@ -371,7 +429,13 @@ export function createMockProvider(config: MockProviderConfig = {}): ProviderAda
     create: async (_token, subConfig) => {
       const id = randomUUID();
       const leaseExpiry = new Date(Date.now() + (subConfig.leaseDurationSeconds ?? 3600) * 1000);
-      subscriptions.set(id, { id, resource: subConfig.resource, webhookUrl: subConfig.webhookUrl, leaseExpiry, status: 'active' });
+      subscriptions.set(id, {
+        id,
+        resource: subConfig.resource,
+        webhookUrl: subConfig.webhookUrl,
+        leaseExpiry,
+        status: 'active',
+      });
       return {
         id,
         accountId: '',
@@ -389,7 +453,11 @@ export function createMockProvider(config: MockProviderConfig = {}): ProviderAda
 
     renew: async (_token, subscriptionId) => {
       const sub = subscriptions.get(subscriptionId);
-      if (!sub) throw new CalendarSdkError({ code: 'NOT_FOUND', message: `Mock subscription not found: ${subscriptionId}` });
+      if (!sub)
+        throw new CalendarSdkError({
+          code: 'NOT_FOUND',
+          message: `Mock subscription not found: ${subscriptionId}`,
+        });
       sub.leaseExpiry = new Date(Date.now() + 3600 * 1000);
       sub.status = 'active';
       return {
@@ -410,22 +478,27 @@ export function createMockProvider(config: MockProviderConfig = {}): ProviderAda
       subscriptions.delete(subscriptionId);
     },
 
-    list: async () => [...subscriptions.values()].map(sub => ({
-      id: sub.id,
-      accountId: '',
-      provider: 'mock',
-      resource: sub.resource,
-      webhookUrl: sub.webhookUrl,
-      leaseExpiry: sub.leaseExpiry,
-      renewalPolicy: 'auto' as const,
-      status: sub.status,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })),
+    list: async () =>
+      [...subscriptions.values()].map((sub) => ({
+        id: sub.id,
+        accountId: '',
+        provider: 'mock',
+        resource: sub.resource,
+        webhookUrl: sub.webhookUrl,
+        leaseExpiry: sub.leaseExpiry,
+        renewalPolicy: 'auto' as const,
+        status: sub.status,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      })),
 
     get: async (_token, subscriptionId) => {
       const sub = subscriptions.get(subscriptionId);
-      if (!sub) throw new CalendarSdkError({ code: 'NOT_FOUND', message: `Mock subscription not found: ${subscriptionId}` });
+      if (!sub)
+        throw new CalendarSdkError({
+          code: 'NOT_FOUND',
+          message: `Mock subscription not found: ${subscriptionId}`,
+        });
       return {
         id: sub.id,
         accountId: '',
@@ -468,7 +541,16 @@ export function createMockProvider(config: MockProviderConfig = {}): ProviderAda
 function fullCapabilities() {
   return {
     calendars: { create: true, update: true, delete: true, share: true, manageNotifications: true },
-    events: { list: true, create: true, update: true, delete: true, move: true, duplicate: true, attachments: true, conferenceData: true },
+    events: {
+      list: true,
+      create: true,
+      update: true,
+      delete: true,
+      move: true,
+      duplicate: true,
+      attachments: true,
+      conferenceData: true,
+    },
     sync: { incremental: true, webhook: true, polling: true },
     availability: { freeBusy: true, suggestedTimes: true },
   };
@@ -487,7 +569,13 @@ function toCalendar(stored: StoredCalendar) {
     readOnly: false,
     hidden: false,
     accessRole: 'owner' as const,
-    capabilities: { create: true, update: true, delete: true, share: true, manageNotifications: true },
+    capabilities: {
+      create: true,
+      update: true,
+      delete: true,
+      share: true,
+      manageNotifications: true,
+    },
     raw: {},
     extensions: {},
     createdAt: new Date(),

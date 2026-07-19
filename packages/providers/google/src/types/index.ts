@@ -166,7 +166,8 @@ export interface GoogleTokenResponse {
   refresh_token?: string;
   scope: string;
   token_type: string;
-  expiry_date: number;
+  /** Seconds until expiry, as returned by Google's token endpoint (not an absolute timestamp). */
+  expires_in: number;
 }
 
 export interface GoogleAclRule {

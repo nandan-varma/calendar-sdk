@@ -59,19 +59,30 @@ describe('createGoogleProvider', () => {
     });
 
     it('exchanges a code for a token set', async () => {
-      fetchMock.mockResolvedValueOnce(jsonResponse({
-        access_token: 'new-access',
-        refresh_token: 'new-refresh',
-        expiry_date: Date.now() + 3600_000,
-        token_type: 'Bearer',
-        scope: 'https://www.googleapis.com/auth/calendar',
-      }));
+      const before = Date.now();
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({
+          access_token: 'new-access',
+          refresh_token: 'new-refresh',
+          expires_in: 3600,
+          token_type: 'Bearer',
+          scope: 'https://www.googleapis.com/auth/calendar',
+        })
+      );
 
-      const tokens = await provider().auth.exchangeCode('auth-code', 'https://app.example.com/callback');
+      const tokens = await provider().auth.exchangeCode(
+        'auth-code',
+        'https://app.example.com/callback'
+      );
 
       expect(tokens.accessToken).toBe('new-access');
       expect(tokens.refreshToken).toBe('new-refresh');
       expect(tokens.scope).toEqual(['https://www.googleapis.com/auth/calendar']);
+      // Google's real token endpoint returns `expires_in` (relative seconds), not an absolute
+      // `expiry_date` - assert the computed expiresAt actually lands ~1hr out, not Invalid Date.
+      expect(tokens.expiresAt).toBeInstanceOf(Date);
+      expect(tokens.expiresAt!.getTime()).toBeGreaterThanOrEqual(before + 3600_000);
+      expect(tokens.expiresAt!.getTime()).toBeLessThanOrEqual(Date.now() + 3600_000);
 
       const [url, init] = fetchMock.mock.calls[0];
       expect(url).toBe('https://oauth2.googleapis.com/token');
@@ -82,17 +93,21 @@ describe('createGoogleProvider', () => {
     });
 
     it('refreshes a token, preserving the original refresh token', async () => {
-      fetchMock.mockResolvedValueOnce(jsonResponse({
-        access_token: 'rotated-access',
-        expiry_date: Date.now() + 3600_000,
-        token_type: 'Bearer',
-        scope: 'https://www.googleapis.com/auth/calendar',
-      }));
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({
+          access_token: 'rotated-access',
+          expires_in: 3600,
+          token_type: 'Bearer',
+          scope: 'https://www.googleapis.com/auth/calendar',
+        })
+      );
 
       const tokens = await provider().auth.refreshToken({ refreshToken: 'existing-refresh' });
 
       expect(tokens.accessToken).toBe('rotated-access');
       expect(tokens.refreshToken).toBe('existing-refresh');
+      expect(tokens.expiresAt).toBeInstanceOf(Date);
+      expect(Number.isNaN(tokens.expiresAt!.getTime())).toBe(false);
 
       const [, init] = fetchMock.mock.calls[0];
       const body = new URLSearchParams(init.body);
@@ -113,12 +128,14 @@ describe('createGoogleProvider', () => {
 
   describe('accounts.getAccount', () => {
     it('maps the userinfo response to a canonical Account', async () => {
-      fetchMock.mockResolvedValueOnce(jsonResponse({
-        kind: 'plus#person',
-        id: 'user-1',
-        email: 'ada@example.com',
-        name: 'Ada Lovelace',
-      }));
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({
+          kind: 'plus#person',
+          id: 'user-1',
+          email: 'ada@example.com',
+          name: 'Ada Lovelace',
+        })
+      );
 
       const account = await provider().accounts.getAccount(TOKEN);
 
@@ -134,14 +151,30 @@ describe('createGoogleProvider', () => {
 
   describe('calendars', () => {
     it('lists calendars and maps access role to capabilities', async () => {
-      fetchMock.mockResolvedValueOnce(jsonResponse({
-        kind: 'calendar#calendarList',
-        etag: 'x',
-        items: [
-          { kind: 'x', etag: 'x', id: 'cal-1', summary: 'Primary', accessRole: 'owner', selected: true },
-          { kind: 'x', etag: 'x', id: 'cal-2', summary: 'Team', accessRole: 'reader', selected: false },
-        ],
-      }));
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({
+          kind: 'calendar#calendarList',
+          etag: 'x',
+          items: [
+            {
+              kind: 'x',
+              etag: 'x',
+              id: 'cal-1',
+              summary: 'Primary',
+              accessRole: 'owner',
+              selected: true,
+            },
+            {
+              kind: 'x',
+              etag: 'x',
+              id: 'cal-2',
+              summary: 'Team',
+              accessRole: 'reader',
+              selected: false,
+            },
+          ],
+        })
+      );
 
       const result = await provider().calendars.list(TOKEN);
 
@@ -152,7 +185,9 @@ describe('createGoogleProvider', () => {
     });
 
     it('creates a calendar with the mapped request body', async () => {
-      fetchMock.mockResolvedValueOnce(jsonResponse({ id: 'new-cal', summary: 'Team events', timeZone: 'UTC' }));
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({ id: 'new-cal', summary: 'Team events', timeZone: 'UTC' })
+      );
 
       await provider().calendars.create(TOKEN, { name: 'Team events', timezone: 'UTC' });
 
@@ -170,11 +205,17 @@ describe('createGoogleProvider', () => {
     it('shares a calendar via the ACL insert endpoint', async () => {
       fetchMock.mockResolvedValueOnce(jsonResponse({ id: 'user:ada@example.com', role: 'reader' }));
 
-      await provider().calendars.share!(TOKEN, 'cal-1', { email: 'ada@example.com', role: 'reader' });
+      await provider().calendars.share!(TOKEN, 'cal-1', {
+        email: 'ada@example.com',
+        role: 'reader',
+      });
 
       const [url, init] = fetchMock.mock.calls[0];
       expect(url).toBe('https://www.googleapis.com/calendar/v3/calendars/cal-1/acl');
-      expect(JSON.parse(init.body)).toEqual({ role: 'reader', scope: { type: 'user', value: 'ada@example.com' } });
+      expect(JSON.parse(init.body)).toEqual({
+        role: 'reader',
+        scope: { type: 'user', value: 'ada@example.com' },
+      });
     });
   });
 
@@ -258,12 +299,16 @@ describe('createGoogleProvider', () => {
       await provider().events.move(TOKEN, 'evt-1', 'cal-1', 'cal-2');
 
       const [url] = fetchMock.mock.calls[0];
-      expect(url).toBe('https://www.googleapis.com/calendar/v3/calendars/cal-1/events/evt-1/move?destination=cal-2');
+      expect(url).toBe(
+        'https://www.googleapis.com/calendar/v3/calendars/cal-1/events/evt-1/move?destination=cal-2'
+      );
     });
 
     it('duplicates an event by cloning the source payload without identity fields', async () => {
       fetchMock
-        .mockResolvedValueOnce(jsonResponse({ ...googleEvent, htmlLink: 'x', created: 'x', updated: 'x' }))
+        .mockResolvedValueOnce(
+          jsonResponse({ ...googleEvent, htmlLink: 'x', created: 'x', updated: 'x' })
+        )
         .mockResolvedValueOnce(jsonResponse({ ...googleEvent, id: 'evt-2' }));
 
       await provider().events.duplicate(TOKEN, 'evt-1', 'cal-2');
@@ -280,13 +325,15 @@ describe('createGoogleProvider', () => {
 
   describe('availability', () => {
     it('computes free/busy from the vendor response', async () => {
-      fetchMock.mockResolvedValueOnce(jsonResponse({
-        kind: 'x',
-        timeZone: 'UTC',
-        calendars: {
-          'cal-1': { busy: [{ start: '2026-08-01T09:00:00Z', end: '2026-08-01T10:00:00Z' }] },
-        },
-      }));
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({
+          kind: 'x',
+          timeZone: 'UTC',
+          calendars: {
+            'cal-1': { busy: [{ start: '2026-08-01T09:00:00Z', end: '2026-08-01T10:00:00Z' }] },
+          },
+        })
+      );
 
       const result = await provider().availability.freeBusy(TOKEN, {
         timeMin: new Date('2026-08-01T00:00:00Z'),
@@ -307,12 +354,24 @@ describe('createGoogleProvider', () => {
 
   describe('sync', () => {
     it('full syncs events and returns a syncToken-based cursor', async () => {
-      fetchMock.mockResolvedValueOnce(jsonResponse({
-        kind: 'x',
-        etag: 'x',
-        items: [{ kind: 'x', etag: 'x', id: 'evt-1', status: 'confirmed', summary: 'Standup', start: { dateTime: '2026-08-01T10:00:00Z' }, end: { dateTime: '2026-08-01T10:15:00Z' } }],
-        nextSyncToken: 'sync-token-1',
-      }));
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({
+          kind: 'x',
+          etag: 'x',
+          items: [
+            {
+              kind: 'x',
+              etag: 'x',
+              id: 'evt-1',
+              status: 'confirmed',
+              summary: 'Standup',
+              start: { dateTime: '2026-08-01T10:00:00Z' },
+              end: { dateTime: '2026-08-01T10:15:00Z' },
+            },
+          ],
+          nextSyncToken: 'sync-token-1',
+        })
+      );
 
       const result = await provider().sync.fullSync(TOKEN, 'cal-1');
 
@@ -321,24 +380,42 @@ describe('createGoogleProvider', () => {
     });
 
     it('treats a 410 response as an expired cursor instead of throwing', async () => {
-      fetchMock.mockResolvedValueOnce(jsonResponse({ error: { code: 410, message: 'Sync token is no longer valid' } }, 410));
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({ error: { code: 410, message: 'Sync token is no longer valid' } }, 410)
+      );
 
       const result = await provider().sync.incrementalSync(TOKEN, 'cal-1', {
-        id: 'x', provider: 'google', accountId: 'a', scope: 'events', token: 'old-token', expiry: new Date(), createdAt: new Date(), updatedAt: new Date(),
+        id: 'x',
+        provider: 'google',
+        accountId: 'a',
+        scope: 'events',
+        token: 'old-token',
+        expiry: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
 
       expect(result.expiredToken).toBe(true);
     });
 
     it('maps a cancelled event to a deletion in incremental sync', async () => {
-      fetchMock.mockResolvedValueOnce(jsonResponse({
-        kind: 'x',
-        etag: 'x',
-        items: [{ kind: 'x', etag: 'x', id: 'evt-1', status: 'cancelled' }],
-      }));
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({
+          kind: 'x',
+          etag: 'x',
+          items: [{ kind: 'x', etag: 'x', id: 'evt-1', status: 'cancelled' }],
+        })
+      );
 
       const result = await provider().sync.incrementalSync(TOKEN, 'cal-1', {
-        id: 'x', provider: 'google', accountId: 'a', scope: 'events', token: 'sync-token', expiry: new Date(), createdAt: new Date(), updatedAt: new Date(),
+        id: 'x',
+        provider: 'google',
+        accountId: 'a',
+        scope: 'events',
+        token: 'sync-token',
+        expiry: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
       });
 
       expect(result.events).toEqual([{ type: 'deleted', eventId: 'evt-1' }]);
@@ -347,15 +424,20 @@ describe('createGoogleProvider', () => {
 
   describe('subscriptions', () => {
     it('creates a watch channel', async () => {
-      fetchMock.mockResolvedValueOnce(jsonResponse({
-        kind: 'api#channel',
-        channelId: 'channel-1',
-        resourceId: 'res-1',
-        resourceUri: 'https://x',
-        expiration: String(Date.now() + 3600_000),
-      }));
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({
+          kind: 'api#channel',
+          channelId: 'channel-1',
+          resourceId: 'res-1',
+          resourceUri: 'https://x',
+          expiration: String(Date.now() + 3600_000),
+        })
+      );
 
-      const sub = await provider().subscriptions.create(TOKEN, { resource: 'cal-1', webhookUrl: 'https://app.example.com/hook' });
+      const sub = await provider().subscriptions.create(TOKEN, {
+        resource: 'cal-1',
+        webhookUrl: 'https://app.example.com/hook',
+      });
 
       expect(sub.id).toBe('channel-1');
       expect(sub.status).toBe('active');
@@ -366,6 +448,28 @@ describe('createGoogleProvider', () => {
         code: 'CAPABILITY_UNSUPPORTED',
       });
     });
+
+    it('forwards a configured secret as the watch channel token, so it can be verified later', async () => {
+      fetchMock.mockResolvedValueOnce(
+        jsonResponse({
+          kind: 'api#channel',
+          channelId: 'channel-1',
+          resourceId: 'res-1',
+          resourceUri: 'https://x',
+          expiration: String(Date.now() + 3600_000),
+        })
+      );
+
+      const sub = await provider().subscriptions.create(TOKEN, {
+        resource: 'cal-1',
+        webhookUrl: 'https://app.example.com/hook',
+        secret: 'shh-its-a-secret',
+      });
+
+      const [, init] = fetchMock.mock.calls[0];
+      expect(JSON.parse(init.body).token).toBe('shh-its-a-secret');
+      expect(sub.secret).toBe('shh-its-a-secret');
+    });
   });
 
   describe('createTransport', () => {
@@ -373,9 +477,14 @@ describe('createGoogleProvider', () => {
       fetchMock.mockResolvedValueOnce(jsonResponse({ ok: true }));
 
       const p = provider();
-      await p.createTransport().request({ path: 'https://www.googleapis.com/calendar/v3/users/me' });
+      await p
+        .createTransport()
+        .request({ path: 'https://www.googleapis.com/calendar/v3/users/me' });
 
-      expect(fetchMock).toHaveBeenCalledWith('https://www.googleapis.com/calendar/v3/users/me', expect.any(Object));
+      expect(fetchMock).toHaveBeenCalledWith(
+        'https://www.googleapis.com/calendar/v3/users/me',
+        expect.any(Object)
+      );
     });
   });
 });

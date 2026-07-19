@@ -23,7 +23,8 @@ const REDACTED = '[REDACTED]';
 function isSensitiveKey(key: string): boolean {
   const normalized = key.toLowerCase();
   return (
-    SENSITIVE_KEYS.some((sk) => normalized.includes(sk)) || SENSITIVE_EXACT_KEYS.includes(normalized)
+    SENSITIVE_KEYS.some((sk) => normalized.includes(sk)) ||
+    SENSITIVE_EXACT_KEYS.includes(normalized)
   );
 }
 

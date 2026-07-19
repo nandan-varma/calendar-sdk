@@ -22,7 +22,13 @@ if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
 }
 
 const sdk = createCalendarSdk({
-  providers: [createGoogleProvider({ clientId: GOOGLE_CLIENT_ID, clientSecret: GOOGLE_CLIENT_SECRET, redirectUri })],
+  providers: [
+    createGoogleProvider({
+      clientId: GOOGLE_CLIENT_ID,
+      clientSecret: GOOGLE_CLIENT_SECRET,
+      redirectUri,
+    }),
+  ],
 });
 
 const flow = createAuthFlow({
@@ -51,7 +57,11 @@ const server = createServer(async (req, res) => {
 
     const tokens = await flow.exchangeCode(code);
     const account = await sdk.accounts.connect('google', {
-      authInput: { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken },
+      authInput: {
+        accessToken: tokens.accessToken,
+        refreshToken: tokens.refreshToken,
+        expiresAt: tokens.expiresAt,
+      },
     });
 
     res.writeHead(200, { 'Content-Type': 'text/plain' });

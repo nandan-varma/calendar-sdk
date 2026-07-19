@@ -29,7 +29,9 @@ if (cursor) {
   const result = await sdk.sync.incrementalSync(account.id, cursor);
   console.log(`Incremental sync picked up ${result.events.length} change(s):`);
   for (const change of result.events) {
-    console.log(`  - ${change.type}: ${change.type === 'deleted' ? change.eventId : change.event.title}`);
+    console.log(
+      `  - ${change.type}: ${change.type === 'deleted' ? change.eventId : change.event.title}`
+    );
   }
   cursor = result.nextCursor ?? cursor;
 }

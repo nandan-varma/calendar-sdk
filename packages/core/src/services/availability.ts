@@ -1,4 +1,9 @@
-import type { FreeBusyQuery, FreeBusyResult, SuggestMeetingQuery, SuggestMeetingResult } from '../types/availability.js';
+import type {
+  FreeBusyQuery,
+  FreeBusyResult,
+  SuggestMeetingQuery,
+  SuggestMeetingResult,
+} from '../types/availability.js';
 import type { ProviderAdapter, TokenSet } from '../adapters/provider.js';
 import type { ProviderKey } from '../types/common.js';
 import type { StorageAdapter } from '../storage/index.js';
@@ -40,7 +45,11 @@ export class AvailabilityService {
       throw errors.authRequired(account.provider);
     }
 
-    this.logger.debug('Fetching free/busy', { accountId, timeMin: query.timeMin, timeMax: query.timeMax });
+    this.logger.debug('Fetching free/busy', {
+      accountId,
+      timeMin: query.timeMin,
+      timeMax: query.timeMax,
+    });
 
     const result = await provider.availability.freeBusy(token, query);
 
@@ -64,7 +73,10 @@ export class AvailabilityService {
       throw errors.authRequired(account.provider);
     }
 
-    this.logger.debug('Getting meeting time suggestions', { accountId, attendees: query.attendees.length });
+    this.logger.debug('Getting meeting time suggestions', {
+      accountId,
+      attendees: query.attendees.length,
+    });
 
     const result = await provider.availability.suggestMeeting(token, query);
 

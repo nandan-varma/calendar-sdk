@@ -1,11 +1,6 @@
 import type { RawProviderData, Extensions } from './common.js';
 
-export type CalendarAccessRole = 
-  | 'owner'
-  | 'writer'
-  | 'reader'
-  | 'freeBusyReader'
-  | 'none';
+export type CalendarAccessRole = 'owner' | 'writer' | 'reader' | 'freeBusyReader' | 'none';
 
 export interface Calendar {
   id: string;

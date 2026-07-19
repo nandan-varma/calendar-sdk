@@ -50,7 +50,7 @@ describe('Recurrence', () => {
     it('should parse daily recurrence', () => {
       const rrule = 'FREQ=DAILY;COUNT=5';
       const parsed = parseRRule(rrule);
-      
+
       expect(parsed.freq).toBe('daily');
       expect(parsed.count).toBe(5);
       expect(parsed.interval).toBe(1);
@@ -59,7 +59,7 @@ describe('Recurrence', () => {
     it('should parse weekly recurrence', () => {
       const rrule = 'FREQ=WEEKLY;BYDAY=MO,WE,FR;COUNT=10';
       const parsed = parseRRule(rrule);
-      
+
       expect(parsed.freq).toBe('weekly');
       expect(parsed.byDay).toContain('MO');
       expect(parsed.byDay).toContain('WE');
@@ -70,7 +70,7 @@ describe('Recurrence', () => {
     it('should parse monthly recurrence', () => {
       const rrule = 'FREQ=MONTHLY;BYMONTHDAY=15;COUNT=12';
       const parsed = parseRRule(rrule);
-      
+
       expect(parsed.freq).toBe('monthly');
       expect(parsed.byMonthDay).toContain(15);
       expect(parsed.count).toBe(12);
@@ -79,7 +79,7 @@ describe('Recurrence', () => {
     it('should parse yearly recurrence', () => {
       const rrule = 'FREQ=YEARLY;BYMONTH=1;BYDAY=MO;COUNT=5';
       const parsed = parseRRule(rrule);
-      
+
       expect(parsed.freq).toBe('yearly');
       expect(parsed.byMonth).toContain(1);
       expect(parsed.byDay).toContain('MO');
@@ -88,28 +88,28 @@ describe('Recurrence', () => {
     it('should parse with interval', () => {
       const rrule = 'FREQ=WEEKLY;INTERVAL=2;COUNT=6';
       const parsed = parseRRule(rrule);
-      
+
       expect(parsed.interval).toBe(2);
     });
 
     it('should parse with until date', () => {
       const rrule = 'FREQ=DAILY;UNTIL=20241231T235959Z';
       const parsed = parseRRule(rrule);
-      
+
       expect(parsed.until).toBeDefined();
     });
 
     it('should handle work week start (WKST)', () => {
       const rrule = 'FREQ=WEEKLY;WKST=MO;BYDAY=MO,TU,WE,TH,FR';
       const parsed = parseRRule(rrule);
-      
+
       expect(parsed.wkst).toBe('MO');
     });
 
     it('should parse complex recurrence', () => {
       const rrule = 'FREQ=WEEKLY;INTERVAL=2;BYDAY=TU,TH;COUNT=20;WKST=SU';
       const parsed = parseRRule(rrule);
-      
+
       expect(parsed.freq).toBe('weekly');
       expect(parsed.interval).toBe(2);
       expect(parsed.byDay).toContain('TU');
@@ -124,7 +124,7 @@ describe('Recurrence', () => {
       const start = new Date('2024-01-15T10:00:00Z');
       const rrule = 'FREQ=DAILY;COUNT=5';
       const occurrences = expandRecurrence(start, rrule, new Date('2024-01-20T00:00:00Z'));
-      
+
       expect(occurrences).toHaveLength(5);
       expect(occurrences[0].getDate()).toBe(15);
       expect(occurrences[4].getDate()).toBe(19);
@@ -134,7 +134,7 @@ describe('Recurrence', () => {
       const start = new Date('2024-01-15T10:00:00Z'); // Monday
       const rrule = 'FREQ=WEEKLY;COUNT=3';
       const occurrences = expandRecurrence(start, rrule, new Date('2024-02-01T00:00:00Z'));
-      
+
       expect(occurrences.length).toBeGreaterThanOrEqual(3);
     });
 
@@ -142,21 +142,21 @@ describe('Recurrence', () => {
       const start = new Date('2024-01-15T10:00:00Z');
       const rrule = 'FREQ=MONTHLY;COUNT=3';
       const occurrences = expandRecurrence(start, rrule, new Date('2024-04-01T00:00:00Z'));
-      
+
       expect(occurrences).toHaveLength(3);
     });
 
     it('should respect time boundaries', () => {
       const start = new Date('2024-01-15T10:00:00Z');
       const rrule = 'FREQ=DAILY;COUNT=10';
-      
+
       const rangeStart = new Date('2024-01-17T00:00:00Z');
       const rangeEnd = new Date('2024-01-20T00:00:00Z');
-      
+
       const occurrences = expandRecurrence(start, rrule, rangeEnd, rangeStart);
-      
+
       // Should only include occurrences within the range
-      occurrences.forEach(occ => {
+      occurrences.forEach((occ) => {
         expect(occ.getTime()).toBeGreaterThanOrEqual(rangeStart.getTime());
         expect(occ.getTime()).toBeLessThan(rangeEnd.getTime());
       });
@@ -166,8 +166,8 @@ describe('Recurrence', () => {
       const start = new Date('2024-01-15T10:00:00Z');
       const rrule = 'FREQ=MONTHLY;BYMONTHDAY=15;COUNT=3';
       const occurrences = expandRecurrence(start, rrule, new Date('2024-04-01T00:00:00Z'));
-      
-      occurrences.forEach(occ => {
+
+      occurrences.forEach((occ) => {
         expect(occ.getDate()).toBe(15);
       });
     });
@@ -176,7 +176,7 @@ describe('Recurrence', () => {
       const start = new Date('2024-01-15T10:00:00Z'); // Monday
       const rrule = 'FREQ=WEEKLY;BYDAY=MO,WE;COUNT=4';
       const occurrences = expandRecurrence(start, rrule, new Date('2024-01-31T00:00:00Z'));
-      
+
       expect(occurrences.length).toBeLessThanOrEqual(4);
     });
   });
@@ -191,7 +191,7 @@ function parseRRule(rrule: string): ParsedRecurrenceRule {
 
   for (const part of parts) {
     const [key, value] = part.split('=');
-    
+
     switch (key) {
       case 'FREQ':
         result.freq = value.toLowerCase() as ParsedRecurrenceRule['freq'];
@@ -209,10 +209,10 @@ function parseRRule(rrule: string): ParsedRecurrenceRule {
         result.byDay = value.split(',');
         break;
       case 'BYMONTHDAY':
-        result.byMonthDay = value.split(',').map(v => Number.parseInt(v, 10));
+        result.byMonthDay = value.split(',').map((v) => Number.parseInt(v, 10));
         break;
       case 'BYMONTH':
-        result.byMonth = value.split(',').map(v => Number.parseInt(v, 10));
+        result.byMonth = value.split(',').map((v) => Number.parseInt(v, 10));
         break;
       case 'WKST':
         result.wkst = value as ParsedRecurrenceRule['wkst'];
@@ -223,30 +223,25 @@ function parseRRule(rrule: string): ParsedRecurrenceRule {
   return result;
 }
 
-function expandRecurrence(
-  start: Date,
-  rrule: string,
-  endDate: Date,
-  rangeStart?: Date
-): Date[] {
+function expandRecurrence(start: Date, rrule: string, endDate: Date, rangeStart?: Date): Date[] {
   const parsed = parseRRule(rrule);
   const occurrences: Date[] = [];
   const effectiveStart = rangeStart || start;
-  
+
   const current = new Date(start);
   const count = parsed.count || 100;
-  
+
   while (occurrences.length < count && current.getTime() <= endDate.getTime()) {
     if (current.getTime() >= effectiveStart.getTime()) {
       occurrences.push(new Date(current));
     }
-    
+
     switch (parsed.freq) {
       case 'daily':
         current.setDate(current.getDate() + (parsed.interval || 1));
         break;
       case 'weekly':
-        current.setDate(current.getDate() + (7 * (parsed.interval || 1)));
+        current.setDate(current.getDate() + 7 * (parsed.interval || 1));
         break;
       case 'monthly':
         current.setMonth(current.getMonth() + (parsed.interval || 1));
@@ -257,11 +252,11 @@ function expandRecurrence(
       default:
         current.setDate(current.getDate() + 1);
     }
-    
+
     if (parsed.until && current.getTime() > parsed.until.getTime()) {
       break;
     }
   }
-  
+
   return occurrences;
 }

@@ -15,8 +15,23 @@ function fakeAccount(overrides: Partial<Account> = {}): Account {
     email: 'test@example.com',
     status: 'connected',
     capabilities: {
-      calendars: { create: true, update: true, delete: true, share: true, manageNotifications: true },
-      events: { list: true, create: true, update: true, delete: true, move: true, duplicate: true, attachments: true, conferenceData: true },
+      calendars: {
+        create: true,
+        update: true,
+        delete: true,
+        share: true,
+        manageNotifications: true,
+      },
+      events: {
+        list: true,
+        create: true,
+        update: true,
+        delete: true,
+        move: true,
+        duplicate: true,
+        attachments: true,
+        conferenceData: true,
+      },
       sync: { incremental: true, webhook: true, polling: true },
       availability: { freeBusy: true, suggestedTimes: true },
     },
@@ -78,11 +93,20 @@ describe('SubscriptionsService - hook emission', () => {
     const onSub = vi.fn();
     hooks.on('subscription', onSub);
 
-    getProvider.mockReturnValue(fakeProvider({
-      create: vi.fn().mockResolvedValue({ id: 'sub-1', resource: 'events', leaseExpiry: new Date(Date.now() + 3600_000) }),
-    }));
+    getProvider.mockReturnValue(
+      fakeProvider({
+        create: vi.fn().mockResolvedValue({
+          id: 'sub-1',
+          resource: 'events',
+          leaseExpiry: new Date(Date.now() + 3600_000),
+        }),
+      })
+    );
 
-    await service.create('account-1', { resource: 'events', notificationUrl: 'https://example.com/hook' });
+    await service.create('account-1', {
+      resource: 'events',
+      notificationUrl: 'https://example.com/hook',
+    });
 
     expect(onSub).toHaveBeenCalledWith(
       expect.objectContaining({ type: 'subscription', event: 'created', accountId: 'account-1' })
@@ -94,9 +118,11 @@ describe('SubscriptionsService - hook emission', () => {
     const onSub = vi.fn();
     hooks.on('subscription', onSub);
 
-    getProvider.mockReturnValue(fakeProvider({
-      renew: vi.fn().mockResolvedValue({ leaseExpiry: new Date(Date.now() + 7200_000) }),
-    }));
+    getProvider.mockReturnValue(
+      fakeProvider({
+        renew: vi.fn().mockResolvedValue({ leaseExpiry: new Date(Date.now() + 7200_000) }),
+      })
+    );
 
     await service.renew('sub-1');
 
@@ -124,15 +150,75 @@ describe('SubscriptionsService - hook emission', () => {
     const onSub = vi.fn();
     hooks.on('subscription', onSub);
 
-    await service.handleNotification({ subscriptionId: 'sub-1', timestamp: new Date(), resource: 'events' });
+    await service.handleNotification({
+      subscriptionId: 'sub-1',
+      timestamp: new Date(),
+      resource: 'events',
+    });
 
     expect(onSub).toHaveBeenCalledWith(
-      expect.objectContaining({ type: 'subscription', event: 'notification', accountId: 'account-1' })
+      expect.objectContaining({
+        type: 'subscription',
+        event: 'notification',
+        accountId: 'account-1',
+      })
     );
   });
 
+  it('accepts a notification whose token matches the subscription secret', async () => {
+    await storage.subscriptions.save(fakeSubscription({ secret: 'shh-its-a-secret' }));
+    const onSub = vi.fn();
+    hooks.on('subscription', onSub);
+
+    await service.handleNotification({
+      subscriptionId: 'sub-1',
+      timestamp: new Date(),
+      resource: 'events',
+      token: 'shh-its-a-secret',
+    });
+
+    expect(onSub).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'subscription',
+        event: 'notification',
+        accountId: 'account-1',
+      })
+    );
+  });
+
+  it('rejects a notification whose token does not match the subscription secret', async () => {
+    await storage.subscriptions.save(fakeSubscription({ secret: 'shh-its-a-secret' }));
+    const onSub = vi.fn();
+    hooks.on('subscription', onSub);
+
+    await expect(
+      service.handleNotification({
+        subscriptionId: 'sub-1',
+        timestamp: new Date(),
+        resource: 'events',
+        token: 'forged',
+      })
+    ).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+
+    expect(onSub).not.toHaveBeenCalled();
+  });
+
+  it('rejects a notification with a missing token when the subscription has a secret', async () => {
+    await storage.subscriptions.save(fakeSubscription({ secret: 'shh-its-a-secret' }));
+
+    await expect(
+      service.handleNotification({
+        subscriptionId: 'sub-1',
+        timestamp: new Date(),
+        resource: 'events',
+      })
+    ).rejects.toMatchObject({ code: 'PERMISSION_DENIED' });
+  });
+
   it('emits subscription/expired for leases past expiry during checkExpiry()', async () => {
-    await storage.subscriptions.save(fakeSubscription({ leaseExpiry: new Date(Date.now() - 1000) }));
+    await storage.subscriptions.save(
+      fakeSubscription({ leaseExpiry: new Date(Date.now() - 1000) })
+    );
     const onSub = vi.fn();
     hooks.on('subscription', onSub);
 

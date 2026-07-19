@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { CalendarSdkError, errors, mapHttpError, isCalendarSdkError, type ErrorCode } from '../../../src/errors/index.js';
+import {
+  CalendarSdkError,
+  errors,
+  mapHttpError,
+  isCalendarSdkError,
+  type ErrorCode,
+} from '../../../src/errors/index.js';
 
 describe('Error Model', () => {
   describe('CalendarSdkError', () => {
@@ -181,7 +187,9 @@ describe('Error Model', () => {
     });
 
     it('should extract provider error codes', () => {
-      const error = mapHttpError(400, 'microsoft', { error: { code: 'BadRequest', message: 'Invalid request' } });
+      const error = mapHttpError(400, 'microsoft', {
+        error: { code: 'BadRequest', message: 'Invalid request' },
+      });
       expect(error.providerErrorCode).toBe('BadRequest');
     });
 
@@ -230,7 +238,7 @@ describe('Error Model', () => {
         'INTERNAL_ERROR',
       ];
 
-      codes.forEach(code => {
+      codes.forEach((code) => {
         const error = new CalendarSdkError({ code, message: 'Test' });
         expect(error.code).toBe(code);
       });

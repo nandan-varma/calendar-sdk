@@ -3,6 +3,7 @@ import type { Calendar, ListCalendarsQuery } from '../types/calendar.js';
 import type { CalendarEvent, ListEventsQuery } from '../types/event.js';
 import type { SyncCursor, SyncCursorInput } from '../types/sync.js';
 import type { Subscription, SubscriptionInput } from '../types/subscription.js';
+import { toDate } from '../types/common.js';
 
 export interface StorageAdapter {
   accounts: AccountsStorage;
@@ -67,6 +68,12 @@ export interface SubscriptionsStorage {
   delete(id: string): Promise<void>;
 }
 
+/**
+ * The name describes the contract, not a guarantee this interface enforces: the SDK never
+ * encrypts these values itself, and `createMemoryStorage()`'s default adapter stores them as
+ * plain objects. Encrypting tokens at rest (and decrypting on read) is the implementer's
+ * responsibility in any custom StorageAdapter backed by persistent storage.
+ */
 export interface EncryptedTokens {
   accessToken: string;
   refreshToken?: string;
@@ -92,20 +99,16 @@ function applyEventQuery(events: CalendarEvent[], query?: ListEventsQuery): Cale
   let results = events;
   if (query?.timeMin) {
     const min = query.timeMin.getTime();
-    results = results.filter(e => {
-      const endTime = e.end.dateTime ? new Date(e.end.dateTime).getTime() : 0;
-      return endTime > min;
-    });
+    // toDate() handles both the DateTime and DateOnly variants - reading e.end.dateTime
+    // directly would silently drop every all-day event, since DateOnly has no dateTime field.
+    results = results.filter((e) => toDate(e.end).getTime() > min);
   }
   if (query?.timeMax) {
     const max = query.timeMax.getTime();
-    results = results.filter(e => {
-      const startTime = e.start.dateTime ? new Date(e.start.dateTime).getTime() : 0;
-      return startTime < max;
-    });
+    results = results.filter((e) => toDate(e.start).getTime() < max);
   }
   if (query?.showDeleted === false) {
-    results = results.filter(e => !e.deletedAt);
+    results = results.filter((e) => !e.deletedAt);
   }
   if (query?.limit) results = results.slice(0, query.limit);
   return results;
@@ -184,7 +187,10 @@ export function createMemoryStorage(_options?: MemoryStorageOptions): StorageAda
     eventsByAccount.rekey(previous?.accountId, event.accountId, event.id);
     eventsByRecurringId.rekey(previous?.recurringEventId, event.recurringEventId, event.id);
 
-    if (previous && (previous.calendarId !== event.calendarId || previous.providerId !== event.providerId)) {
+    if (
+      previous &&
+      (previous.calendarId !== event.calendarId || previous.providerId !== event.providerId)
+    ) {
       eventsByProviderId.delete(providerIdKey(previous.calendarId, previous.providerId));
     }
     eventsByProviderId.set(providerIdKey(event.calendarId, event.providerId), event.id);
@@ -230,7 +236,7 @@ export function createMemoryStorage(_options?: MemoryStorageOptions): StorageAda
       list: async (accountId, query) => {
         let results = getMany(calendars, calendarsByAccount.get(accountId));
         if (query?.showHidden === false) {
-          results = results.filter(c => !c.hidden);
+          results = results.filter((c) => !c.hidden);
         }
         if (query?.limit) results = results.slice(0, query.limit);
         return results;
@@ -265,9 +271,12 @@ export function createMemoryStorage(_options?: MemoryStorageOptions): StorageAda
         const id = eventsByProviderId.get(providerIdKey(calendarId, providerId));
         return id ? (events.get(id) ?? null) : null;
       },
-      list: async (calendarId, query) => applyEventQuery(getMany(events, eventsByCalendar.get(calendarId)), query),
-      listByAccount: async (accountId, query) => applyEventQuery(getMany(events, eventsByAccount.get(accountId)), query),
-      getByRecurringEventId: async (recurringEventId) => getMany(events, eventsByRecurringId.get(recurringEventId)),
+      list: async (calendarId, query) =>
+        applyEventQuery(getMany(events, eventsByCalendar.get(calendarId)), query),
+      listByAccount: async (accountId, query) =>
+        applyEventQuery(getMany(events, eventsByAccount.get(accountId)), query),
+      getByRecurringEventId: async (recurringEventId) =>
+        getMany(events, eventsByRecurringId.get(recurringEventId)),
       update: async (id, data) => {
         const existing = events.get(id);
         if (!existing) return;
@@ -319,7 +328,8 @@ export function createMemoryStorage(_options?: MemoryStorageOptions): StorageAda
       },
       get: async (id) => subscriptions.get(id) ?? null,
       list: async (accountId) => getMany(subscriptions, subscriptionsByAccount.get(accountId)),
-      listByProvider: async (provider) => getMany(subscriptions, subscriptionsByProvider.get(provider)),
+      listByProvider: async (provider) =>
+        getMany(subscriptions, subscriptionsByProvider.get(provider)),
       update: async (id, data) => {
         const existing = subscriptions.get(id);
         if (!existing) return;
@@ -338,13 +348,17 @@ export function createMemoryStorage(_options?: MemoryStorageOptions): StorageAda
       },
     },
     tokens: {
-      save: async (accountId, tok) => { tokens.set(accountId, tok); },
+      save: async (accountId, tok) => {
+        tokens.set(accountId, tok);
+      },
       get: async (accountId) => tokens.get(accountId) ?? null,
       update: async (accountId, tok) => {
         const existing = tokens.get(accountId);
         if (existing) tokens.set(accountId, { ...existing, ...tok });
       },
-      delete: async (accountId) => { tokens.delete(accountId); },
+      delete: async (accountId) => {
+        tokens.delete(accountId);
+      },
     },
     transaction: async <T>(fn: () => Promise<T>) => fn(),
   };

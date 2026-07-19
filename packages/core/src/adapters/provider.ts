@@ -1,15 +1,26 @@
 import type { ProviderKey } from '../types/common.js';
 import type { Account } from '../types/account.js';
-import type { Calendar, CreateCalendarInput, UpdateCalendarInput, ListCalendarsQuery, ShareCalendarInput } from '../types/calendar.js';
-import type { 
-  CalendarEvent, 
-  CreateEventInput, 
-  UpdateEventInput, 
-  ListEventsQuery, 
+import type {
+  Calendar,
+  CreateCalendarInput,
+  UpdateCalendarInput,
+  ListCalendarsQuery,
+  ShareCalendarInput,
+} from '../types/calendar.js';
+import type {
+  CalendarEvent,
+  CreateEventInput,
+  UpdateEventInput,
+  ListEventsQuery,
   EventOptions,
   ExpandedOccurrence,
 } from '../types/event.js';
-import type { FreeBusyQuery, FreeBusyResult, SuggestMeetingQuery, SuggestMeetingResult } from '../types/availability.js';
+import type {
+  FreeBusyQuery,
+  FreeBusyResult,
+  SuggestMeetingQuery,
+  SuggestMeetingResult,
+} from '../types/availability.js';
 import type { SyncCursor, SyncResult } from '../types/sync.js';
 import type { Subscription, SubscriptionInput, SubscriptionConfig } from '../types/subscription.js';
 import type { CapabilityMap } from '../capabilities/index.js';
@@ -19,7 +30,7 @@ import type { Transport } from '../transport/index.js';
 export interface ProviderAdapter {
   readonly key: ProviderKey;
   readonly displayName: string;
-  
+
   auth: AuthProviderMethods;
   accounts: AccountsProviderMethods;
   calendars: CalendarsProviderMethods;
@@ -27,7 +38,7 @@ export interface ProviderAdapter {
   availability: AvailabilityProviderMethods;
   sync: SyncProviderMethods;
   subscriptions: SubscriptionsProviderMethods;
-  
+
   getCapabilities(): CapabilityMap;
   createTransport(): Transport;
 }
@@ -77,14 +88,40 @@ export interface CalendarsProviderMethods {
 }
 
 export interface EventsProviderMethods {
-  list(token: TokenSet, calendarId: string, query?: ListEventsQuery): Promise<Paginated<CalendarEvent>>;
+  list(
+    token: TokenSet,
+    calendarId: string,
+    query?: ListEventsQuery
+  ): Promise<Paginated<CalendarEvent>>;
   get(token: TokenSet, calendarId: string, id: string): Promise<CalendarEvent>;
-  create(token: TokenSet, calendarId: string, input: CreateEventInput, opts?: EventOptions): Promise<CalendarEvent>;
-  update(token: TokenSet, calendarId: string, id: string, patch: UpdateEventInput, opts?: EventOptions): Promise<CalendarEvent>;
+  create(
+    token: TokenSet,
+    calendarId: string,
+    input: CreateEventInput,
+    opts?: EventOptions
+  ): Promise<CalendarEvent>;
+  update(
+    token: TokenSet,
+    calendarId: string,
+    id: string,
+    patch: UpdateEventInput,
+    opts?: EventOptions
+  ): Promise<CalendarEvent>;
   delete(token: TokenSet, calendarId: string, id: string, opts?: EventOptions): Promise<void>;
-  move(token: TokenSet, eventId: string, sourceCalendarId: string, targetCalendarId: string): Promise<CalendarEvent>;
+  move(
+    token: TokenSet,
+    eventId: string,
+    sourceCalendarId: string,
+    targetCalendarId: string
+  ): Promise<CalendarEvent>;
   duplicate(token: TokenSet, eventId: string, targetCalendarId: string): Promise<CalendarEvent>;
-  expandRecurrence(token: TokenSet, calendarId: string, eventId: string, timeMin: Date, timeMax: Date): Promise<ExpandedOccurrence[]>;
+  expandRecurrence(
+    token: TokenSet,
+    calendarId: string,
+    eventId: string,
+    timeMin: Date,
+    timeMax: Date
+  ): Promise<ExpandedOccurrence[]>;
 }
 
 export interface AvailabilityProviderMethods {
@@ -93,7 +130,11 @@ export interface AvailabilityProviderMethods {
 }
 
 export interface SyncProviderMethods {
-  fullSync(token: TokenSet, calendarId: string, options?: FullSyncProviderOptions): Promise<SyncResult>;
+  fullSync(
+    token: TokenSet,
+    calendarId: string,
+    options?: FullSyncProviderOptions
+  ): Promise<SyncResult>;
   incrementalSync(token: TokenSet, calendarId: string, cursor: SyncCursor): Promise<SyncResult>;
 }
 
@@ -111,4 +152,3 @@ export interface SubscriptionsProviderMethods {
   get(token: TokenSet, subscriptionId: string): Promise<Subscription>;
   validateWebhook?(webhookUrl: string, validationToken?: string): Promise<boolean>;
 }
-

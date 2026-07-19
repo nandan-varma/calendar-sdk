@@ -17,7 +17,7 @@ const account = await sdk.accounts.connect('mock', {
 console.log(`Connected account: ${account.email} (${account.id})`);
 
 const calendars = await sdk.calendars.list(account.id);
-console.log(`Calendars: ${calendars.map(c => c.name).join(', ')}`);
+console.log(`Calendars: ${calendars.map((c) => c.name).join(', ')}`);
 
 const [primary] = calendars;
 
@@ -39,7 +39,9 @@ const freeBusy = await sdk.availability.freeBusy(account.id, {
   timeMax: new Date('2026-08-02T00:00:00Z'),
   calendars: [primary.providerId],
 });
-console.log(`Busy blocks on ${primary.name}: ${freeBusy.calendars[primary.providerId]?.length ?? 0}`);
+console.log(
+  `Busy blocks on ${primary.name}: ${freeBusy.calendars[primary.providerId]?.length ?? 0}`
+);
 
 await sdk.calendars.share(primary.id, { email: 'teammate@example.com', role: 'reader' });
 console.log('Shared the calendar with teammate@example.com');

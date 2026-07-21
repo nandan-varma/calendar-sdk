@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { TokenSet } from '@nandan-varma/calendar-sdk';
+import type { TokenSet } from '@calendar-sdk/core';
 import { createMicrosoftProvider } from '../src/index.js';
 
 function jsonResponse(data: unknown, status = 200) {

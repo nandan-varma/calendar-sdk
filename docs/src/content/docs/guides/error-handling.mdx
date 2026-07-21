@@ -27,7 +27,7 @@ class CalendarSdkError extends Error {
 ```
 
 ```typescript
-import { isCalendarSdkError } from "@nandan-varma/calendar-sdk";
+import { isCalendarSdkError } from "@calendar-sdk/core";
 
 try {
   await sdk.events.create(calendarId, input);
@@ -63,7 +63,7 @@ try {
 If you call provider APIs directly (e.g. with `sdk.accounts.getToken`), you can reuse the SDK's mapping:
 
 ```typescript
-import { mapHttpError } from "@nandan-varma/calendar-sdk";
+import { mapHttpError } from "@calendar-sdk/core";
 
 const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
 if (!res.ok) {
@@ -78,7 +78,7 @@ It extracts vendor error codes/messages from Google- and Graph-style bodies and 
 The `errors` factory is exported for adapters and custom code:
 
 ```typescript
-import { errors, CalendarSdkError } from "@nandan-varma/calendar-sdk";
+import { errors, CalendarSdkError } from "@calendar-sdk/core";
 
 errors.authRequired("google");
 errors.rateLimited("microsoft", 30);

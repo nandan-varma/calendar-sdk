@@ -10,10 +10,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@nandan-varma/calendar-sdk": "workspace:*",
-    "@nandan-varma/calendar-sdk-mock": "workspace:*",
-    "@nandan-varma/calendar-sdk-google": "workspace:*",
-    "@nandan-varma/calendar-sdk-auth": "workspace:*"
+    "@calendar-sdk/core": "workspace:*",
+    "@calendar-sdk/mock": "workspace:*",
+    "@calendar-sdk/google": "workspace:*",
+    "@calendar-sdk/auth": "workspace:*"
   },
   "devDependencies": {
     "tsx": "^4.19.2",

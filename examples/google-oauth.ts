@@ -7,9 +7,9 @@
 // Then open http://localhost:3000/login in a browser.
 
 import { createServer } from 'node:http';
-import { createCalendarSdk } from '@nandan-varma/calendar-sdk';
-import { createGoogleProvider } from '@nandan-varma/calendar-sdk-google';
-import { createAuthFlow } from '@nandan-varma/calendar-sdk-auth';
+import { createCalendarSdk } from '@calendar-sdk/core';
+import { createGoogleProvider } from '@calendar-sdk/google';
+import { createAuthFlow } from '@calendar-sdk/auth';
 
 const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } = process.env;
 const redirectUri = process.env.GOOGLE_REDIRECT_URI ?? 'http://localhost:3000/auth/google/callback';

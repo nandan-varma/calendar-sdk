@@ -8,7 +8,7 @@ sidebar:
 Everything the SDK knows — accounts, encrypted token sets, calendars, events, sync cursors, subscriptions — lives behind one `StorageAdapter`. The default is in-memory (great for development and tests, gone on restart); production apps supply their own.
 
 ```typescript
-import { createCalendarSdk, createMemoryStorage } from "@nandan-varma/calendar-sdk";
+import { createCalendarSdk, createMemoryStorage } from "@calendar-sdk/core";
 
 const sdk = createCalendarSdk({
   providers: [...],
@@ -58,7 +58,7 @@ Semantics worth matching when you implement your own:
 
 ## Token security
 
-`tokens.save` receives an `EncryptedTokens` object — but **the SDK does not encrypt for you**. Encrypt/decrypt inside your adapter (or with a `TokenEncryptor` from `@nandan-varma/calendar-sdk-auth`) before persisting:
+`tokens.save` receives an `EncryptedTokens` object — but **the SDK does not encrypt for you**. Encrypt/decrypt inside your adapter (or with a `TokenEncryptor` from `@calendar-sdk/auth`) before persisting:
 
 ```typescript
 interface TokenEncryptor {
@@ -70,7 +70,7 @@ interface TokenEncryptor {
 ## Sketch: a SQL-backed adapter
 
 ```typescript
-import type { StorageAdapter } from "@nandan-varma/calendar-sdk";
+import type { StorageAdapter } from "@calendar-sdk/core";
 
 export function createSqlStorage(db: Db): StorageAdapter {
   return {

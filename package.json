@@ -1,5 +1,5 @@
 {
-  "name": "calendar-sdk",
+  "name": "calendar-sdk-monorepo",
   "version": "0.0.1",
   "private": true,
   "description": "Multi-provider calendar integration platform",
@@ -28,7 +28,7 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "packageManager": "pnpm@11.13.0",
+  "packageManager": "pnpm@11.15.1",
   "license": "MIT",
   "author": "Nandan Varma",
   "repository": {

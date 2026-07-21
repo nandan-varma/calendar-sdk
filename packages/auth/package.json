@@ -1,5 +1,5 @@
 {
-  "name": "@nandan-varma/calendar-sdk-auth",
+  "name": "@calendar-sdk/auth",
   "version": "0.0.1",
   "type": "module",
   "main": "./dist/index.js",
@@ -31,9 +31,9 @@
     "vitest": "^1.2.0"
   },
   "dependencies": {
-    "@nandan-varma/calendar-sdk": "workspace:*"
+    "@calendar-sdk/core": "workspace:*"
   },
-  "description": "OAuth token helpers for @nandan-varma/calendar-sdk providers",
+  "description": "OAuth token helpers for calendar-sdk providers",
   "license": "MIT",
   "author": "Nandan Varma",
   "files": ["dist"],

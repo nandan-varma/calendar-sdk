@@ -4,8 +4,8 @@
 // Swap createMockProvider() for createGoogleProvider()/createMicrosoftProvider()/createCalDavProvider()
 // and every call below stays identical - see google-oauth.ts for the real-credentials version.
 
-import { createCalendarSdk } from '@nandan-varma/calendar-sdk';
-import { createMockProvider } from '@nandan-varma/calendar-sdk-mock';
+import { createCalendarSdk } from '@calendar-sdk/core';
+import { createMockProvider } from '@calendar-sdk/mock';
 
 const sdk = createCalendarSdk({
   providers: [createMockProvider()],

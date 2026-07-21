@@ -1,5 +1,5 @@
 {
-  "name": "@nandan-varma/calendar-sdk-mock",
+  "name": "@calendar-sdk/mock",
   "version": "0.0.1",
   "type": "module",
   "main": "./dist/index.js",
@@ -30,9 +30,9 @@
     "vitest": "^1.2.0"
   },
   "dependencies": {
-    "@nandan-varma/calendar-sdk": "workspace:*"
+    "@calendar-sdk/core": "workspace:*"
   },
-  "description": "In-memory mock calendar provider for @nandan-varma/calendar-sdk - exercise the full SDK surface in tests without live credentials or network calls",
+  "description": "In-memory mock calendar provider for calendar-sdk - exercise the full SDK surface in tests without live credentials or network calls",
   "license": "MIT",
   "author": "Nandan Varma",
   "files": ["dist"],

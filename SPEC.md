@@ -1,4 +1,4 @@
-Below is a v1-oriented specification for `calendar-sdk` focused on the best possible developer experience, while staying faithful to what the major calendar ecosystems actually support.
+Below is a v1-oriented specification for `@calendar-sdk/core` focused on the best possible developer experience, while staying faithful to what the major calendar ecosystems actually support.
 
 ## What the providers force you to support
 
@@ -16,7 +16,7 @@ For packaging, Node.js supports dual CommonJS/ESM delivery through conditional e
 
 # v1 product definition
 
-`calendar-sdk` v1 should be a **multi-provider calendar integration platform** with three strong guarantees:
+`@calendar-sdk/core` v1 should be a **multi-provider calendar integration platform** with three strong guarantees:
 
 1. **One canonical model** for calendars, events, availability, sync cursors, and subscriptions.
 2. **Provider adapters** for Google, Microsoft, and CalDAV/Apple-style accounts.
@@ -91,7 +91,7 @@ That is essential for production integrations.
 
 ## A. Core package
 
-### `calendar-sdk`
+### `@calendar-sdk/core`
 
 Contains:
 
@@ -804,7 +804,7 @@ Use:
 
 ```json
 {
-  "name": "calendar-sdk",
+  "name": "@calendar-sdk/core",
   "type": "module",
   "exports": {
     ".": {
@@ -894,7 +894,7 @@ Ship a mock provider/testing harness so app developers can test their integratio
 
 # v1 acceptance criteria
 
-`calendar-sdk` v1 is ready when all of the following are true:
+`@calendar-sdk/core` v1 is ready when all of the following are true:
 
 1. A developer can connect Google, Microsoft, and CalDAV accounts with a small, typed API.
 2. Calendar and event CRUD work reliably with provider-specific quirks hidden behind a stable abstraction.

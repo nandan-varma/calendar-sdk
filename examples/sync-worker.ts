@@ -2,8 +2,8 @@
 // worker would run on a schedule to keep local state current.
 // Run with: pnpm --filter @nandan-varma/calendar-sdk-examples sync-worker
 
-import { createCalendarSdk } from '@nandan-varma/calendar-sdk';
-import { createMockProvider } from '@nandan-varma/calendar-sdk-mock';
+import { createCalendarSdk } from '@calendar-sdk/core';
+import { createMockProvider } from '@calendar-sdk/mock';
 
 const sdk = createCalendarSdk({ providers: [createMockProvider()] });
 

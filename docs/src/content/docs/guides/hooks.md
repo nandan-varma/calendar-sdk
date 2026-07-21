@@ -50,7 +50,7 @@ Callbacks may be sync or async (`(event) => void | Promise<void>`). Exceptions t
 By default the SDK creates an internal bus with `createHooks()`. You can pass your own — including the exported `EventEmitter`, which adds async emission and a custom error handler:
 
 ```typescript
-import { createCalendarSdk, EventEmitter } from "@nandan-varma/calendar-sdk";
+import { createCalendarSdk, EventEmitter } from "@calendar-sdk/core";
 
 const hooks = new EventEmitter({
   async: true,                              // await each listener in order

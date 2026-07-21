@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import type { TokenSet } from '@nandan-varma/calendar-sdk';
+import type { TokenSet } from '@calendar-sdk/core';
 import { createCalDavProvider } from '../src/index.js';
 
 function xmlResponse(body: string, status = 207) {

@@ -49,7 +49,7 @@ import {
   defaultCapabilityMap,
   getCapabilitiesForProvider,
   mergeCapabilities,
-} from "@nandan-varma/calendar-sdk";
+} from "@calendar-sdk/core";
 
 getCapabilitiesForProvider("microsoft"); // canonical map for a provider
 mergeCapabilities(defaultCapabilityMap, { sync: { incremental: true, webhook: false, polling: true } });

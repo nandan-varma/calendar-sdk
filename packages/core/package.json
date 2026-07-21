@@ -1,5 +1,5 @@
 {
-  "name": "@nandan-varma/calendar-sdk",
+  "name": "@calendar-sdk/core",
   "version": "0.0.1",
   "type": "module",
   "main": "./dist/index.js",

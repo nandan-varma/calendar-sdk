@@ -39,14 +39,14 @@ Tokens are only persisted when a **refresh token** is present. For Google, reque
 
 ## The auth helper package
 
-`@nandan-varma/calendar-sdk-auth` gives you the pieces for a web OAuth flow without pulling in a full auth framework:
+`@calendar-sdk/auth` gives you the pieces for a web OAuth flow without pulling in a full auth framework:
 
 ```typescript
 import {
   createAuthFlow,
   createState,
   verifyState,
-} from "@nandan-varma/calendar-sdk-auth";
+} from "@calendar-sdk/auth";
 
 const flow = createAuthFlow({
   provider: "google", // or "microsoft"
@@ -93,7 +93,7 @@ The package also exports lower-level building blocks:
 ### Token manager for background jobs
 
 ```typescript
-import { createTokenManager } from "@nandan-varma/calendar-sdk-auth";
+import { createTokenManager } from "@calendar-sdk/auth";
 
 const tokens = createTokenManager({
   provider: "google",

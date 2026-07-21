@@ -22,7 +22,7 @@ Every start/end is a discriminated union of a timed value and an all-day value:
 Helpers exported from the core:
 
 ```typescript
-import { isAllDay, toDate, toDateTimeString } from "@nandan-varma/calendar-sdk";
+import { isAllDay, toDate, toDateTimeString } from "@calendar-sdk/core";
 
 isAllDay(event.start);          // type guard for the { date } form
 toDate(event.start);            // → JavaScript Date

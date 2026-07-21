@@ -1,11 +1,11 @@
 ---
 title: Auth package
-description: API reference for @nandan-varma/calendar-sdk-auth — OAuth flows, token refresh, and CSRF helpers.
+description: API reference for @calendar-sdk/auth — OAuth flows, token refresh, and CSRF helpers.
 sidebar:
   order: 5
 ---
 
-`@nandan-varma/calendar-sdk-auth` contains OAuth utilities for Google and Microsoft. It is optional — provider adapters embed their own auth methods — but useful when you build your own login routes or background token services. Usage patterns are covered in the [Authentication guide](/guides/authentication/); this page is the API surface.
+`@calendar-sdk/auth` contains OAuth utilities for Google and Microsoft. It is optional — provider adapters embed their own auth methods — but useful when you build your own login routes or background token services. Usage patterns are covered in the [Authentication guide](/guides/authentication/); this page is the API surface.
 
 ## Flows
 

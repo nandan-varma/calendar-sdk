@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createCalendarSdk } from '@nandan-varma/calendar-sdk';
+import { createCalendarSdk } from '@calendar-sdk/core';
 import { createMockProvider } from '../src/index.js';
 
 describe('mock provider - full SDK flow without network calls', () => {

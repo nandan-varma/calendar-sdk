@@ -42,7 +42,7 @@ Debug logging of request bodies and headers redacts `access_token`, `refresh_tok
 Adapter authors (and anyone making provider-native calls) can create a transport:
 
 ```typescript
-import { createTransport, defaultRetryOptions } from "@nandan-varma/calendar-sdk";
+import { createTransport, defaultRetryOptions } from "@calendar-sdk/core";
 
 const transport = createTransport("google", {
   baseUrl: "https://www.googleapis.com/calendar/v3",

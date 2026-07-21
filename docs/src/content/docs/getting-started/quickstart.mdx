@@ -12,8 +12,8 @@ This walkthrough connects a Google account, lists its calendars, creates an even
 ## 1. Create the SDK
 
 ```typescript
-import { createCalendarSdk } from "@nandan-varma/calendar-sdk";
-import { createGoogleProvider } from "@nandan-varma/calendar-sdk-google";
+import { createCalendarSdk } from "@calendar-sdk/core";
+import { createGoogleProvider } from "@calendar-sdk/google";
 
 const sdk = createCalendarSdk({
   providers: [
@@ -27,7 +27,7 @@ const sdk = createCalendarSdk({
 ```
 
 :::tip[No credentials handy yet?]
-Swap in `createMockProvider()` from `@nandan-varma/calendar-sdk-mock` and every call below runs immediately, in memory — see [`examples/quickstart.ts`](https://github.com/nandan-varma/calendar-sdk/blob/main/examples/quickstart.ts).
+Swap in `createMockProvider()` from `@calendar-sdk/mock` and every call below runs immediately, in memory — see [`examples/quickstart.ts`](https://github.com/nandan-varma/calendar-sdk/blob/main/examples/quickstart.ts).
 :::
 
 `createCalendarSdk` returns a `CalendarSdk` object exposing six services — `accounts`, `calendars`, `events`, `availability`, `subscriptions`, and `sync` — plus `hooks`, `storage`, and `getProvider(key)`. See [Configuration](/reference/configuration/) for every option.
@@ -84,9 +84,9 @@ const freeBusy = await sdk.availability.freeBusy(account.id, {
 ## Swapping providers
 
 ```typescript
-import { createMicrosoftProvider } from "@nandan-varma/calendar-sdk-microsoft";
+import { createMicrosoftProvider } from "@calendar-sdk/microsoft";
 // or
-import { createCalDavProvider } from "@nandan-varma/calendar-sdk-caldav";
+import { createCalDavProvider } from "@calendar-sdk/caldav";
 ```
 
 Register them under their key (`"microsoft"` / `"caldav"`) and the rest of your code stays identical. A single SDK instance can hold all three providers at once, with accounts from each.
@@ -95,7 +95,7 @@ Register them under their key (`"microsoft"` / `"caldav"`) and the rest of your 
 
 <CardGrid>
   <LinkCard title="Architecture" description="How the core, adapters, and storage fit together." href="/guides/architecture/" />
-  <LinkCard title="Authentication" description="Full OAuth flows with @nandan-varma/calendar-sdk-auth." href="/guides/authentication/" />
+  <LinkCard title="Authentication" description="Full OAuth flows with @calendar-sdk/auth." href="/guides/authentication/" />
   <LinkCard title="Storage" description="Persist accounts and tokens in your own database." href="/guides/storage/" />
   <LinkCard title="Sync & Webhooks" description="Keep local state up to date." href="/guides/sync/" />
 </CardGrid>

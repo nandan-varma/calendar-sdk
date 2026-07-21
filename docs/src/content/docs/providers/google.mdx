@@ -7,7 +7,7 @@ sidebar:
 
 import CapabilityMatrix from '../../../components/CapabilityMatrix.astro';
 
-`@nandan-varma/calendar-sdk-google` adapts the [Google Calendar API v3](https://developers.google.com/calendar/api) to the canonical model. It is the most fully featured provider: incremental sync via `syncToken`, watch-channel webhooks, attachments, Meet conference data, and event move/duplicate.
+`@calendar-sdk/google` adapts the [Google Calendar API v3](https://developers.google.com/calendar/api) to the canonical model. It is the most fully featured provider: incremental sync via `syncToken`, watch-channel webhooks, attachments, Meet conference data, and event move/duplicate.
 
 ## Credentials
 
@@ -18,8 +18,8 @@ import CapabilityMatrix from '../../../components/CapabilityMatrix.astro';
 ## Setup
 
 ```typescript
-import { createCalendarSdk } from "@nandan-varma/calendar-sdk";
-import { createGoogleProvider } from "@nandan-varma/calendar-sdk-google";
+import { createCalendarSdk } from "@calendar-sdk/core";
+import { createGoogleProvider } from "@calendar-sdk/google";
 
 const sdk = createCalendarSdk({
   providers: [

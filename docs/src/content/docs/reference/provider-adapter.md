@@ -10,7 +10,7 @@ A provider adapter is pure translation: canonical types in, vendor wire format o
 ## The interface
 
 ```typescript
-import type { ProviderAdapter } from "@nandan-varma/calendar-sdk";
+import type { ProviderAdapter } from "@calendar-sdk/core";
 
 interface ProviderAdapter {
   readonly key: ProviderKey; // "google" | "microsoft" | "caldav", or any custom string for a third-party/testing provider
@@ -90,7 +90,7 @@ interface SubscriptionsProviderMethods {
 1. **Declare honest capabilities.** `getCapabilities()` is checked by services *before* calling you. If you report `webhook: false`, your `subscriptions` methods will never be invoked — you can throw `errors.capabilityUnsupported(...)` in the bodies.
 2. **Map errors with `mapHttpError`.** Convert non-OK responses into `CalendarSdkError`s so `retryable`, `code`, and remediation behave consistently:
    ```typescript
-   import { mapHttpError } from "@nandan-varma/calendar-sdk";
+   import { mapHttpError } from "@calendar-sdk/core";
    if (!response.ok) {
      throw mapHttpError(response.status, "google", await response.json().catch(() => null));
    }
@@ -103,7 +103,7 @@ interface SubscriptionsProviderMethods {
 ## Skeleton
 
 ```typescript
-import type { ProviderAdapter, Logger } from "@nandan-varma/calendar-sdk";
+import type { ProviderAdapter, Logger } from "@calendar-sdk/core";
 
 export interface MyProviderConfig {
   clientId: string;
@@ -135,5 +135,5 @@ export function createMyProvider(config: MyProviderConfig): ProviderAdapter {
 ```
 
 :::note
-Want to try your adapter, or test code that depends on the SDK, without live credentials? `@nandan-varma/calendar-sdk-mock` (`packages/providers/mock`) is a complete in-memory `ProviderAdapter` you can read as a second reference implementation alongside Google's.
+Want to try your adapter, or test code that depends on the SDK, without live credentials? `@calendar-sdk/mock` (`packages/providers/mock`) is a complete in-memory `ProviderAdapter` you can read as a second reference implementation alongside Google's.
 :::

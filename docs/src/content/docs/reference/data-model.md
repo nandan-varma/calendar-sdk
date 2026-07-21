@@ -5,7 +5,7 @@ sidebar:
   order: 2
 ---
 
-All types are exported from `@nandan-varma/calendar-sdk`. Three conventions run through the whole model:
+All types are exported from `@calendar-sdk/core`. Three conventions run through the whole model:
 
 - **`id` vs `providerId`** — `id` is an SDK-generated UUID (stable, what you pass to services); `providerId` is the vendor's identifier.
 - **`raw` and `extensions`** — the original provider payload is preserved on `raw`; provider-only extras live in `extensions`. Nothing is discarded.

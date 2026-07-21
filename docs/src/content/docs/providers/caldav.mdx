@@ -7,15 +7,15 @@ sidebar:
 
 import CapabilityMatrix from '../../../components/CapabilityMatrix.astro';
 
-`@nandan-varma/calendar-sdk-caldav` speaks [CalDAV](https://datatracker.ietf.org/doc/html/rfc4791) (calendar access over WebDAV, with iCalendar payloads). It is the interoperability path for **iCloud/Apple Calendar**, Fastmail, Nextcloud, Radicale, Baïkal, and any other standards-compliant server.
+`@calendar-sdk/caldav` speaks [CalDAV](https://datatracker.ietf.org/doc/html/rfc4791) (calendar access over WebDAV, with iCalendar payloads). It is the interoperability path for **iCloud/Apple Calendar**, Fastmail, Nextcloud, Radicale, Baïkal, and any other standards-compliant server.
 
 ## Setup
 
 CalDAV uses HTTP **Basic auth**, not OAuth — credentials go straight into the provider config:
 
 ```typescript
-import { createCalendarSdk } from "@nandan-varma/calendar-sdk";
-import { createCalDavProvider } from "@nandan-varma/calendar-sdk-caldav";
+import { createCalendarSdk } from "@calendar-sdk/core";
+import { createCalDavProvider } from "@calendar-sdk/caldav";
 
 const sdk = createCalendarSdk({
   providers: [

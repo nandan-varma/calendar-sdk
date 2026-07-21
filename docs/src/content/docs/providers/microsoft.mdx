@@ -7,7 +7,7 @@ sidebar:
 
 import CapabilityMatrix from '../../../components/CapabilityMatrix.astro';
 
-`@nandan-varma/calendar-sdk-microsoft` adapts [Microsoft Graph](https://learn.microsoft.com/graph/api/resources/calendar) calendars (Outlook / Microsoft 365) to the canonical model, including delta-query incremental sync, change-notification webhooks, and Graph's unique `findMeetingTimes` suggestions.
+`@calendar-sdk/microsoft` adapts [Microsoft Graph](https://learn.microsoft.com/graph/api/resources/calendar) calendars (Outlook / Microsoft 365) to the canonical model, including delta-query incremental sync, change-notification webhooks, and Graph's unique `findMeetingTimes` suggestions.
 
 ## Credentials
 
@@ -18,8 +18,8 @@ import CapabilityMatrix from '../../../components/CapabilityMatrix.astro';
 ## Setup
 
 ```typescript
-import { createCalendarSdk } from "@nandan-varma/calendar-sdk";
-import { createMicrosoftProvider } from "@nandan-varma/calendar-sdk-microsoft";
+import { createCalendarSdk } from "@calendar-sdk/core";
+import { createMicrosoftProvider } from "@calendar-sdk/microsoft";
 
 const sdk = createCalendarSdk({
   providers: [

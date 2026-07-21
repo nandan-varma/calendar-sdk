@@ -8,7 +8,7 @@ sidebar:
 ## `createCalendarSdk(config)`
 
 ```typescript
-import { createCalendarSdk } from "@nandan-varma/calendar-sdk";
+import { createCalendarSdk } from "@calendar-sdk/core";
 
 const sdk = createCalendarSdk({
   providers: [createGoogleProvider({ ... })],

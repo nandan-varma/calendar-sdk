@@ -5,9 +5,9 @@ import type {
   CreateAuthUrlOptions,
   ShareCalendarInput,
   RetryOptions,
-} from '@nandan-varma/calendar-sdk';
-import type { Logger } from '@nandan-varma/calendar-sdk';
-import { CalendarSdkError, createTransport, defaultRetryOptions } from '@nandan-varma/calendar-sdk';
+} from '@calendar-sdk/core';
+import type { Logger } from '@calendar-sdk/core';
+import { CalendarSdkError, createTransport, defaultRetryOptions } from '@calendar-sdk/core';
 
 const GRAPH_BASE_URL = 'https://graph.microsoft.com/v1.0';
 

@@ -12,19 +12,19 @@ calendar-sdk is split into a provider-agnostic core plus one small adapter packa
 
 <Tabs>
   <TabItem label="Google Calendar">
-    <PackageManagers packages={['@nandan-varma/calendar-sdk', '@nandan-varma/calendar-sdk-google']} />
+    <PackageManagers packages={['@calendar-sdk/core', '@calendar-sdk/google']} />
   </TabItem>
   <TabItem label="Microsoft Graph">
-    <PackageManagers packages={['@nandan-varma/calendar-sdk', '@nandan-varma/calendar-sdk-microsoft']} />
+    <PackageManagers packages={['@calendar-sdk/core', '@calendar-sdk/microsoft']} />
   </TabItem>
   <TabItem label="CalDAV">
-    <PackageManagers packages={['@nandan-varma/calendar-sdk', '@nandan-varma/calendar-sdk-caldav']} />
+    <PackageManagers packages={['@calendar-sdk/core', '@calendar-sdk/caldav']} />
   </TabItem>
 </Tabs>
 
 Optionally add the OAuth helper package if you want ready-made authorization-URL, code-exchange, and token-refresh utilities for your own auth routes:
 
-<PackageManagers packages={['@nandan-varma/calendar-sdk-auth']} />
+<PackageManagers packages={['@calendar-sdk/auth']} />
 
 ## Requirements
 

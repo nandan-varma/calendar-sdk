@@ -11,8 +11,8 @@ import type {
   CalendarEvent,
   SyncEvent,
   Transport,
-} from '@nandan-varma/calendar-sdk';
-import { CalendarSdkError, toDate } from '@nandan-varma/calendar-sdk';
+} from '@calendar-sdk/core';
+import { CalendarSdkError, toDate } from '@calendar-sdk/core';
 import { randomUUID } from 'node:crypto';
 
 export interface MockProviderConfig {

@@ -4,9 +4,9 @@ import type {
   RefreshToken,
   CreateAuthUrlOptions,
   RetryOptions,
-} from '@nandan-varma/calendar-sdk';
-import type { Logger } from '@nandan-varma/calendar-sdk';
-import { CalendarSdkError, createTransport, defaultRetryOptions } from '@nandan-varma/calendar-sdk';
+} from '@calendar-sdk/core';
+import type { Logger } from '@calendar-sdk/core';
+import { CalendarSdkError, createTransport, defaultRetryOptions } from '@calendar-sdk/core';
 import { randomUUID } from 'node:crypto';
 
 export interface CalDavProviderConfig {

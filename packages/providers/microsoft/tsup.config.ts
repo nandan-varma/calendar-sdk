@@ -9,5 +9,5 @@ export default defineConfig({
   clean: true,
   treeshake: true,
   minify: true,
-  external: ['@nandan-varma/calendar-sdk'],
+  external: ['@calendar-sdk/core'],
 });

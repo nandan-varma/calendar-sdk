@@ -1,8 +1,8 @@
 # calendar-sdk
 
-[![npm version](https://img.shields.io/npm/v/@nandan-varma/calendar-sdk.svg)](https://www.npmjs.com/package/@nandan-varma/calendar-sdk)
+[![npm version](https://img.shields.io/npm/v/%40calendar-sdk%2Fcore.svg)](https://www.npmjs.com/package/@calendar-sdk/core)
 [![CI](https://github.com/nandan-varma/calendar-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/nandan-varma/calendar-sdk/actions/workflows/ci.yml)
-[![license](https://img.shields.io/npm/l/@nandan-varma/calendar-sdk.svg)](LICENSE)
+[![license](https://img.shields.io/npm/l/%40calendar-sdk%2Fcore.svg)](LICENSE)
 
 One TypeScript API for **Google Calendar, Microsoft Graph (Outlook), and CalDAV/iCloud** — events, calendars, availability, incremental sync, and webhook subscriptions, without vendoring three different SDKs into your app.
 
@@ -12,24 +12,24 @@ An open alternative to paid unified-calendar APIs: bring your own OAuth credenti
 
 | Package | What it is |
 |---|---|
-| [`@nandan-varma/calendar-sdk`](packages/core) | Core: unified services (accounts, calendars, events, availability, subscriptions, sync), storage + hooks + retrying transport |
-| [`@nandan-varma/calendar-sdk-google`](packages/providers/google) | Google Calendar provider adapter |
-| [`@nandan-varma/calendar-sdk-microsoft`](packages/providers/microsoft) | Microsoft Graph calendar provider adapter |
-| [`@nandan-varma/calendar-sdk-caldav`](packages/providers/caldav) | CalDAV provider adapter (iCloud, Fastmail, Nextcloud, …) |
-| [`@nandan-varma/calendar-sdk-mock`](packages/providers/mock) | In-memory provider for tests and examples — no credentials or network calls |
-| [`@nandan-varma/calendar-sdk-auth`](packages/auth) | OAuth flow, token refresh, and encrypted token-set helpers |
+| [`@calendar-sdk/core`](packages/core) | Core: unified services (accounts, calendars, events, availability, subscriptions, sync), storage + hooks + retrying transport |
+| [`@calendar-sdk/google`](packages/providers/google) | Google Calendar provider adapter |
+| [`@calendar-sdk/microsoft`](packages/providers/microsoft) | Microsoft Graph calendar provider adapter |
+| [`@calendar-sdk/caldav`](packages/providers/caldav) | CalDAV provider adapter (iCloud, Fastmail, Nextcloud, …) |
+| [`@calendar-sdk/mock`](packages/providers/mock) | In-memory provider for tests and examples — no credentials or network calls |
+| [`@calendar-sdk/auth`](packages/auth) | OAuth flow, token refresh, and encrypted token-set helpers |
 
 ## Install
 
 ```bash
-npm install @nandan-varma/calendar-sdk @nandan-varma/calendar-sdk-google
+npm install @calendar-sdk/core @calendar-sdk/google
 ```
 
 ## Quick start
 
 ```typescript
-import { createCalendarSdk } from "@nandan-varma/calendar-sdk";
-import { createGoogleProvider } from "@nandan-varma/calendar-sdk-google";
+import { createCalendarSdk } from "@calendar-sdk/core";
+import { createGoogleProvider } from "@calendar-sdk/google";
 
 const sdk = createCalendarSdk({
   providers: [
@@ -69,7 +69,7 @@ const freeBusy = await sdk.availability.freeBusy(account.id, {
 
 Swap `createGoogleProvider` for `createMicrosoftProvider` or `createCalDavProvider` and the rest of your code stays identical. A single SDK instance can register more than one provider at once — just add another entry to `providers`.
 
-Want to try it with zero setup? [`examples/quickstart.ts`](examples/quickstart.ts) runs this same flow against `@nandan-varma/calendar-sdk-mock` — no credentials or network access needed:
+Want to try it with zero setup? [`examples/quickstart.ts`](examples/quickstart.ts) runs this same flow against `@calendar-sdk/mock` — no credentials or network access needed:
 
 ```bash
 pnpm install
@@ -79,7 +79,7 @@ pnpm --filter @nandan-varma/calendar-sdk-examples quickstart
 ### OAuth helper
 
 ```typescript
-import { createAuthFlow } from "@nandan-varma/calendar-sdk-auth";
+import { createAuthFlow } from "@calendar-sdk/auth";
 
 const flow = createAuthFlow({
   provider: "google",
@@ -98,11 +98,11 @@ See [`examples/google-oauth.ts`](examples/google-oauth.ts) for the full connect 
 
 ### Testing your integration
 
-[`@nandan-varma/calendar-sdk-mock`](packages/providers/mock) is a fully in-memory `ProviderAdapter` — no network calls, deterministic — so you can exercise your own code against the whole SDK surface without live credentials:
+[`@calendar-sdk/mock`](packages/providers/mock) is a fully in-memory `ProviderAdapter` — no network calls, deterministic — so you can exercise your own code against the whole SDK surface without live credentials:
 
 ```typescript
-import { createCalendarSdk } from "@nandan-varma/calendar-sdk";
-import { createMockProvider } from "@nandan-varma/calendar-sdk-mock";
+import { createCalendarSdk } from "@calendar-sdk/core";
+import { createMockProvider } from "@calendar-sdk/mock";
 
 const sdk = createCalendarSdk({ providers: [createMockProvider()] });
 ```

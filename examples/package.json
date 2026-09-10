@@ -10,13 +10,13 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@calendar-sdk/auth": "workspace:*",
     "@calendar-sdk/core": "workspace:*",
-    "@calendar-sdk/mock": "workspace:*",
     "@calendar-sdk/google": "workspace:*",
-    "@calendar-sdk/auth": "workspace:*"
+    "@calendar-sdk/mock": "workspace:*"
   },
   "devDependencies": {
-    "tsx": "^4.19.2",
-    "typescript": "^5.3.3"
+    "tsx": "^4.23.13",
+    "typescript": "^5.9.3"
   }
 }

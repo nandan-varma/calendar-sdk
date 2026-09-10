@@ -25,11 +25,11 @@
     "clean": "rm -rf dist"
   },
   "devDependencies": {
-    "@types/node": "^20.11.0",
+    "@types/node": "^20.19.43",
     "dotenv": "^17.4.2",
-    "tsup": "^8.0.2",
-    "typescript": "^5.3.3",
-    "vitest": "^1.2.0"
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.0"
   },
   "peerDependencies": {
     "typescript": "^5.3.3"
@@ -37,7 +37,9 @@
   "description": "Provider-agnostic TypeScript calendar SDK: one API for events, calendars, availability, sync, and webhooks across Google Calendar, Microsoft Graph, and CalDAV",
   "license": "MIT",
   "author": "Nandan Varma",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "sideEffects": false,
   "keywords": [
     "calendar",

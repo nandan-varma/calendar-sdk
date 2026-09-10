@@ -24,10 +24,10 @@
     "clean": "rm -rf dist"
   },
   "devDependencies": {
-    "@types/node": "^20.11.0",
-    "typescript": "^5.3.3",
-    "tsup": "^8.0.2",
-    "vitest": "^1.2.0"
+    "@types/node": "^20.19.43",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.3",
+    "vitest": "^5.0.0"
   },
   "dependencies": {
     "@calendar-sdk/core": "workspace:*"
@@ -35,9 +35,17 @@
   "description": "In-memory mock calendar provider for calendar-sdk - exercise the full SDK surface in tests without live credentials or network calls",
   "license": "MIT",
   "author": "Nandan Varma",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "sideEffects": false,
-  "keywords": ["calendar", "sdk", "typescript", "testing", "mock"],
+  "keywords": [
+    "calendar",
+    "sdk",
+    "typescript",
+    "testing",
+    "mock"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/nandan-varma/calendar-sdk.git",

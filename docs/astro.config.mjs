@@ -52,15 +52,15 @@ export default defineConfig({
         },
         {
           label: 'Guides',
-          autogenerate: { directory: 'guides' },
+          items: [{ autogenerate: { directory: 'guides' } }],
         },
         {
           label: 'Providers',
-          autogenerate: { directory: 'providers' },
+          items: [{ autogenerate: { directory: 'providers' } }],
         },
         {
           label: 'Reference',
-          autogenerate: { directory: 'reference' },
+          items: [{ autogenerate: { directory: 'reference' } }],
         },
       ],
     }),

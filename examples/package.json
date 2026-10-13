@@ -16,7 +16,7 @@
     "@calendar-sdk/mock": "workspace:*"
   },
   "devDependencies": {
-    "tsx": "^4.23.13",
+    "tsx": "^4.23.15",
     "typescript": "^5.9.3"
   }
 }

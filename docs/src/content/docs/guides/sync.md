@@ -1,8 +1,9 @@
 ---
+
 title: Sync
 description: Full, incremental, and reconciliation sync with persisted cursors.
 sidebar:
-  order: 7
+order: 7
 ---
 
 `sdk.sync` keeps your local store in step with the provider. Where the vendor supports it (Google `syncToken`, Microsoft Graph delta queries), sync is **incremental**: after an initial full sync you only fetch what changed.
@@ -16,11 +17,11 @@ sidebar:
 ```typescript
 interface SyncResult {
   accountId: string;
-  scope: "calendars" | "events" | "all";
-  events: SyncEvent[];      // { type: "created" | "updated", event } | { type: "deleted", eventId }
+  scope: 'calendars' | 'events' | 'all';
+  events: SyncEvent[]; // { type: "created" | "updated", event } | { type: "deleted", eventId }
   deletions: string[];
   nextCursor?: SyncCursor;
-  expiredToken: boolean;    // cursor invalid — run a full sync
+  expiredToken: boolean; // cursor invalid — run a full sync
   hasMore: boolean;
 }
 ```
@@ -29,9 +30,9 @@ interface SyncResult {
 
 ```typescript
 const result = await sdk.sync.fullSync(account.id, {
-  calendarId,                       // recommended — see the note below; omit to sync every stored calendar
-  timeMin: new Date("2026-01-01"),
-  timeMax: new Date("2027-01-01"),
+  calendarId, // recommended — see the note below; omit to sync every stored calendar
+  timeMin: new Date('2026-01-01'),
+  timeMax: new Date('2027-01-01'),
   limit: 2500,
 });
 ```
@@ -39,13 +40,13 @@ const result = await sdk.sync.fullSync(account.id, {
 Resolves the account's provider and a valid token for you (same as every other service — no need to call `sdk.getProvider()` yourself), pulls events for the selected calendars, persists all changes, and saves the fresh cursor returned by the provider so the next pass can be incremental.
 
 :::note
-Pass `calendarId` explicitly when you can. A cursor is tied to one calendar's event feed; if you omit `calendarId` on a multi-calendar account, only the *last* calendar synced in that pass gets a durable cursor. For correct independent tracking per calendar, call `fullSync`/`incrementalSync` once per `calendarId`.
+Pass `calendarId` explicitly when you can. A cursor is tied to one calendar's event feed; if you omit `calendarId` on a multi-calendar account, only the _last_ calendar synced in that pass gets a durable cursor. For correct independent tracking per calendar, call `fullSync`/`incrementalSync` once per `calendarId`.
 :::
 
 ## Incremental sync
 
 ```typescript
-const cursor = await sdk.storage.syncCursors.get(account.id, "events");
+const cursor = await sdk.storage.syncCursors.get(account.id, 'events');
 
 if (!cursor) {
   await sdk.sync.fullSync(account.id, { calendarId });
@@ -66,11 +67,11 @@ On success the advanced cursor is persisted automatically. When the provider rep
 For drift repair (missed webhooks, partial failures), `reconcile` diffs local storage against a fresh provider snapshot:
 
 ```typescript
-const { created, updated, deleted } = await sdk.sync.reconcile(
-  account.id,
-  "events",
-  { calendarId, timeMin, timeMax },
-);
+const { created, updated, deleted } = await sdk.sync.reconcile(account.id, 'events', {
+  calendarId,
+  timeMin,
+  timeMax,
+});
 ```
 
 Events present remotely are upserted; local events missing remotely are deleted.
@@ -92,7 +93,7 @@ Useful for dashboards and deciding whether a full sync is due.
 
 ```typescript
 async function syncAccount(accountId: string, calendarId: string) {
-  const cursor = await sdk.storage.syncCursors.get(accountId, "events");
+  const cursor = await sdk.storage.syncCursors.get(accountId, 'events');
 
   const result = cursor
     ? await sdk.sync.incrementalSync(accountId, cursor, { calendarId })

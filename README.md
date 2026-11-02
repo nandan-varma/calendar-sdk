@@ -10,14 +10,14 @@ An open alternative to paid unified-calendar APIs: bring your own OAuth credenti
 
 ## Packages
 
-| Package | What it is |
-|---|---|
-| [`@calendar-sdk/core`](packages/core) | Core: unified services (accounts, calendars, events, availability, subscriptions, sync), storage + hooks + retrying transport |
-| [`@calendar-sdk/google`](packages/providers/google) | Google Calendar provider adapter |
-| [`@calendar-sdk/microsoft`](packages/providers/microsoft) | Microsoft Graph calendar provider adapter |
-| [`@calendar-sdk/caldav`](packages/providers/caldav) | CalDAV provider adapter (iCloud, Fastmail, Nextcloud, …) |
-| [`@calendar-sdk/mock`](packages/providers/mock) | In-memory provider for tests and examples — no credentials or network calls |
-| [`@calendar-sdk/auth`](packages/auth) | OAuth flow, token refresh, and encrypted token-set helpers |
+| Package                                                   | What it is                                                                                                                    |
+| --------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| [`@calendar-sdk/core`](packages/core)                     | Core: unified services (accounts, calendars, events, availability, subscriptions, sync), storage + hooks + retrying transport |
+| [`@calendar-sdk/google`](packages/providers/google)       | Google Calendar provider adapter                                                                                              |
+| [`@calendar-sdk/microsoft`](packages/providers/microsoft) | Microsoft Graph calendar provider adapter                                                                                     |
+| [`@calendar-sdk/caldav`](packages/providers/caldav)       | CalDAV provider adapter (iCloud, Fastmail, Nextcloud, …)                                                                      |
+| [`@calendar-sdk/mock`](packages/providers/mock)           | In-memory provider for tests and examples — no credentials or network calls                                                   |
+| [`@calendar-sdk/auth`](packages/auth)                     | OAuth flow, token refresh, and encrypted token-set helpers                                                                    |
 
 ## Install
 
@@ -28,8 +28,8 @@ npm install @calendar-sdk/core @calendar-sdk/google
 ## Quick start
 
 ```typescript
-import { createCalendarSdk } from "@calendar-sdk/core";
-import { createGoogleProvider } from "@calendar-sdk/google";
+import { createCalendarSdk } from '@calendar-sdk/core';
+import { createGoogleProvider } from '@calendar-sdk/google';
 
 const sdk = createCalendarSdk({
   providers: [
@@ -42,7 +42,7 @@ const sdk = createCalendarSdk({
 });
 
 // Connect an account (tokens from your OAuth callback)
-const account = await sdk.accounts.connect("google", {
+const account = await sdk.accounts.connect('google', {
   authInput: { accessToken, refreshToken },
 });
 
@@ -54,9 +54,9 @@ const events = await sdk.events.list(calendars[0].id, {
 });
 
 await sdk.events.create(calendars[0].id, {
-  title: "Coffee",
-  start: { dateTime: "2026-08-01T10:00:00Z", timezone: "UTC" },
-  end: { dateTime: "2026-08-01T10:30:00Z", timezone: "UTC" },
+  title: 'Coffee',
+  start: { dateTime: '2026-08-01T10:00:00Z', timezone: 'UTC' },
+  end: { dateTime: '2026-08-01T10:30:00Z', timezone: 'UTC' },
 });
 
 // Free/busy across an account's calendars
@@ -79,14 +79,14 @@ pnpm --filter @nandan-varma/calendar-sdk-examples quickstart
 ### OAuth helper
 
 ```typescript
-import { createAuthFlow } from "@calendar-sdk/auth";
+import { createAuthFlow } from '@calendar-sdk/auth';
 
 const flow = createAuthFlow({
-  provider: "google",
+  provider: 'google',
   clientId: process.env.GOOGLE_CLIENT_ID!,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-  redirectUri: "https://app.example.com/oauth/callback",
-  scopes: ["https://www.googleapis.com/auth/calendar"],
+  redirectUri: 'https://app.example.com/oauth/callback',
+  scopes: ['https://www.googleapis.com/auth/calendar'],
 });
 
 const authorizationUrl = flow.getAuthorizationUrl(); // send the user here
@@ -101,8 +101,8 @@ See [`examples/google-oauth.ts`](examples/google-oauth.ts) for the full connect 
 [`@calendar-sdk/mock`](packages/providers/mock) is a fully in-memory `ProviderAdapter` — no network calls, deterministic — so you can exercise your own code against the whole SDK surface without live credentials:
 
 ```typescript
-import { createCalendarSdk } from "@calendar-sdk/core";
-import { createMockProvider } from "@calendar-sdk/mock";
+import { createCalendarSdk } from '@calendar-sdk/core';
+import { createMockProvider } from '@calendar-sdk/mock';
 
 const sdk = createCalendarSdk({ providers: [createMockProvider()] });
 ```

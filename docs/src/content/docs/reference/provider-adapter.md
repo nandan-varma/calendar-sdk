@@ -1,8 +1,9 @@
 ---
+
 title: Writing a provider adapter
 description: Implement the ProviderAdapter interface to add a new calendar backend without touching the core.
 sidebar:
-  order: 3
+order: 3
 ---
 
 A provider adapter is pure translation: canonical types in, vendor wire format out. The core never changes when you add one. The Google package (`packages/providers/google`) is the reference implementation — a factory in `client.ts`, vendor wire types in `types/`, and canonical↔vendor mappers in `mappers/`.
@@ -10,7 +11,7 @@ A provider adapter is pure translation: canonical types in, vendor wire format o
 ## The interface
 
 ```typescript
-import type { ProviderAdapter } from "@calendar-sdk/core";
+import type { ProviderAdapter } from '@calendar-sdk/core';
 
 interface ProviderAdapter {
   readonly key: ProviderKey; // "google" | "microsoft" | "caldav", or any custom string for a third-party/testing provider
@@ -87,8 +88,9 @@ interface SubscriptionsProviderMethods {
 
 ## Ground rules
 
-1. **Declare honest capabilities.** `getCapabilities()` is checked by services *before* calling you. If you report `webhook: false`, your `subscriptions` methods will never be invoked — you can throw `errors.capabilityUnsupported(...)` in the bodies.
+1. **Declare honest capabilities.** `getCapabilities()` is checked by services _before_ calling you. If you report `webhook: false`, your `subscriptions` methods will never be invoked — you can throw `errors.capabilityUnsupported(...)` in the bodies.
 2. **Map errors with `mapHttpError`.** Convert non-OK responses into `CalendarSdkError`s so `retryable`, `code`, and remediation behave consistently:
+
    ```typescript
    import { mapHttpError } from "@calendar-sdk/core";
    if (!response.ok) {
@@ -103,7 +105,7 @@ interface SubscriptionsProviderMethods {
 ## Skeleton
 
 ```typescript
-import type { ProviderAdapter, Logger } from "@calendar-sdk/core";
+import type { ProviderAdapter, Logger } from '@calendar-sdk/core';
 
 export interface MyProviderConfig {
   clientId: string;
@@ -114,22 +116,51 @@ export interface MyProviderConfig {
 
 export function createMyProvider(config: MyProviderConfig): ProviderAdapter {
   return {
-    key: "my-provider", // any string - ProviderKey accepts custom keys alongside the three built-ins
-    displayName: "My Calendar Server",
-    auth: { /* createAuthorizationUrl, exchangeCode, refreshToken, revokeToken */ },
-    accounts: { /* getAccount */ },
-    calendars: { /* list, get, create, update, delete */ },
-    events: { /* list, get, create, update, delete, move, duplicate, expandRecurrence */ },
-    availability: { /* freeBusy, suggestMeeting */ },
-    sync: { /* fullSync, incrementalSync */ },
-    subscriptions: { /* create, renew, delete, list, get */ },
+    key: 'my-provider', // any string - ProviderKey accepts custom keys alongside the three built-ins
+    displayName: 'My Calendar Server',
+    auth: {
+      /* createAuthorizationUrl, exchangeCode, refreshToken, revokeToken */
+    },
+    accounts: {
+      /* getAccount */
+    },
+    calendars: {
+      /* list, get, create, update, delete */
+    },
+    events: {
+      /* list, get, create, update, delete, move, duplicate, expandRecurrence */
+    },
+    availability: {
+      /* freeBusy, suggestMeeting */
+    },
+    sync: {
+      /* fullSync, incrementalSync */
+    },
+    subscriptions: {
+      /* create, renew, delete, list, get */
+    },
     getCapabilities: () => ({
-      calendars: { create: true, update: true, delete: true, share: false, manageNotifications: false },
-      events: { list: true, create: true, update: true, delete: true, move: false, duplicate: false, attachments: false, conferenceData: false },
+      calendars: {
+        create: true,
+        update: true,
+        delete: true,
+        share: false,
+        manageNotifications: false,
+      },
+      events: {
+        list: true,
+        create: true,
+        update: true,
+        delete: true,
+        move: false,
+        duplicate: false,
+        attachments: false,
+        conferenceData: false,
+      },
       sync: { incremental: false, webhook: false, polling: true },
       availability: { freeBusy: true, suggestedTimes: false },
     }),
-    createTransport: () => createTransport("caldav", { baseUrl: "https://api.example.com" }),
+    createTransport: () => createTransport('caldav', { baseUrl: 'https://api.example.com' }),
   };
 }
 ```

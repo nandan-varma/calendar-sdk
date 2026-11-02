@@ -1,8 +1,9 @@
 ---
+
 title: Events
 description: Create, query, update, move, and duplicate events with one canonical model.
 sidebar:
-  order: 5
+order: 5
 ---
 
 `sdk.events` is the workhorse service. All methods operate on **SDK ids** — get calendar ids from `sdk.calendars.list` and event ids from `sdk.events.list`/`create`.
@@ -22,11 +23,11 @@ Every start/end is a discriminated union of a timed value and an all-day value:
 Helpers exported from the core:
 
 ```typescript
-import { isAllDay, toDate, toDateTimeString } from "@calendar-sdk/core";
+import { isAllDay, toDate, toDateTimeString } from '@calendar-sdk/core';
 
-isAllDay(event.start);          // type guard for the { date } form
-toDate(event.start);            // → JavaScript Date
-toDateTimeString(event.start);  // → ISO string or date string
+isAllDay(event.start); // type guard for the { date } form
+toDate(event.start); // → JavaScript Date
+toDateTimeString(event.start); // → ISO string or date string
 ```
 
 ## API
@@ -37,9 +38,9 @@ toDateTimeString(event.start);  // → ISO string or date string
 const events = await sdk.events.list(calendarId, {
   timeMin: new Date(),
   timeMax: new Date(Date.now() + 7 * 86400_000),
-  singleEvents: true,   // expand recurring events into instances
-  orderBy: "startTime",
-  q: "standup",         // free-text search where supported
+  singleEvents: true, // expand recurring events into instances
+  orderBy: 'startTime',
+  q: 'standup', // free-text search where supported
   limit: 100,
 });
 ```
@@ -53,20 +54,24 @@ Reads from storage only; throws `NOT_FOUND` if this event hasn't been synced loc
 ### `create(calendarId, input, options?)`
 
 ```typescript
-const event = await sdk.events.create(calendarId, {
-  title: "Design review",
-  description: "Weekly design sync",
-  location: "Room 4 / Meet",
-  start: { dateTime: "2026-08-01T10:00:00Z", timezone: "UTC" },
-  end: { dateTime: "2026-08-01T11:00:00Z", timezone: "UTC" },
-  attendees: [{ email: "ada@example.com", displayName: "Ada" }],
-  reminders: [{ method: "popup", minutes: 10 }],
-  recurrence: { rrule: "FREQ=WEEKLY;BYDAY=FR" },
-  conference: { createRequest: true },  // e.g. Google Meet
-}, {
-  sendUpdates: "all",           // notify attendees
-  conferenceDataVersion: 1,     // required by Google for conference creation
-});
+const event = await sdk.events.create(
+  calendarId,
+  {
+    title: 'Design review',
+    description: 'Weekly design sync',
+    location: 'Room 4 / Meet',
+    start: { dateTime: '2026-08-01T10:00:00Z', timezone: 'UTC' },
+    end: { dateTime: '2026-08-01T11:00:00Z', timezone: 'UTC' },
+    attendees: [{ email: 'ada@example.com', displayName: 'Ada' }],
+    reminders: [{ method: 'popup', minutes: 10 }],
+    recurrence: { rrule: 'FREQ=WEEKLY;BYDAY=FR' },
+    conference: { createRequest: true }, // e.g. Google Meet
+  },
+  {
+    sendUpdates: 'all', // notify attendees
+    conferenceDataVersion: 1, // required by Google for conference creation
+  }
+);
 ```
 
 `CreateEventInput` also supports `allDay`, `timezone`, `status` (`confirmed`/`tentative`/`cancelled`), `transparency` (`opaque`/`transparent`), `visibility` (`default`/`public`/`private`), and `attachments` (where the provider supports them).
@@ -77,9 +82,9 @@ const event = await sdk.events.create(calendarId, {
 
 ```typescript
 const updated = await sdk.events.update(eventId, {
-  title: "Design review (moved)",
-  start: { dateTime: "2026-08-01T14:00:00Z", timezone: "UTC" },
-  end: { dateTime: "2026-08-01T15:00:00Z", timezone: "UTC" },
+  title: 'Design review (moved)',
+  start: { dateTime: '2026-08-01T14:00:00Z', timezone: 'UTC' },
+  end: { dateTime: '2026-08-01T15:00:00Z', timezone: 'UTC' },
 });
 ```
 
@@ -88,7 +93,7 @@ All fields are optional; `recurrence: null` and `conference: null` explicitly cl
 ### `delete(eventId, options?)`
 
 ```typescript
-await sdk.events.delete(eventId, { sendUpdates: "none" });
+await sdk.events.delete(eventId, { sendUpdates: 'none' });
 ```
 
 Deletes remotely and removes the stored copy. A no-op if the event isn't in storage.
@@ -116,10 +121,10 @@ Copies an event into another calendar and stores the copy under a new SDK id. Go
 
 ## Errors you may encounter
 
-| Code | When |
-| --- | --- |
-| `NOT_FOUND` | Calendar/event not in storage — populate via `calendars.list` / `events.list` first |
-| `AUTH_REQUIRED` | Token missing or unrefreshable |
-| `CAPABILITY_UNSUPPORTED` | `create`/`update`/`delete`/`move` not supported by this provider |
-| `VALIDATION_FAILED` | e.g. moving an event across accounts |
-| `RATE_LIMITED` | Provider throttling — retried automatically, thrown only after retries are exhausted |
+| Code                     | When                                                                                 |
+| ------------------------ | ------------------------------------------------------------------------------------ |
+| `NOT_FOUND`              | Calendar/event not in storage — populate via `calendars.list` / `events.list` first  |
+| `AUTH_REQUIRED`          | Token missing or unrefreshable                                                       |
+| `CAPABILITY_UNSUPPORTED` | `create`/`update`/`delete`/`move` not supported by this provider                     |
+| `VALIDATION_FAILED`      | e.g. moving an event across accounts                                                 |
+| `RATE_LIMITED`           | Provider throttling — retried automatically, thrown only after retries are exhausted |

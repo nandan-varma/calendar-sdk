@@ -1,8 +1,9 @@
 ---
+
 title: Data model
 description: The canonical types shared by every provider — accounts, calendars, events, availability, sync, and subscriptions.
 sidebar:
-  order: 2
+order: 2
 ---
 
 All types are exported from `@calendar-sdk/core`. Three conventions run through the whole model:
@@ -14,11 +15,11 @@ All types are exported from `@calendar-sdk/core`. Three conventions run through 
 ## Account
 
 ```typescript
-type AccountStatus = "connected" | "disconnected" | "expired" | "error";
+type AccountStatus = 'connected' | 'disconnected' | 'expired' | 'error';
 
 interface Account {
   id: string;
-  provider: "google" | "microsoft" | "caldav";
+  provider: 'google' | 'microsoft' | 'caldav';
   displayName: string;
   email: string;
   status: AccountStatus;
@@ -35,7 +36,7 @@ Inputs: `AuthInput` (`authorizationCode` / `accessToken` / `refreshToken` / `red
 ## Calendar
 
 ```typescript
-type CalendarAccessRole = "owner" | "writer" | "reader" | "freeBusyReader" | "none";
+type CalendarAccessRole = 'owner' | 'writer' | 'reader' | 'freeBusyReader' | 'none';
 
 interface Calendar {
   id: string;
@@ -62,9 +63,9 @@ Inputs/queries: `CreateCalendarInput`, `UpdateCalendarInput`, `ListCalendarsQuer
 ## CalendarEvent
 
 ```typescript
-type EventStatus = "confirmed" | "tentative" | "cancelled";
-type EventTransparency = "transparent" | "opaque";
-type EventVisibility = "default" | "public" | "private";
+type EventStatus = 'confirmed' | 'tentative' | 'cancelled';
+type EventTransparency = 'transparent' | 'opaque';
+type EventVisibility = 'default' | 'public' | 'private';
 
 interface CalendarEvent {
   id: string;
@@ -84,13 +85,13 @@ interface CalendarEvent {
   visibility: EventVisibility;
   attendees: Attendee[];
   organizer?: Organizer;
-  reminders?: Reminder[];          // { method: "email" | "popup" | "sms" | "audio", minutes }
-  recurrence?: Recurrence;         // { rrule?, rdate?, exdate?, timezone? }
+  reminders?: Reminder[]; // { method: "email" | "popup" | "sms" | "audio", minutes }
+  recurrence?: Recurrence; // { rrule?, rdate?, exdate?, timezone? }
   recurrenceMaster: boolean;
   recurringEventId?: string;
   occurrenceId?: string;
   exceptions: EventException[];
-  conference?: ConferenceData;     // Meet/Teams/Zoom entry points
+  conference?: ConferenceData; // Meet/Teams/Zoom entry points
   attachments: Attachment[];
   etag?: string;
   version?: string;
@@ -112,7 +113,7 @@ Inputs/queries: `CreateEventInput`, `UpdateEventInput` (nullable `recurrence`/`c
 interface FreeBusyQuery {
   timeMin: Date;
   timeMax: Date;
-  calendars: string[];   // provider calendar ids
+  calendars: string[]; // provider calendar ids
   timezone?: string;
 }
 
@@ -124,9 +125,9 @@ interface FreeBusyResult {
 interface FreeBusyBlock {
   start: Date;
   end: Date;
-  status: "free" | "busy" | "tentative" | "unknown";
-  transparency?: "transparent" | "opaque";
-  busyType?: "busy" | "outOfOffice" | "workingElsewhere";
+  status: 'free' | 'busy' | 'tentative' | 'unknown';
+  transparency?: 'transparent' | 'opaque';
+  busyType?: 'busy' | 'outOfOffice' | 'workingElsewhere';
 }
 ```
 
@@ -139,8 +140,8 @@ interface SyncCursor {
   id: string;
   provider: string;
   accountId: string;
-  scope: "calendars" | "events" | "all";
-  token: string;         // opaque provider token (syncToken / deltaLink)
+  scope: 'calendars' | 'events' | 'all';
+  token: string; // opaque provider token (syncToken / deltaLink)
   expiry: Date;
   metadata?: Record<string, unknown>;
   createdAt: Date;
@@ -148,9 +149,9 @@ interface SyncCursor {
 }
 
 type SyncEvent =
-  | { type: "created"; event: CalendarEvent }
-  | { type: "updated"; event: CalendarEvent; previousEtag?: string }
-  | { type: "deleted"; eventId: string };
+  | { type: 'created'; event: CalendarEvent }
+  | { type: 'updated'; event: CalendarEvent; previousEtag?: string }
+  | { type: 'deleted'; eventId: string };
 
 interface SyncResult {
   accountId: string;
@@ -174,10 +175,10 @@ interface Subscription {
   webhookUrl?: string;
   leaseExpiry: Date;
   secret?: string;
-  renewalPolicy: "auto" | "manual";
-  status: "active" | "expired" | "error" | "paused";
+  renewalPolicy: 'auto' | 'manual';
+  status: 'active' | 'expired' | 'error' | 'paused';
   lastNotificationAt?: Date;
-  lastNotificationStatus?: "success" | "failed";
+  lastNotificationStatus?: 'success' | 'failed';
   errorMessage?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -189,7 +190,7 @@ Plus `SubscriptionConfig` (`resource`, `webhookUrl`, `leaseDurationSeconds`, `se
 ## Common
 
 ```typescript
-type ProviderKey = "google" | "microsoft" | "caldav" | (string & {}); // the three built-ins, or any key a custom/testing provider registers under
+type ProviderKey = 'google' | 'microsoft' | 'caldav' | (string & {}); // the three built-ins, or any key a custom/testing provider registers under
 
 interface Paginated<T> {
   items: T[];

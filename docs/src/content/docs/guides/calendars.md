@@ -1,19 +1,20 @@
 ---
+
 title: Calendars
 description: List, create, update, and delete calendars across providers.
 sidebar:
-  order: 4
+order: 4
 ---
 
-`sdk.calendars` works with the calendar collections of a connected account. Listing also *persists* calendars to storage, which the other services rely on — make it the first call after connecting an account.
+`sdk.calendars` works with the calendar collections of a connected account. Listing also _persists_ calendars to storage, which the other services rely on — make it the first call after connecting an account.
 
 ## The Calendar model
 
 ```typescript
 interface Calendar {
-  id: string;            // SDK id — pass this to events.* and calendars.*
+  id: string; // SDK id — pass this to events.* and calendars.*
   accountId: string;
-  providerId: string;    // vendor id (e.g. Google calendarId)
+  providerId: string; // vendor id (e.g. Google calendarId)
   name: string;
   description?: string;
   timezone: string;
@@ -21,7 +22,7 @@ interface Calendar {
   primary: boolean;
   readOnly: boolean;
   hidden: boolean;
-  accessRole: "owner" | "writer" | "reader" | "freeBusyReader" | "none";
+  accessRole: 'owner' | 'writer' | 'reader' | 'freeBusyReader' | 'none';
   capabilities: CalendarCapabilityMap; // derived from accessRole
   raw: unknown;
   extensions: Record<string, unknown>;
@@ -57,10 +58,10 @@ Reads from storage only — throws `NOT_FOUND` if this calendar hasn't been sync
 
 ```typescript
 const calendar = await sdk.calendars.create(account.id, {
-  name: "Team events",
-  description: "Shared team calendar",
-  timezone: "Europe/Berlin",
-  color: "#0f766e",
+  name: 'Team events',
+  description: 'Shared team calendar',
+  timezone: 'Europe/Berlin',
+  color: '#0f766e',
 });
 ```
 
@@ -70,7 +71,7 @@ Checks the provider's `calendars.create` capability first (`CAPABILITY_UNSUPPORT
 
 ```typescript
 const updated = await sdk.calendars.update(calendarId, {
-  name: "Team events (2026)",
+  name: 'Team events (2026)',
   hidden: false,
 });
 ```
@@ -88,15 +89,15 @@ Deletes the calendar at the provider, then removes it **and all of its locally s
 ### `share(calendarId, input)`
 
 ```typescript
-await sdk.calendars.share(calendarId, { email: "teammate@example.com", role: "reader" });
+await sdk.calendars.share(calendarId, { email: 'teammate@example.com', role: 'reader' });
 ```
 
 Grants access to another user: Google via the Calendar ACL API, Microsoft via Graph `calendarPermissions`. Throws `CAPABILITY_UNSUPPORTED` where the provider doesn't support it — check `account.capabilities.calendars.share` first (Google and Microsoft report `true`, CalDAV `false`).
 
 ## Errors you may encounter
 
-| Code | When |
-| --- | --- |
-| `NOT_FOUND` | Account or calendar not in storage (did you call `calendars.list` first?) |
-| `AUTH_REQUIRED` | Token missing/unrefreshable — reconnect the account |
-| `CAPABILITY_UNSUPPORTED` | Operation not supported by the provider or your access role |
+| Code                     | When                                                                      |
+| ------------------------ | ------------------------------------------------------------------------- |
+| `NOT_FOUND`              | Account or calendar not in storage (did you call `calendars.list` first?) |
+| `AUTH_REQUIRED`          | Token missing/unrefreshable — reconnect the account                       |
+| `CAPABILITY_UNSUPPORTED` | Operation not supported by the provider or your access role               |

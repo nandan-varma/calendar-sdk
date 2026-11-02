@@ -1,9 +1,8 @@
 ---
-
 title: Auth package
 description: API reference for @calendar-sdk/auth — OAuth flows, token refresh, and CSRF helpers.
 sidebar:
-order: 5
+  order: 5
 ---
 
 `@calendar-sdk/auth` contains OAuth utilities for Google and Microsoft. It is optional — provider adapters embed their own auth methods — but useful when you build your own login routes or background token services. Usage patterns are covered in the [Authentication guide](/guides/authentication/); this page is the API surface.
@@ -14,7 +13,7 @@ order: 5
 
 ```typescript
 interface AuthFlowOptions {
-  provider: 'google' | 'microsoft';
+  provider: "google" | "microsoft";
   clientId: string;
   clientSecret?: string;
   redirectUri: string;
@@ -55,8 +54,8 @@ Posts to the provider token endpoint and returns a normalized `TokenSet` (`acces
 
 ```typescript
 refreshToken(
-  { provider, clientId, clientSecret }, // RefreshOptions
-  { refreshToken } // RefreshToken
+  { provider, clientId, clientSecret },   // RefreshOptions
+  { refreshToken },                       // RefreshToken
 );
 ```
 
@@ -74,10 +73,7 @@ Expiry checks against `token.expiresAt`; `shouldRefreshToken` fires early by `bu
 
 ```typescript
 interface TokenManagerHandle {
-  getToken(
-    accountId: string,
-    getRefreshToken: () => Promise<RefreshToken | null>
-  ): Promise<TokenSet | null>;
+  getToken(accountId: string, getRefreshToken: () => Promise<RefreshToken | null>): Promise<TokenSet | null>;
   invalidateToken(accountId: string): void;
   clear(): void;
 }

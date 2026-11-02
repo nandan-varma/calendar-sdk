@@ -1,12 +1,11 @@
 ---
-
 title: Webhooks & subscriptions
 description: Push notifications for calendar changes via Google watch channels and Microsoft Graph subscriptions.
 sidebar:
-order: 8
+  order: 8
 ---
 
-`sdk.subscriptions` manages provider push channels — Google Calendar _watch channels_ and Microsoft Graph _change notification subscriptions_ — so you can react to changes without polling. CalDAV has no webhook support (`capabilities.sync.webhook: false`); poll with [Sync](/guides/sync/) instead.
+`sdk.subscriptions` manages provider push channels — Google Calendar *watch channels* and Microsoft Graph *change notification subscriptions* — so you can react to changes without polling. CalDAV has no webhook support (`capabilities.sync.webhook: false`); poll with [Sync](/guides/sync/) instead.
 
 ## The Subscription model
 
@@ -15,14 +14,14 @@ interface Subscription {
   id: string;
   accountId: string;
   provider: string;
-  resource: string; // what is being watched (e.g. a calendar)
-  webhookUrl?: string; // your HTTPS endpoint
-  leaseExpiry: Date; // provider-imposed expiry — must be renewed
-  secret?: string; // validation secret (Graph clientState)
-  renewalPolicy: 'auto' | 'manual';
-  status: 'active' | 'expired' | 'error' | 'paused';
+  resource: string;          // what is being watched (e.g. a calendar)
+  webhookUrl?: string;       // your HTTPS endpoint
+  leaseExpiry: Date;         // provider-imposed expiry — must be renewed
+  secret?: string;           // validation secret (Graph clientState)
+  renewalPolicy: "auto" | "manual";
+  status: "active" | "expired" | "error" | "paused";
   lastNotificationAt?: Date;
-  lastNotificationStatus?: 'success' | 'failed';
+  lastNotificationStatus?: "success" | "failed";
   errorMessage?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -33,10 +32,10 @@ interface Subscription {
 
 ```typescript
 const subscription = await sdk.subscriptions.create(account.id, {
-  resource: calendar.providerId, // provider calendar id
-  webhookUrl: 'https://app.example.com/webhooks/calendar',
-  leaseDurationSeconds: 60 * 60 * 24 * 3, // provider-capped
-  secret: process.env.WEBHOOK_SECRET, // echoed back for validation
+  resource: calendar.providerId,                     // provider calendar id
+  webhookUrl: "https://app.example.com/webhooks/calendar",
+  leaseDurationSeconds: 60 * 60 * 24 * 3,            // provider-capped
+  secret: process.env.WEBHOOK_SECRET,                // echoed back for validation
 });
 ```
 
@@ -51,17 +50,17 @@ Provider notifications are thin "something changed" pings. The standard pattern:
 3. Run an incremental sync to fetch the actual changes.
 
 ```typescript
-app.post('/webhooks/calendar', async (req, res) => {
+app.post("/webhooks/calendar", async (req, res) => {
   res.status(202).end(); // acknowledge fast; providers retry slow endpoints
 
   await sdk.subscriptions.handleNotification({
-    subscriptionId, // from provider headers/body
+    subscriptionId,             // from provider headers/body
     accountId,
     resource,
     timestamp: new Date(),
   });
 
-  const cursor = await sdk.storage.syncCursors.get(accountId, 'events');
+  const cursor = await sdk.storage.syncCursors.get(accountId, "events");
   if (cursor) await sdk.sync.incrementalSync(accountId, cursor);
 });
 ```
@@ -93,9 +92,9 @@ await sdk.subscriptions.renew(subscriptionId);
 ## Other operations
 
 ```typescript
-await sdk.subscriptions.list(accountId); // stored subscriptions for an account
-await sdk.subscriptions.get(id); // one subscription, or null
-await sdk.subscriptions.delete(id); // stop remotely (best effort) + remove locally
+await sdk.subscriptions.list(accountId);   // stored subscriptions for an account
+await sdk.subscriptions.get(id);           // one subscription, or null
+await sdk.subscriptions.delete(id);        // stop remotely (best effort) + remove locally
 ```
 
 ## Observing subscription activity

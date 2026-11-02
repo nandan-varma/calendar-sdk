@@ -1,9 +1,8 @@
 ---
-
 title: Accounts
 description: Connect, inspect, refresh, and disconnect provider accounts.
 sidebar:
-order: 3
+  order: 3
 ---
 
 `sdk.accounts` manages the link between your users and their calendar providers. An `Account` is the root of everything else — calendars, events, cursors, and subscriptions all belong to one.
@@ -12,13 +11,13 @@ order: 3
 
 ```typescript
 interface Account {
-  id: string; // SDK-generated UUID — use this everywhere
-  provider: 'google' | 'microsoft' | 'caldav';
+  id: string;                 // SDK-generated UUID — use this everywhere
+  provider: "google" | "microsoft" | "caldav";
   displayName: string;
   email: string;
-  status: 'connected' | 'disconnected' | 'expired' | 'error';
+  status: "connected" | "disconnected" | "expired" | "error";
   capabilities: CapabilityMap; // snapshot of what this provider supports
-  raw: unknown; // raw provider profile payload
+  raw: unknown;                // raw provider profile payload
   extensions: Record<string, unknown>;
   createdAt: Date;
   updatedAt: Date;
@@ -30,7 +29,7 @@ interface Account {
 ### `connect(providerKey, options)`
 
 ```typescript
-const account = await sdk.accounts.connect('google', {
+const account = await sdk.accounts.connect("google", {
   authInput: { accessToken, refreshToken },
   // authInput: { authorizationCode, redirectUri } also works
   persistTokens: true, // default
@@ -79,11 +78,11 @@ Best-effort revokes the access token with the provider, then deletes tokens, syn
 
 ## Account status
 
-| Status         | Meaning                                                              |
-| -------------- | -------------------------------------------------------------------- |
-| `connected`    | Tokens valid (or refreshable); normal operation                      |
-| `expired`      | A token refresh failed — the user must re-authenticate via `connect` |
-| `disconnected` | Explicitly disconnected                                              |
-| `error`        | Provider-side failure                                                |
+| Status | Meaning |
+| --- | --- |
+| `connected` | Tokens valid (or refreshable); normal operation |
+| `expired` | A token refresh failed — the user must re-authenticate via `connect` |
+| `disconnected` | Explicitly disconnected |
+| `error` | Provider-side failure |
 
 When a service hits an account whose token can't be resolved it throws `AUTH_REQUIRED` — catch it, send the user through OAuth again, and call `connect` with the new tokens.

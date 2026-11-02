@@ -1,9 +1,8 @@
 ---
-
 title: Transport & retries
 description: The shared fetch wrapper — retry policy, backoff, timeouts, and log redaction.
 sidebar:
-order: 4
+  order: 4
 ---
 
 All provider HTTP traffic flows through one transport: a `fetch` wrapper with retries, exponential backoff with jitter, timeout handling, and sensitive-value redaction in debug logs.
@@ -23,7 +22,7 @@ Defaults (exported as `defaultRetryOptions`):
 }
 ```
 
-- Delay for attempt _n_ is `min(initialDelayMs · backoffMultiplier^n, maxDelayMs)` plus up to 30 % random jitter.
+- Delay for attempt *n* is `min(initialDelayMs · backoffMultiplier^n, maxDelayMs)` plus up to 30 % random jitter.
 - A `Retry-After` response header **overrides** the computed backoff (seconds → ms).
 - Network-level errors matching `retryableErrors` are retried like retryable statuses.
 - When retries are exhausted, the last error is thrown as a `CalendarSdkError` — so any error your code sees has already been through the retry policy.
@@ -43,20 +42,20 @@ Debug logging of request bodies and headers redacts `access_token`, `refresh_tok
 Adapter authors (and anyone making provider-native calls) can create a transport:
 
 ```typescript
-import { createTransport, defaultRetryOptions } from '@calendar-sdk/core';
+import { createTransport, defaultRetryOptions } from "@calendar-sdk/core";
 
-const transport = createTransport('google', {
-  baseUrl: 'https://www.googleapis.com/calendar/v3',
+const transport = createTransport("google", {
+  baseUrl: "https://www.googleapis.com/calendar/v3",
   timeout: 15_000,
   headers: { Authorization: `Bearer ${accessToken}` },
   retryOptions: { ...defaultRetryOptions, maxRetries: 5 },
-  fetch: customFetch, // optional; defaults to global fetch
+  fetch: customFetch,           // optional; defaults to global fetch
 });
 
 const { data, status, headers, requestId } = await transport.request<GoogleEventsResponse>({
-  method: 'GET',
-  path: '/calendars/primary/events',
-  query: { maxResults: '50' },
+  method: "GET",
+  path: "/calendars/primary/events",
+  query: { maxResults: "50" },
 });
 ```
 

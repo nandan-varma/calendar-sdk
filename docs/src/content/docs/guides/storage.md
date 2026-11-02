@@ -1,9 +1,8 @@
 ---
-
 title: Storage
 description: The StorageAdapter interface, the in-memory default, and writing a database-backed adapter.
 sidebar:
-order: 9
+  order: 9
 ---
 
 Everything the SDK knows — accounts, encrypted token sets, calendars, events, sync cursors, subscriptions — lives behind one `StorageAdapter`. The default is in-memory (great for development and tests, gone on restart); production apps supply their own.
@@ -40,14 +39,14 @@ interface StorageAdapter {
 
 Each repository is small and CRUD-shaped:
 
-| Repository      | Methods                                                                                                                                 |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `accounts`      | `save`, `get`, `list`, `listByProvider`, `update`, `delete`                                                                             |
-| `calendars`     | `save`, `get`, `list(accountId, query?)`, `listByAccount`, `update`, `delete`                                                           |
-| `events`        | `save`, `saveMany`, `get`, `list(calendarId, query?)`, `listByAccount`, `getByRecurringEventId`, `update`, `delete`, `deleteByCalendar` |
-| `syncCursors`   | `save`, `get(accountId, scope)`, `list`, `delete(accountId, scope)`, `deleteByAccount`                                                  |
-| `subscriptions` | `save`, `get`, `list(accountId)`, `listByProvider`, `update`, `delete`                                                                  |
-| `tokens`        | `save(accountId, tokens)`, `get`, `update`, `delete`                                                                                    |
+| Repository | Methods |
+| --- | --- |
+| `accounts` | `save`, `get`, `list`, `listByProvider`, `update`, `delete` |
+| `calendars` | `save`, `get`, `list(accountId, query?)`, `listByAccount`, `update`, `delete` |
+| `events` | `save`, `saveMany`, `get`, `list(calendarId, query?)`, `listByAccount`, `getByRecurringEventId`, `update`, `delete`, `deleteByCalendar` |
+| `syncCursors` | `save`, `get(accountId, scope)`, `list`, `delete(accountId, scope)`, `deleteByAccount` |
+| `subscriptions` | `save`, `get`, `list(accountId)`, `listByProvider`, `update`, `delete` |
+| `tokens` | `save(accountId, tokens)`, `get`, `update`, `delete` |
 
 Semantics worth matching when you implement your own:
 
@@ -71,27 +70,27 @@ interface TokenEncryptor {
 ## Sketch: a SQL-backed adapter
 
 ```typescript
-import type { StorageAdapter } from '@calendar-sdk/core';
+import type { StorageAdapter } from "@calendar-sdk/core";
 
 export function createSqlStorage(db: Db): StorageAdapter {
   return {
     accounts: {
-      save: (a) => db.upsert('accounts', a),
-      get: (id) => db.findOne('accounts', { id }),
-      list: () => db.findMany('accounts', {}),
-      listByProvider: (provider) => db.findMany('accounts', { provider }),
-      update: (id, data) => db.patch('accounts', id, { ...data, updatedAt: new Date() }),
-      delete: (id) => db.remove('accounts', id),
+      save: (a) => db.upsert("accounts", a),
+      get: (id) => db.findOne("accounts", { id }),
+      list: () => db.findMany("accounts", {}),
+      listByProvider: (provider) => db.findMany("accounts", { provider }),
+      update: (id, data) => db.patch("accounts", id, { ...data, updatedAt: new Date() }),
+      delete: (id) => db.remove("accounts", id),
     },
     tokens: {
       save: async (accountId, tokens) =>
-        db.upsert('tokens', { accountId, ...(await encryptor.encrypt(tokens)) }),
+        db.upsert("tokens", { accountId, ...(await encryptor.encrypt(tokens)) }),
       get: async (accountId) => {
-        const row = await db.findOne('tokens', { accountId });
+        const row = await db.findOne("tokens", { accountId });
         return row ? encryptor.decrypt(row) : null;
       },
-      update: (accountId, patch) => db.patch('tokens', accountId, patch),
-      delete: (accountId) => db.remove('tokens', accountId),
+      update: (accountId, patch) => db.patch("tokens", accountId, patch),
+      delete: (accountId) => db.remove("tokens", accountId),
     },
     // …calendars, events, syncCursors, subscriptions follow the same shape
     transaction: (fn) => db.transaction(fn),

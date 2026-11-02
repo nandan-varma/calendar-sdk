@@ -48,40 +48,40 @@ const calendars = await sdk.calendars.list(account.id);
 
 ## 2) Strong typing with low ceremony
 
-- Narrow input/output types
-- Discriminated unions for event/time/recur/sync errors
-- Provider-specific extras accessible but not required
-- No giant `any` surfaces
+* Narrow input/output types
+* Discriminated unions for event/time/recur/sync errors
+* Provider-specific extras accessible but not required
+* No giant `any` surfaces
 
 ## 3) Explicit capability discovery
 
 Never force developers to discover unsupported behavior by trial and error. The SDK should say:
 
-- this provider supports webhook sync
-- this provider supports event attachments
-- this provider supports conference data
-- this provider does not support calendar sharing in the same way
+* this provider supports webhook sync
+* this provider supports event attachments
+* this provider supports conference data
+* this provider does not support calendar sharing in the same way
 
 ## 4) Good defaults, not hidden magic
 
 The SDK should provide:
 
-- retries with backoff
-- pagination helpers
-- token refresh
-- cursor persistence
-- webhook renewal helpers
-- sane logging redaction
+* retries with backoff
+* pagination helpers
+* token refresh
+* cursor persistence
+* webhook renewal helpers
+* sane logging redaction
 
 ## 5) Provider-native escape hatches
 
 The SDK should expose:
 
-- raw payload access
-- vendor-specific fields
-- provider-specific request options
-- custom transport hooks
-- custom auth hooks
+* raw payload access
+* vendor-specific fields
+* provider-specific request options
+* custom transport hooks
+* custom auth hooks
 
 That is essential for production integrations.
 
@@ -95,37 +95,37 @@ That is essential for production integrations.
 
 Contains:
 
-- canonical types
-- SDK factory
-- adapter interfaces
-- error model
-- sync primitives
-- capability model
-- transport abstractions
-- event emitter/hooks
-- serialization helpers
+* canonical types
+* SDK factory
+* adapter interfaces
+* error model
+* sync primitives
+* capability model
+* transport abstractions
+* event emitter/hooks
+* serialization helpers
 
 ### `calendar-sdk/auth`
 
 Contains:
 
-- OAuth helper utilities
-- refresh token management helpers
-- token encryption interfaces
-- auth session types
-- auth flow utilities for web apps and background services
+* OAuth helper utilities
+* refresh token management helpers
+* token encryption interfaces
+* auth session types
+* auth flow utilities for web apps and background services
 
 ### Provider packages
 
-- `calendar-sdk/google`
-- `calendar-sdk/microsoft`
-- `calendar-sdk/caldav`
+* `calendar-sdk/google`
+* `calendar-sdk/microsoft`
+* `calendar-sdk/caldav`
 
 Optional later:
 
-- `calendar-sdk/ics`
-- `calendar-sdk/exchange`
-- `calendar-sdk/custom`
+* `calendar-sdk/ics`
+* `calendar-sdk/exchange`
+* `calendar-sdk/custom`
 
 ---
 
@@ -137,103 +137,103 @@ Represents a connected identity on a provider.
 
 Required fields:
 
-- `id`
-- `provider`
-- `displayName`
-- `email`
-- `status`
-- `capabilities`
-- `raw`
-- `extensions`
+* `id`
+* `provider`
+* `displayName`
+* `email`
+* `status`
+* `capabilities`
+* `raw`
+* `extensions`
 
 ## 2) Calendar
 
 Required fields:
 
-- `id`
-- `accountId`
-- `providerId`
-- `name`
-- `description`
-- `timezone`
-- `color`
-- `primary`
-- `readOnly`
-- `hidden`
-- `accessRole`
-- `capabilities`
-- `raw`
-- `extensions`
+* `id`
+* `accountId`
+* `providerId`
+* `name`
+* `description`
+* `timezone`
+* `color`
+* `primary`
+* `readOnly`
+* `hidden`
+* `accessRole`
+* `capabilities`
+* `raw`
+* `extensions`
 
 ## 3) Event
 
 Required fields:
 
-- `id`
-- `accountId`
-- `calendarId`
-- `providerId`
-- `iCalUid`
-- `title`
-- `description`
-- `location`
-- `start`
-- `end`
-- `allDay`
-- `timezone`
-- `status`
-- `transparency`
-- `visibility`
-- `attendees`
-- `organizer`
-- `reminders`
-- `recurrence`
-- `recurrenceMaster`
-- `recurringEventId`
-- `occurrenceId`
-- `exceptions`
-- `conference`
-- `attachments`
-- `etag`
-- `version`
-- `createdAt`
-- `updatedAt`
-- `deletedAt`
-- `raw`
-- `extensions`
+* `id`
+* `accountId`
+* `calendarId`
+* `providerId`
+* `iCalUid`
+* `title`
+* `description`
+* `location`
+* `start`
+* `end`
+* `allDay`
+* `timezone`
+* `status`
+* `transparency`
+* `visibility`
+* `attendees`
+* `organizer`
+* `reminders`
+* `recurrence`
+* `recurrenceMaster`
+* `recurringEventId`
+* `occurrenceId`
+* `exceptions`
+* `conference`
+* `attachments`
+* `etag`
+* `version`
+* `createdAt`
+* `updatedAt`
+* `deletedAt`
+* `raw`
+* `extensions`
 
 ## 4) Availability / free-busy
 
 Required fields:
 
-- time window
-- calendars or users
-- returned blocks
-- free/busy/tentative/unknown classification
-- timezone awareness
+* time window
+* calendars or users
+* returned blocks
+* free/busy/tentative/unknown classification
+* timezone awareness
 
 ## 5) Sync cursor
 
 Required fields:
 
-- provider
-- accountId
-- scope
-- token
-- expiry
-- metadata
+* provider
+* accountId
+* scope
+* token
+* expiry
+* metadata
 
 ## 6) Subscription / webhook lease
 
 Required fields:
 
-- provider
-- resource scope
-- lease expiry
-- secret/validation data
-- renewal policy
-- last notification timestamp
-- status
+* provider
+* resource scope
+* lease expiry
+* secret/validation data
+* renewal policy
+* last notification timestamp
+* status
 
 ---
 
@@ -358,12 +358,12 @@ sdk.subscriptions.list(accountId);
 
 ### Required behaviors
 
-- OAuth-based user consent for Google and Microsoft.
-- Token refresh.
-- Secure secret storage.
-- Account reauthorization flows.
-- Clear errors when auth is missing, expired, or revoked.
-- Support delegated and service/app-only modes where the provider allows them.
+* OAuth-based user consent for Google and Microsoft.
+* Token refresh.
+* Secure secret storage.
+* Account reauthorization flows.
+* Clear errors when auth is missing, expired, or revoked.
+* Support delegated and service/app-only modes where the provider allows them.
 
 ### DX requirement
 
@@ -377,14 +377,14 @@ Why: Microsoft permissions differ substantially between delegated and applicatio
 
 ### Required operations
 
-- list calendars
-- get calendar
-- create calendar
-- update calendar
-- delete calendar
-- support primary calendars and secondary calendars
-- support read-only calendars
-- support calendar sharing metadata where provider allows it
+* list calendars
+* get calendar
+* create calendar
+* update calendar
+* delete calendar
+* support primary calendars and secondary calendars
+* support read-only calendars
+* support calendar sharing metadata where provider allows it
 
 ### DX requirement
 
@@ -398,26 +398,26 @@ Google explicitly models calendar list access and ACL roles; Microsoft has calen
 
 ### Required operations
 
-- list events
-- get event
-- create event
-- update event
-- delete event
-- move event
-- duplicate event
+* list events
+* get event
+* create event
+* update event
+* delete event
+* move event
+* duplicate event
 
 ### Required event features
 
-- all-day events
-- timezone-aware events
-- attendees
-- organizer
-- reminders
-- recurrence
-- exceptions / overrides
-- cancellation status
-- attachments
-- conference data where supported
+* all-day events
+* timezone-aware events
+* attendees
+* organizer
+* reminders
+* recurrence
+* exceptions / overrides
+* cancellation status
+* attachments
+* conference data where supported
 
 ### DX requirement
 
@@ -433,22 +433,22 @@ This must be a serious part of v1, not an afterthought.
 
 ### Required capabilities
 
-- RRULE support
-- RDATE support
-- EXDATE support
-- recurring master event
-- instance expansion within a query window
-- detached instance handling
-- cancelled instance handling
-- DST-safe expansion
-- timezone-preserving serialization
+* RRULE support
+* RDATE support
+* EXDATE support
+* recurring master event
+* instance expansion within a query window
+* detached instance handling
+* cancelled instance handling
+* DST-safe expansion
+* timezone-preserving serialization
 
 ### DX requirement
 
 Give developers two views:
 
-- canonical recurrence object for writes
-- expanded occurrences for reads
+* canonical recurrence object for writes
+* expanded occurrences for reads
 
 Do not force them to manually reconstruct recurring series.
 
@@ -460,11 +460,11 @@ This is essential because iCalendar is the standard recurrence/data model underp
 
 ### Required operations
 
-- free/busy query
-- optional suggested times
-- support multiple calendars or people in one query
-- timezone selection
-- support provider fallbacks
+* free/busy query
+* optional suggested times
+* support multiple calendars or people in one query
+* timezone selection
+* support provider fallbacks
 
 ### DX requirement
 
@@ -480,20 +480,20 @@ This is one of the most important v1 requirements.
 
 ### Required behaviors
 
-- full sync
-- incremental sync
-- cursor persistence
-- cursor invalidation handling
-- deletion propagation
-- pagination handling
-- resync on expiration
-- reconciliation mode after missed webhooks
+* full sync
+* incremental sync
+* cursor persistence
+* cursor invalidation handling
+* deletion propagation
+* pagination handling
+* resync on expiration
+* reconciliation mode after missed webhooks
 
 ### Provider-specific behavior to accommodate
 
-- Google incremental sync uses `syncToken`; expired tokens can require a full resync and Google can return `410 Gone` when the token is no longer valid. Google also supports watch channels for push-style notifications. ([Google for Developers][11])
-- Microsoft Graph delta query is designed for incremental synchronization, and subscriptions provide change notifications. ([Microsoft Learn][12])
-- CalDAV should support polling or sync-property-based strategies depending on the server. The SDK should treat this as a capability rather than assuming webhook parity with Google or Microsoft. ([IETF Datatracker][4])
+* Google incremental sync uses `syncToken`; expired tokens can require a full resync and Google can return `410 Gone` when the token is no longer valid. Google also supports watch channels for push-style notifications. ([Google for Developers][11])
+* Microsoft Graph delta query is designed for incremental synchronization, and subscriptions provide change notifications. ([Microsoft Learn][12])
+* CalDAV should support polling or sync-property-based strategies depending on the server. The SDK should treat this as a capability rather than assuming webhook parity with Google or Microsoft. ([IETF Datatracker][4])
 
 ### DX requirement
 
@@ -505,14 +505,14 @@ Expose sync as a durable service concept, not a one-off method call.
 
 ### Required behaviors
 
-- create subscription
-- renew subscription
-- delete subscription
-- validate webhook endpoint
-- process notifications
-- detect lost notifications
-- trigger recovery sync
-- surface expiry warnings
+* create subscription
+* renew subscription
+* delete subscription
+* validate webhook endpoint
+* process notifications
+* detect lost notifications
+* trigger recovery sync
+* surface expiry warnings
 
 ### DX requirement
 
@@ -526,12 +526,12 @@ Google watch channels and Microsoft subscriptions are both lease-like, expiring 
 
 ### Required support
 
-- read-only access
-- read/write access
-- free/busy-only access
-- shared calendars
-- delegated calendars
-- owner vs writer vs reader distinction where possible
+* read-only access
+* read/write access
+* free/busy-only access
+* shared calendars
+* delegated calendars
+* owner vs writer vs reader distinction where possible
 
 ### DX requirement
 
@@ -547,10 +547,10 @@ This is mandatory.
 
 ### Required fields on every normalized object
 
-- `raw`
-- `extensions`
-- provider identity fields
-- provider version or ETag when available
+* `raw`
+* `extensions`
+* provider identity fields
+* provider version or ETag when available
 
 ### DX requirement
 
@@ -564,30 +564,30 @@ This matters because Google, Microsoft, and CalDAV all carry provider-specific i
 
 ### Required normalized error codes
 
-- `AUTH_REQUIRED`
-- `AUTH_EXPIRED`
-- `PERMISSION_DENIED`
-- `NOT_FOUND`
-- `CONFLICT`
-- `RATE_LIMITED`
-- `CAPABILITY_UNSUPPORTED`
-- `VALIDATION_FAILED`
-- `SYNC_CURSOR_EXPIRED`
-- `SUBSCRIPTION_EXPIRED`
-- `NETWORK_ERROR`
-- `PROVIDER_ERROR`
+* `AUTH_REQUIRED`
+* `AUTH_EXPIRED`
+* `PERMISSION_DENIED`
+* `NOT_FOUND`
+* `CONFLICT`
+* `RATE_LIMITED`
+* `CAPABILITY_UNSUPPORTED`
+* `VALIDATION_FAILED`
+* `SYNC_CURSOR_EXPIRED`
+* `SUBSCRIPTION_EXPIRED`
+* `NETWORK_ERROR`
+* `PROVIDER_ERROR`
 
 ### Error payload
 
 Each error should include:
 
-- provider key
-- HTTP status
-- provider error code
-- request ID
-- retry hint
-- raw error payload
-- human-readable remediation message
+* provider key
+* HTTP status
+* provider error code
+* request ID
+* retry hint
+* raw error payload
+* human-readable remediation message
 
 ### DX requirement
 
@@ -601,12 +601,12 @@ Google’s error docs explicitly distinguish HTTP-level and body-level details, 
 
 ### Required behavior
 
-- exponential backoff with jitter
-- respect `Retry-After`
-- retry transient network and server failures
-- detect rate limiting
-- circuit-breaker option for repeated provider failures
-- per-provider retry policy override
+* exponential backoff with jitter
+* respect `Retry-After`
+* retry transient network and server failures
+* detect rate limiting
+* circuit-breaker option for repeated provider failures
+* per-provider retry policy override
 
 ### DX requirement
 
@@ -620,14 +620,14 @@ This matters because both Google and Microsoft expose quota/throttle behavior an
 
 ### Required runtime support
 
-- Node.js LTS
-- ESM-first
-- CJS compatibility through conditional exports if shipped
-- injectable fetch
-- proxy support
-- timeout support
-- user agent / client info injection
-- tracing headers
+* Node.js LTS
+* ESM-first
+* CJS compatibility through conditional exports if shipped
+* injectable fetch
+* proxy support
+* timeout support
+* user agent / client info injection
+* tracing headers
 
 ### DX requirement
 
@@ -643,22 +643,22 @@ A production-grade v1 should not assume ephemeral memory.
 
 ### Persisted data
 
-- connected accounts
-- session tokens
-- calendars
-- events
-- sync cursors
-- webhook subscriptions
-- provider ID mappings
-- webhook secrets
-- audit events
+* connected accounts
+* session tokens
+* calendars
+* events
+* sync cursors
+* webhook subscriptions
+* provider ID mappings
+* webhook secrets
+* audit events
 
 ### Required storage adapters
 
-- in-memory
-- PostgreSQL
-- Redis or similar cache layer
-- encrypted local file store for development
+* in-memory
+* PostgreSQL
+* Redis or similar cache layer
+* encrypted local file store for development
 
 ### DX requirement
 
@@ -670,23 +670,23 @@ The SDK should run out of the box in memory, but offer straightforward productio
 
 ### Required hooks
 
-- request start/end
-- sync start/end
-- subscription renewal events
-- error events
-- rate-limit events
-- auth refresh events
-- webhook receive/verify events
+* request start/end
+* sync start/end
+* subscription renewal events
+* error events
+* rate-limit events
+* auth refresh events
+* webhook receive/verify events
 
 ### Required metadata
 
-- provider
-- account
-- calendar
-- operation
-- request ID
-- duration
-- retry count
+* provider
+* account
+* calendar
+* operation
+* request ID
+* duration
+* retry count
 
 ### DX requirement
 
@@ -698,12 +698,12 @@ Provide a structured logger interface and optional OpenTelemetry-friendly hooks.
 
 ### Required rules
 
-- encrypt refresh tokens and secrets at rest
-- redact sensitive fields from logs
-- separate tenant namespaces
-- isolate webhook secrets
-- support least-privilege scopes
-- do not serialize access tokens in debug output
+* encrypt refresh tokens and secrets at rest
+* redact sensitive fields from logs
+* separate tenant namespaces
+* isolate webhook secrets
+* support least-privilege scopes
+* do not serialize access tokens in debug output
 
 ### Apple/CalDAV implication
 
@@ -731,41 +731,41 @@ No developer should need to learn five different packages to do the first useful
 
 ## 2) Opinionated defaults
 
-- default retry policy
-- default pagination helper
-- default JSON serialization
-- default token refresh
-- default logging shape
+* default retry policy
+* default pagination helper
+* default JSON serialization
+* default token refresh
+* default logging shape
 
 ## 3) Provider-specific escape hatches
 
 Every adapter should allow:
 
-- raw request headers
-- provider-specific options
-- raw payload inspection
-- vendor-specific fields
+* raw request headers
+* provider-specific options
+* raw payload inspection
+* vendor-specific fields
 
 ## 4) Great error messages
 
 Errors must tell the developer:
 
-- what failed
-- why it failed
-- whether they can retry
-- whether they need to re-auth
-- whether the capability is unsupported
+* what failed
+* why it failed
+* whether they can retry
+* whether they need to re-auth
+* whether the capability is unsupported
 
 ## 5) Discoverability
 
 The public API should be organized by nouns:
 
-- accounts
-- calendars
-- events
-- availability
-- sync
-- subscriptions
+* accounts
+* calendars
+* events
+* availability
+* sync
+* subscriptions
 
 ## 6) Narrow, stable types
 
@@ -775,17 +775,17 @@ Use stable exported types and avoid leaking internal adapter implementation type
 
 A developer should be able to start with:
 
-- list calendars
-- read events
-- create events
+* list calendars
+* read events
+* create events
 
 Then later add:
 
-- sync
-- webhooks
-- availability
-- sharing
-- provider-specific fields
+* sync
+* webhooks
+* availability
+* sharing
+* provider-specific fields
 
 ---
 
@@ -795,10 +795,10 @@ Then later add:
 
 Use:
 
-- `exports`
-- conditional exports
-- typed entrypoints
-- subpath exports per provider
+* `exports`
+* conditional exports
+* typed entrypoints
+* subpath exports per provider
 
 ### Recommended layout
 
@@ -831,29 +831,29 @@ The docs are part of the product.
 
 ## Must-have docs
 
-- quickstart
-- provider setup guides
-- auth flow guides
-- sync guide
-- webhook guide
-- error handling guide
-- timezone guide
-- recurrence guide
-- sharing/permissions guide
-- migration guide
-- provider comparison matrix
-- production deployment checklist
-- troubleshooting page
+* quickstart
+* provider setup guides
+* auth flow guides
+* sync guide
+* webhook guide
+* error handling guide
+* timezone guide
+* recurrence guide
+* sharing/permissions guide
+* migration guide
+* provider comparison matrix
+* production deployment checklist
+* troubleshooting page
 
 ## Must-have examples
 
-- Next.js / web OAuth connection
-- Node backend service account / daemon pattern
-- sync worker with storage
-- webhook receiver
-- free-busy lookup
-- recurring event creation
-- CalDAV setup example
+* Next.js / web OAuth connection
+* Node backend service account / daemon pattern
+* sync worker with storage
+* webhook receiver
+* free-busy lookup
+* recurring event creation
+* CalDAV setup example
 
 ## DX requirement
 
@@ -865,26 +865,26 @@ Every example should be copy-pastable and use real types.
 
 ## Unit tests
 
-- time conversion
-- recurrence expansion
-- event normalization
-- error mapping
-- capability detection
-- request serialization
+* time conversion
+* recurrence expansion
+* event normalization
+* error mapping
+* capability detection
+* request serialization
 
 ## Integration tests
 
-- Google sandbox tenant
-- Microsoft test tenant
-- CalDAV test server
-- webhook round-trip tests
-- sync cursor expiration tests
+* Google sandbox tenant
+* Microsoft test tenant
+* CalDAV test server
+* webhook round-trip tests
+* sync cursor expiration tests
 
 ## Contract tests
 
-- golden fixtures per provider
-- snapshot tests for raw-to-canonical mappings
-- no-loss round-trip tests for raw payload retention
+* golden fixtures per provider
+* snapshot tests for raw-to-canonical mappings
+* no-loss round-trip tests for raw payload retention
 
 ## DX requirement
 
@@ -914,15 +914,15 @@ Ship a mock provider/testing harness so app developers can test their integratio
 
 If the goal is best-in-class DX, the v1 should be intentionally narrow in public surface area but deep in operational correctness:
 
-- **one canonical model**
-- **one adapter contract**
-- **one sync model**
-- **one subscription model**
-- **one error model**
-- **one storage abstraction**
-- **provider packages for Google, Microsoft, and CalDAV**
-- **full raw-payload preservation**
-- **explicit capability discovery**
+* **one canonical model**
+* **one adapter contract**
+* **one sync model**
+* **one subscription model**
+* **one error model**
+* **one storage abstraction**
+* **provider packages for Google, Microsoft, and CalDAV**
+* **full raw-payload preservation**
+* **explicit capability discovery**
 
 That gives developers a simple mental model without sacrificing the complexity the providers demand.
 

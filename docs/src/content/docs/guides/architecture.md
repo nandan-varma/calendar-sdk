@@ -1,9 +1,8 @@
 ---
-
 title: Architecture
 description: How the provider-agnostic core, provider adapters, and pluggable storage fit together.
 sidebar:
-order: 1
+  order: 1
 ---
 
 The right mental model is not "one universal calendar API." It is **one stable SDK core with provider capabilities exposed explicitly**.

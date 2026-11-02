@@ -1,9 +1,8 @@
 ---
-
 title: Authentication
 description: OAuth flows, connecting accounts with codes or tokens, and automatic token refresh.
 sidebar:
-order: 2
+  order: 2
 ---
 
 calendar-sdk is bring-your-own-credentials. You run the OAuth flow (or use the helper package), then hand the resulting tokens to `sdk.accounts.connect`. After that, refresh is automatic.
@@ -14,15 +13,15 @@ calendar-sdk is bring-your-own-credentials. You run the OAuth flow (or use the h
 
 ```typescript
 // 1. With an authorization code from your OAuth callback
-const account = await sdk.accounts.connect('google', {
+const account = await sdk.accounts.connect("google", {
   authInput: {
     authorizationCode: code,
-    redirectUri: 'https://app.example.com/oauth/callback',
+    redirectUri: "https://app.example.com/oauth/callback",
   },
 });
 
 // 2. With tokens you already have
-const account = await sdk.accounts.connect('google', {
+const account = await sdk.accounts.connect("google", {
   authInput: { accessToken, refreshToken },
 });
 ```
@@ -43,14 +42,18 @@ Tokens are only persisted when a **refresh token** is present. For Google, reque
 `@calendar-sdk/auth` gives you the pieces for a web OAuth flow without pulling in a full auth framework:
 
 ```typescript
-import { createAuthFlow, createState, verifyState } from '@calendar-sdk/auth';
+import {
+  createAuthFlow,
+  createState,
+  verifyState,
+} from "@calendar-sdk/auth";
 
 const flow = createAuthFlow({
-  provider: 'google', // or "microsoft"
+  provider: "google", // or "microsoft"
   clientId: process.env.GOOGLE_CLIENT_ID!,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-  redirectUri: 'https://app.example.com/oauth/callback',
-  scopes: ['https://www.googleapis.com/auth/calendar'],
+  redirectUri: "https://app.example.com/oauth/callback",
+  scopes: ["https://www.googleapis.com/auth/calendar"],
 });
 
 // Step 1: redirect the user
@@ -58,11 +61,11 @@ const state = createState(); // random hex, store it in the session
 res.redirect(flow.getAuthorizationUrl());
 
 // Step 2: in your callback route
-if (!verifyState(req.query.state, session.state)) throw new Error('CSRF');
+if (!verifyState(req.query.state, session.state)) throw new Error("CSRF");
 const tokens = await flow.exchangeCode(req.query.code);
 
 // Step 3: hand off to the SDK
-const account = await sdk.accounts.connect('google', {
+const account = await sdk.accounts.connect("google", {
   authInput: {
     accessToken: tokens.accessToken,
     refreshToken: tokens.refreshToken,
@@ -76,24 +79,24 @@ For Google, `createAuthorizationUrl` automatically adds `access_type=offline` an
 
 The package also exports lower-level building blocks:
 
-| Function                                                                         | Purpose                                                        |
-| -------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `createAuthorizationUrl(options)`                                                | Build the provider's authorization URL                         |
-| `exchangeCodeForTokens({ provider, code, clientId, clientSecret, redirectUri })` | Code → `TokenSet`                                              |
-| `refreshToken(options, { refreshToken })`                                        | Refresh an expired token set                                   |
-| `revokeToken(provider, accessToken)`                                             | Revoke a token (Google only)                                   |
-| `isTokenExpired(token)`                                                          | `true` once `expiresAt` has passed                             |
-| `shouldRefreshToken(token, bufferMs?)`                                           | Like `isTokenExpired` but with an expiry buffer (default 60 s) |
-| `createTokenManager(options)`                                                    | Cached refresh manager for background services                 |
-| `createState()` / `verifyState(state, stored)`                                   | CSRF state helpers (timing-safe comparison)                    |
+| Function | Purpose |
+| --- | --- |
+| `createAuthorizationUrl(options)` | Build the provider's authorization URL |
+| `exchangeCodeForTokens({ provider, code, clientId, clientSecret, redirectUri })` | Code → `TokenSet` |
+| `refreshToken(options, { refreshToken })` | Refresh an expired token set |
+| `revokeToken(provider, accessToken)` | Revoke a token (Google only) |
+| `isTokenExpired(token)` | `true` once `expiresAt` has passed |
+| `shouldRefreshToken(token, bufferMs?)` | Like `isTokenExpired` but with an expiry buffer (default 60 s) |
+| `createTokenManager(options)` | Cached refresh manager for background services |
+| `createState()` / `verifyState(state, stored)` | CSRF state helpers (timing-safe comparison) |
 
 ### Token manager for background jobs
 
 ```typescript
-import { createTokenManager } from '@calendar-sdk/auth';
+import { createTokenManager } from "@calendar-sdk/auth";
 
 const tokens = createTokenManager({
-  provider: 'google',
+  provider: "google",
   clientId: process.env.GOOGLE_CLIENT_ID!,
   clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
 });
